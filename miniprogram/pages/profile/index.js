@@ -41,6 +41,13 @@ Page({
       return;
     }
 
+    if (key === "favorites") {
+      wx.navigateTo({
+        url: "/pages/favorites/index"
+      });
+      return;
+    }
+
     showOfflineOrderNotice();
   },
 

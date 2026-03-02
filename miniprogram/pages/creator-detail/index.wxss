@@ -5,19 +5,32 @@
 
 .creator-top {
   display: flex;
-  flex-direction: column;
-  gap: 28rpx;
+  align-items: flex-start;
+  gap: 24rpx;
+}
+
+.creator-top__body {
+  flex: 1;
+  min-width: 0;
 }
 
 .creator-top__avatar {
   width: 220rpx;
   height: 220rpx;
+  flex-shrink: 0;
   border-radius: 50%;
   border: 1rpx solid rgba(189, 154, 95, 0.34);
 }
 
+.creator-top__title-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
 .creator-top__name {
-  margin-top: 8rpx;
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: 62rpx;
 }
 
@@ -40,25 +53,51 @@
 
 .creator-place-list {
   display: flex;
-  flex-direction: column;
-  gap: 18rpx;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 18rpx 16rpx;
   margin-top: 24rpx;
 }
 
 .creator-place-item {
-  padding: 0 0 16rpx;
-  border-bottom: 1rpx solid rgba(153, 57, 33, 0.08);
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10rpx;
+  width: auto;
+  max-width: 100%;
+  min-height: 56rpx;
+  padding: 10rpx 18rpx;
+  border: 1rpx solid rgba(153, 57, 33, 0.18);
+  border-radius: 999rpx;
+  background:
+    linear-gradient(135deg, rgba(255, 250, 241, 0.46), rgba(242, 230, 201, 0.2)),
+    rgba(255, 255, 255, 0.08);
   text-align: left;
-  font-size: 28rpx;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   color: #2b241d;
+  letter-spacing: 1rpx;
 }
 
-.creator-top__button {
-  width: 100%;
+.creator-place-item--hover {
+  background:
+    linear-gradient(135deg, rgba(255, 250, 241, 0.62), rgba(242, 230, 201, 0.28)),
+    rgba(255, 255, 255, 0.12);
+  border-color: rgba(153, 57, 33, 0.28);
 }
 
-.creator-bottom-action {
-  padding-top: 8rpx;
+.creator-place-item__label {
+  font-size: 28rpx;
+  line-height: 1.15;
+}
+
+.creator-place-item__icon {
+  font-size: 18rpx;
+  line-height: 1;
+  color: #993921;
+  opacity: 0.7;
 }
 
 .detail-card__title {
@@ -73,7 +112,7 @@
 }
 
 .compare-block__title {
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 30rpx;
   font-weight: 500;
   color: #2b241d;
@@ -83,7 +122,6 @@
   margin-top: 28rpx;
 }
 
-.group-list,
 .review-list {
   display: flex;
   flex-direction: column;
@@ -91,30 +129,55 @@
   margin-top: 28rpx;
 }
 
-.group-item {
-  padding-bottom: 20rpx;
-  border-bottom: 1rpx solid rgba(153, 57, 33, 0.1);
+.creator-feedback {
+  padding: 32rpx 28rpx 36rpx;
+  border: 1rpx solid rgba(189, 154, 95, 0.22);
+  border-radius: 24rpx;
+  background:
+    linear-gradient(180deg, rgba(255, 250, 241, 0.42), rgba(242, 230, 201, 0.14)),
+    rgba(255, 255, 255, 0.08);
 }
 
-.group-item__name {
-  display: block;
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
-  font-size: 34rpx;
-  font-weight: 500;
-  color: #2b241d;
+.creator-feedback__eyebrow {
+  margin-bottom: 0;
 }
 
-.group-item__meta,
 .review-item__content,
 .review-item__audience {
   display: block;
-  margin-top: 10rpx;
   font-size: 24rpx;
   line-height: 1.95;
   color: #6a5a4b;
 }
 
 .review-item {
-  padding-bottom: 22rpx;
-  border-bottom: 1rpx solid rgba(153, 57, 33, 0.08);
+  position: relative;
+  padding: 26rpx 24rpx 22rpx 28rpx;
+  border: 1rpx solid rgba(153, 57, 33, 0.08);
+  border-radius: 18rpx;
+  background: rgba(255, 250, 241, 0.36);
+}
+
+.review-item__mark {
+  position: absolute;
+  top: 12rpx;
+  left: 18rpx;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 52rpx;
+  line-height: 1;
+  color: rgba(153, 57, 33, 0.2);
+}
+
+.review-item__content {
+  position: relative;
+  z-index: 1;
+  padding-left: 16rpx;
+}
+
+.review-item__audience {
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  letter-spacing: 2rpx;
+  color: #993921;
+  opacity: 0.82;
 }

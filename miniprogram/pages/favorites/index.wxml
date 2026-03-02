@@ -1,0 +1,87 @@
+<view class="page-shell favorites-page">
+  <text class="back-link" bindtap="goBack">← 返回我的</text>
+  <text class="eyebrow">已收藏的对象</text>
+  <text class="page-title">我的收藏</text>
+  <text class="page-subtitle">按土地、人物、行程分类浏览，点击卡片可回到对应详情页。</text>
+
+  <view wx:if="{{!loggedIn}}" class="section-block paper-block">
+    <text class="section-title">登录后查看收藏</text>
+    <text class="page-subtitle favorites-empty__text">当前原型使用本地模拟登录，先到“我的”完成登录，再回来管理收藏。</text>
+  </view>
+
+  <block wx:elif="{{hasFavorites}}">
+    <view wx:if="{{favoriteDestinations.length}}" class="section-block">
+      <view class="section-head favorites-section__head">
+        <text class="section-title">收藏土地</text>
+        <text class="favorites-section__meta">{{favoriteDestinations.length}} 个</text>
+      </view>
+      <view class="card-stack">
+        <destination-card
+          wx:for="{{favoriteDestinations}}"
+          wx:key="id"
+          destination="{{item}}"
+          bind:cardtap="onDestinationTap"
+        ></destination-card>
+      </view>
+    </view>
+
+    <view wx:if="{{favoriteCreators.length}}" class="section-block">
+      <view class="section-head favorites-section__head">
+        <text class="section-title">收藏人物</text>
+        <text class="favorites-section__meta">{{favoriteCreators.length}} 位</text>
+      </view>
+      <view class="card-stack">
+        <creator-card
+          wx:for="{{favoriteCreators}}"
+          wx:key="id"
+          creator="{{item}}"
+          bind:cardtap="onCreatorTap"
+        ></creator-card>
+      </view>
+    </view>
+
+    <view wx:if="{{favoriteServices.length}}" class="section-block">
+      <view class="section-head favorites-section__head">
+        <text class="section-title">收藏行程</text>
+        <text class="favorites-section__meta">{{favoriteServices.length}} 段</text>
+      </view>
+      <view class="card-stack">
+        <service-card
+          wx:for="{{favoriteServices}}"
+          wx:key="id"
+          service="{{item}}"
+          creator-name="{{item.creatorName}}"
+          bind:cardtap="onServiceTap"
+        ></service-card>
+      </view>
+    </view>
+
+    <view wx:if="{{favoriteIdeas.length}}" class="section-block">
+      <view class="section-head favorites-section__head">
+        <text class="section-title">收藏故事</text>
+        <text class="favorites-section__meta">{{favoriteIdeas.length}} 篇</text>
+      </view>
+      <view class="favorites-idea-list">
+        <view
+          wx:for="{{favoriteIdeas}}"
+          wx:key="id"
+          class="favorites-idea-card"
+          data-slug="{{item.slug}}"
+          bindtap="onIdeaTap"
+        >
+          <text class="eyebrow">主题：{{item.theme}}</text>
+          <text class="favorites-idea-card__title">{{item.title}}</text>
+          <text class="favorites-idea-card__summary">{{item.summary}}</text>
+          <text wx:if="{{item.authorName}}" class="favorites-idea-card__meta">作者：{{item.authorName}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <view wx:else class="section-block paper-block">
+    <text class="section-title">还没有收藏内容</text>
+    <text class="page-subtitle favorites-empty__text">去目的地、人物、行程或故事详情页点一下收藏，卡片就会出现在这里。</text>
+  </view>
+</view>
+
+<app-tab-bar></app-tab-bar>

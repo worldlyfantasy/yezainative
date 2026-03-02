@@ -9,6 +9,7 @@
     "pages/idea-detail/index",
     "pages/service-detail/index",
     "pages/how-it-works/index",
+    "pages/favorites/index",
     "pages/profile/index",
     "pages/orders/index",
     "pages/order-detail/index",
@@ -23,6 +24,7 @@
     "narrative-text": "/components/yezai/narrative-text/index",
     "quote-block": "/components/yezai/quote-block/index",
     "creator-row": "/components/yezai/creator-row/index",
+    "favorite-star": "/components/yezai/favorite-star/index",
     "journey-item": "/components/yezai/journey-item/index",
     "invite-button": "/components/yezai/invite-button/index",
     "divider-line": "/components/yezai/divider-line/index"

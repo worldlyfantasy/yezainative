@@ -9,12 +9,23 @@ page {
   line-height: 1.85;
 }
 
+.title {
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  letter-spacing: 0.02em;
+}
+
+.quote {
+  font-family: "KaiTi", "STKaiti", serif;
+  opacity: 0.85;
+}
+
 view,
 text,
 button,
 navigator,
 image,
-scroll-view {
+scroll-view,
+input {
   box-sizing: border-box;
 }
 
@@ -37,7 +48,7 @@ button::after {
 
 .page-title {
   display: block;
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 60rpx;
   line-height: 1.45;
   font-weight: 500;
@@ -76,7 +87,7 @@ button::after {
 
 .section-title {
   display: block;
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 44rpx;
   line-height: 1.5;
   font-weight: 500;
@@ -185,6 +196,13 @@ button::after {
   gap: 14rpx;
 }
 
+.filter-picker-trigger {
+  display: block;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
 .filter-label {
   font-size: 24rpx;
   color: #6a5a4b;
@@ -192,6 +210,8 @@ button::after {
 
 .filter-picker,
 .search-input {
+  display: block;
+  width: 100%;
   min-height: 76rpx;
   padding: 18rpx 24rpx;
   border: 1rpx solid rgba(189, 154, 95, 0.42);

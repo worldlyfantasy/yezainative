@@ -1,20 +1,38 @@
+.theme-scroll {
+  width: 100%;
+}
+
 .theme-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18rpx 26rpx;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  padding-right: 12rpx;
 }
 
 .theme-chip {
-  padding: 0 0 8rpx;
-  border-radius: 0;
-  border: 0;
-  border-bottom: 1rpx solid transparent;
-  background: transparent;
-  font-size: 24rpx;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-height: 60rpx;
+  padding: 0 16rpx;
+  margin-right: 14rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid rgba(153, 57, 33, 0.18);
+  background: rgba(255, 250, 241, 0.34);
   color: #6a5a4b;
+  white-space: nowrap;
+}
+
+.theme-chip__text {
+  display: block;
+  font-size: 24rpx;
+  line-height: 60rpx;
 }
 
 .theme-chip--active {
-  border-color: rgba(153, 57, 33, 0.34);
+  border-color: rgba(153, 57, 33, 0.36);
+  background: rgba(209, 94, 20, 0.08);
   color: #2b241d;
 }

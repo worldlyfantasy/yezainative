@@ -14,8 +14,16 @@
   padding-top: 30rpx;
 }
 
-.destination-hero__title {
+.destination-hero__title-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
   margin-top: 8rpx;
+}
+
+.destination-hero__title {
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: 62rpx;
 }
 
@@ -33,7 +41,7 @@
 
 .presence-item__name {
   display: block;
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 34rpx;
   color: #2b241d;
 }

@@ -11,7 +11,7 @@
 }
 
 .section-title-block__title {
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 42rpx;
   line-height: 1.5;
   font-weight: 500;

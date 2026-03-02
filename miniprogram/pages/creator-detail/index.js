@@ -1,10 +1,12 @@
 const { getCreatorDetailData } = require("../../services/content");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
-const { showOfflineOrderNotice } = require("../../utils/offline");
+const { toggleFavorite } = require("../../services/favorites");
+const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
 
 Page({
   data: {
     creator: null,
+    favoriteNoticeState: "",
     creatorDestinations: [],
     relatedServices: [],
     groupServices: []
@@ -26,12 +28,12 @@ Page({
     this.setData(payload);
   },
 
-  goBack() {
-    goTopLevel(TOP_LEVEL_ROUTES.creators);
+  onUnload() {
+    clearFavoriteNotice(this, "favoriteNoticeState", true);
   },
 
-  handleOfflineOrder() {
-    showOfflineOrderNotice();
+  goBack() {
+    goTopLevel(TOP_LEVEL_ROUTES.creators);
   },
 
   onServiceTap(event) {
@@ -44,6 +46,25 @@ Page({
     const slug = event.currentTarget.dataset.slug;
     wx.navigateTo({
       url: `/pages/destination-detail/index?slug=${slug}`
+    });
+  },
+
+  toggleFavorite() {
+    const favorited = toggleFavorite("creators", this.data.creator.slug);
+    this.setData({
+      "creator.isFavorited": favorited
+    });
+    if (favorited) {
+      showFavoriteNotice(this);
+      return;
+    }
+
+    clearFavoriteNotice(this);
+  },
+
+  goFavorites() {
+    wx.navigateTo({
+      url: "/pages/favorites/index"
     });
   }
 });

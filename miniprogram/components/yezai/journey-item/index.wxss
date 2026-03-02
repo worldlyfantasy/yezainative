@@ -41,7 +41,7 @@
 
 .journey-item__title {
   display: block;
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 38rpx;
   line-height: 1.55;
   font-weight: 500;

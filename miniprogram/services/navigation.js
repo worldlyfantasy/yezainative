@@ -43,6 +43,7 @@ function resolveTopLevelRoute(route) {
 
   if (
     normalized.indexOf("pages/profile/") === 0 ||
+    normalized.indexOf("pages/favorites/") === 0 ||
     normalized.indexOf("pages/orders/") === 0 ||
     normalized.indexOf("pages/order-detail/") === 0 ||
     normalized.indexOf("pages/payment-result/") === 0

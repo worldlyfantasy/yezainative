@@ -13,9 +13,9 @@ const {
   getUniqueServiceTypes,
   getUniqueServiceStyles
 } = require("../mock/helpers");
-const { homeSteps, howItWorksFlows } = require("../mock/static-content");
+const { howItWorksFlows } = require("../mock/static-content");
 const { parseIdeaBody } = require("../utils/content");
-const { isFavorited } = require("./favorites");
+const { isFavorited, getFavoriteState } = require("./favorites");
 
 function buildOptionList(items, mode) {
   return [{ label: "全部", value: "" }].concat(
@@ -37,6 +37,31 @@ function buildOptionList(items, mode) {
 
 function getHomePageData() {
   return {
+    heroSlides: [
+      {
+        id: "hero-aba-presence",
+        variant: "photo",
+        image: "https://picsum.photos/seed/yezai-landing/1600/900",
+        mark: "野哉",
+        title: "山风缓下来，人才听见远处的路。",
+        desc: "先靠近一片土地，再靠近在那里生活的人。",
+        targetIdeaSlug: "aba-presence"
+      },
+      {
+        id: "hero-brand",
+        variant: "photo",
+        tone: "muted",
+        cloudFileID:
+          "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/hero.png",
+        image:
+          "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/brandasset/hero.png?sign=9865caf7bf0857f23ca36b8b3c4e5a21&t=1772431222",
+        showMask: true,
+        mark: "",
+        title: "",
+        desc: "",
+        subDesc: ""
+      }
+    ],
     featuredCreators: creators.slice(0, 3),
     featuredDestinations: destinations.slice(0, 4),
     featuredIdeas: ideas.slice(0, 3).map((idea) => {
@@ -44,8 +69,7 @@ function getHomePageData() {
       return Object.assign({}, idea, {
         authorName: author ? author.name : ""
       });
-    }),
-    steps: homeSteps
+    })
   };
 }
 
@@ -74,7 +98,9 @@ function getCreatorDetailData(slug) {
   const groupServices = relatedServices.filter((service) => creator.groupIds.includes(service.id));
 
   return {
-    creator,
+    creator: Object.assign({}, creator, {
+      isFavorited: isFavorited("creators", creator.slug)
+    }),
     creatorDestinations,
     relatedServices,
     groupServices
@@ -167,7 +193,10 @@ function getServiceDetailData(slug) {
 
   const creator = creators.find((item) => item.id === service.creatorId) || null;
   const relatedDestinations = destinations.filter((item) => service.destinationSlugs.includes(item.slug));
-  const heroCover = relatedDestinations[0] ? relatedDestinations[0].cover : "";
+  const heroCover = service.cover || (relatedDestinations[0] ? relatedDestinations[0].cover : "");
+  const photoGallery = service.gallery && service.gallery.length
+    ? service.gallery
+    : (heroCover ? [heroCover] : []);
 
   return {
     service: Object.assign({}, service, {
@@ -175,13 +204,41 @@ function getServiceDetailData(slug) {
     }),
     creator,
     relatedDestinations,
-    heroCover
+    heroCover,
+    photoGallery
   };
 }
 
 function getHowItWorksData() {
   return {
     flows: howItWorksFlows
+  };
+}
+
+function getFavoritesPageData() {
+  const favoriteState = getFavoriteState();
+
+  return {
+    favoriteDestinations: destinations.filter((destination) => favoriteState.destinations[destination.slug]),
+    favoriteCreators: creators.filter((creator) => favoriteState.creators[creator.slug]),
+    favoriteServices: services
+      .filter((service) => favoriteState.services[service.slug])
+      .map((service) => {
+        const creator = creators.find((item) => item.id === service.creatorId);
+
+        return Object.assign({}, service, {
+          creatorName: creator ? creator.name : ""
+        });
+      }),
+    favoriteIdeas: ideas
+      .filter((idea) => favoriteState.ideas[idea.slug])
+      .map((idea) => {
+        const author = creators.find((creator) => creator.id === idea.authorId);
+
+        return Object.assign({}, idea, {
+          authorName: author ? author.name : ""
+        });
+      })
   };
 }
 
@@ -194,5 +251,6 @@ module.exports = {
   getIdeasPageData,
   getIdeaDetailData,
   getServiceDetailData,
-  getHowItWorksData
+  getHowItWorksData,
+  getFavoritesPageData
 };

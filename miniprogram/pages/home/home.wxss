@@ -4,12 +4,23 @@
 
 .hero {
   position: relative;
-  min-height: 820rpx;
+  height: 820rpx;
   overflow: hidden;
 }
 
+.hero__swiper,
+.hero__slide {
+  width: 100%;
+  height: 100%;
+}
+
+.hero__slide {
+  background: #e7dece;
+}
+
 .hero__image,
-.hero__mask {
+.hero__mask,
+.hero__art {
   position: absolute;
   top: 0;
   right: 0;
@@ -20,7 +31,77 @@
 }
 
 .hero__mask {
-  background: linear-gradient(180deg, rgba(21, 15, 11, 0.08), rgba(21, 15, 11, 0.48) 82%);
+  background: linear-gradient(180deg, rgba(21, 15, 11, 0.08), rgba(21, 15, 11, 0.3) 82%);
+}
+
+.hero__slide--muted .hero__image {
+  opacity: 1;
+}
+
+.hero__slide--muted .hero__mask {
+  background:
+    linear-gradient(180deg, rgba(255, 251, 243, 0.03), rgba(247, 235, 211, 0.08) 46%, rgba(121, 78, 43, 0.05) 100%),
+    linear-gradient(90deg, rgba(255, 248, 234, 0.03), rgba(255, 248, 234, 0));
+}
+
+.hero__mask--art {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 244, 0.06), rgba(58, 34, 18, 0.18) 76%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+}
+
+.hero__art {
+  background:
+    linear-gradient(180deg, #f2ead7 0%, #ece3d4 58%, #ede6da 100%);
+}
+
+.hero__art-band {
+  position: absolute;
+  left: -8%;
+  width: 116%;
+  border-radius: 999rpx;
+  transform: rotate(-6deg);
+}
+
+.hero__art-band--top {
+  top: -40rpx;
+  height: 260rpx;
+  background:
+    linear-gradient(180deg, rgba(241, 208, 108, 0.94), rgba(233, 187, 80, 0.9));
+}
+
+.hero__art-band--middle {
+  top: 300rpx;
+  left: 40%;
+  width: 92%;
+  height: 300rpx;
+  background:
+    linear-gradient(180deg, rgba(198, 189, 176, 0.46), rgba(215, 206, 193, 0.64));
+  transform: rotate(-10deg);
+}
+
+.hero__art-band--bottom {
+  right: -12%;
+  bottom: -120rpx;
+  left: auto;
+  width: 78%;
+  height: 240rpx;
+  background:
+    linear-gradient(180deg, rgba(206, 124, 69, 0.9), rgba(170, 86, 40, 0.94));
+  transform: rotate(-10deg);
+}
+
+.hero__art-logo {
+  position: absolute;
+  top: 116rpx;
+  left: 58rpx;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 120rpx;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 4rpx;
+  color: #9e3820;
+  transform: rotate(-14deg);
 }
 
 .hero__content {
@@ -29,7 +110,7 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  min-height: 820rpx;
+  height: 100%;
   padding: 72rpx 44rpx;
 }
 
@@ -43,7 +124,7 @@
 .hero__title {
   margin-top: 18rpx;
   max-width: 560rpx;
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 68rpx;
   line-height: 1.52;
   font-weight: 500;
@@ -59,15 +140,20 @@
   color: rgba(242, 230, 201, 0.86);
 }
 
-.home-join__actions {
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-  margin-top: 32rpx;
+.hero__slide--art .hero__mark {
+  color: rgba(123, 53, 24, 0.72);
 }
 
-.home__wide-button {
-  width: 100%;
+.hero__slide--art .hero__title {
+  color: #3b2a1f;
+}
+
+.hero__slide--art .hero__desc {
+  color: rgba(70, 52, 41, 0.9);
+}
+
+.hero__desc--secondary {
+  margin-top: 6rpx;
 }
 
 .home-note {
@@ -80,53 +166,4 @@
   font-size: 30rpx;
   line-height: 2;
   color: #5e5145;
-}
-
-.home-simple-head {
-  align-items: flex-start;
-}
-
-.home-inline-button {
-  min-height: 68rpx;
-  padding: 0 22rpx;
-  font-size: 24rpx;
-}
-
-.step-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20rpx;
-}
-
-.step-item {
-  padding-left: 24rpx;
-  border-left: 3rpx solid rgba(153, 57, 33, 0.24);
-}
-
-.step-item__title {
-  display: block;
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
-  font-size: 32rpx;
-  font-weight: 500;
-  color: #2b241d;
-}
-
-.step-item__detail {
-  display: block;
-  margin-top: 12rpx;
-  font-size: 26rpx;
-  line-height: 1.95;
-  color: #6a5a4b;
-}
-
-.home-join {
-  padding: 0 0 12rpx;
-  border: 0;
-  border-top: 1rpx solid rgba(153, 57, 33, 0.14);
-  border-radius: 0;
-  background: transparent;
-}
-
-.home-join__desc {
-  margin-top: 16rpx;
 }

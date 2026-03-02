@@ -8,8 +8,16 @@
   border-bottom: 1rpx solid rgba(153, 57, 33, 0.14);
 }
 
-.article-card__title {
+.article-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
   margin-top: 8rpx;
+}
+
+.article-card__title {
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: 62rpx;
 }
 
@@ -25,7 +33,7 @@
 }
 
 .article-block--heading {
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 36rpx;
   line-height: 1.8;
   font-weight: 500;

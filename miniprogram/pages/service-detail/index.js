@@ -1,12 +1,16 @@
 const { getServiceDetailData } = require("../../services/content");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
 const { toggleFavorite } = require("../../services/favorites");
+const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
 
 Page({
   data: {
     service: null,
+    favoriteNoticeState: "",
     creator: null,
-    relatedDestinations: []
+    relatedDestinations: [],
+    heroCover: "",
+    photoGallery: []
   },
 
   onLoad(options) {
@@ -23,6 +27,10 @@ Page({
       return;
     }
     this.setData(payload);
+  },
+
+  onUnload() {
+    clearFavoriteNotice(this, "favoriteNoticeState", true);
   },
 
   goBack() {
@@ -59,6 +67,18 @@ Page({
     const favorited = toggleFavorite("services", this.data.service.slug);
     this.setData({
       "service.isFavorited": favorited
+    });
+    if (favorited) {
+      showFavoriteNotice(this);
+      return;
+    }
+
+    clearFavoriteNotice(this);
+  },
+
+  goFavorites() {
+    wx.navigateTo({
+      url: "/pages/favorites/index"
     });
   }
 });

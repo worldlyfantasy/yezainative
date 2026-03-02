@@ -24,9 +24,17 @@
   flex: 1;
 }
 
+.creator-card__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
 .creator-card__name {
   display: block;
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  flex: 0 0 auto;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 40rpx;
   line-height: 1.45;
   font-weight: 500;
@@ -44,23 +52,19 @@
 .creator-card__tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 8rpx 16rpx;
+  justify-content: flex-end;
+  gap: 10rpx 12rpx;
+  flex: 1;
+  padding-top: 6rpx;
 }
 
 .creator-card__tag {
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  font-size: 22rpx;
-  color: #6a5a4b;
-}
-
-.creator-card__foot {
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-  padding-top: 6rpx;
-  border-top: 0;
-  font-size: 22rpx;
-  color: #6a5a4b;
+  padding: 6rpx 14rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid rgba(153, 57, 33, 0.2);
+  background: rgba(189, 154, 95, 0.1);
+  font-size: 20rpx;
+  line-height: 1.2;
+  letter-spacing: 1rpx;
+  color: #8a5a38;
 }

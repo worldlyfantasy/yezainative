@@ -11,9 +11,7 @@ Page({
   },
 
   onSearchInput(event) {
-    this.setData({
-      searchValue: event.detail.value
-    });
+    this.applySearch(event.detail.value);
   },
 
   onSearch() {

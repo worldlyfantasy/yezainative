@@ -1,5 +1,8 @@
-.search-button {
-  width: 160rpx;
-  border-radius: 999rpx;
-  min-height: 76rpx;
+.destination-search-input {
+  width: 92%;
+  margin: 0 auto;
+  min-height: 68rpx;
+  padding: 14rpx 22rpx;
+  border-radius: 34rpx;
+  font-size: 24rpx;
 }

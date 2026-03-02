@@ -1,3 +1,22 @@
 .page-shell {
   padding-bottom: 196rpx;
 }
+
+.creators-filter-shell {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.creator-filter-item {
+  flex: 1;
+  min-width: 0;
+  gap: 10rpx;
+}
+
+.creator-filter-picker {
+  min-height: 64rpx;
+  padding: 14rpx 20rpx;
+  border-radius: 32rpx;
+  font-size: 24rpx;
+}

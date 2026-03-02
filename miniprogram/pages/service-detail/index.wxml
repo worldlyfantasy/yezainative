@@ -1,15 +1,35 @@
 <view wx:if="{{service}}" class="page-shell">
   <text class="back-link" bindtap="goBack">← 返回目的地</text>
 
+  <view wx:if="{{heroCover}}" class="section-block service-gallery">
+    <image class="service-gallery__hero" src="{{heroCover}}" mode="aspectFill"></image>
+    <scroll-view wx:if="{{photoGallery.length}}" class="service-gallery__strip" scroll-x="true" enable-flex="true">
+      <view class="service-gallery__row">
+        <image
+          wx:for="{{photoGallery}}"
+          wx:key="*this"
+          class="service-gallery__thumb"
+          src="{{item}}"
+          mode="aspectFill"
+        ></image>
+      </view>
+    </scroll-view>
+  </view>
+
   <view class="section-block paper-block">
     <view class="service-hero">
       <view class="service-hero__content">
         <text class="eyebrow">{{service.type}}</text>
-        <text class="page-title service-hero__title">{{service.name}}</text>
-        <text class="page-subtitle">{{service.summary}}</text>
-        <view class="action-row">
-          <button class="ghost-button" bindtap="toggleFavorite">{{service.isFavorited ? '已收藏' : '收藏路线'}}</button>
+        <view class="service-hero__title-row">
+          <text class="page-title service-hero__title">{{service.name}}</text>
+          <favorite-star
+            favorited="{{service.isFavorited}}"
+            notice-state="{{favoriteNoticeState}}"
+            bind:toggle="toggleFavorite"
+            bind:navigatefavorites="goFavorites"
+          ></favorite-star>
         </view>
+        <text class="page-subtitle">{{service.summary}}</text>
       </view>
       <view class="service-hero__meta">
         <text class="service-hero__price">{{service.price}}</text>

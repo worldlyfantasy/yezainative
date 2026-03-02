@@ -28,7 +28,7 @@
 }
 
 .idea-card__title {
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 40rpx;
   line-height: 1.55;
   font-weight: 500;
@@ -36,7 +36,7 @@
 }
 
 .idea-card__summary {
-  font-size: 27rpx;
+  font-size: 24rpx;
   line-height: 2;
   color: #6a5a4b;
 }

@@ -26,7 +26,7 @@
 }
 
 .order-card__name {
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 34rpx;
   line-height: 1.5;
   font-weight: 500;

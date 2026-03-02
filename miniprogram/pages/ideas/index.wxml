@@ -3,17 +3,19 @@
   <text class="page-title">旅行灵感</text>
   <text class="page-subtitle">这些文章来自创作者与旅人共同写下的现场笔记，远离空洞宣传语。</text>
 
-  <view class="section-block theme-row">
-    <button
-      wx:for="{{themes}}"
-      wx:key="*this"
-      class="theme-chip {{currentTheme === item ? 'theme-chip--active' : ''}}"
-      data-theme="{{item}}"
-      bindtap="toggleTheme"
-    >
-      {{item}}
-    </button>
-  </view>
+  <scroll-view class="section-block theme-scroll" scroll-x="true" show-scrollbar="false">
+    <view class="theme-row">
+      <view
+        wx:for="{{themes}}"
+        wx:key="*this"
+        class="theme-chip {{currentTheme === item ? 'theme-chip--active' : ''}}"
+        data-theme="{{item}}"
+        bindtap="toggleTheme"
+      >
+        <text class="theme-chip__text">{{item}}</text>
+      </view>
+    </view>
+  </scroll-view>
 
   <view class="section-block">
     <view wx:if="{{ideas.length}}" class="card-stack">

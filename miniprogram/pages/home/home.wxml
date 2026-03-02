@@ -1,24 +1,48 @@
 <view class="home-page">
   <view class="hero">
-    <image class="hero__image" src="https://picsum.photos/seed/yezai-landing/1600/900" mode="aspectFill"></image>
-    <view class="hero__mask"></view>
-    <view class="hero__content">
-      <text class="hero__mark">野哉</text>
-      <text class="hero__title">山风缓下来，人才听见远处的路。</text>
-      <text class="hero__desc">先靠近一片土地，再靠近在那里生活的人。</text>
-    </view>
+    <swiper
+      class="hero__swiper"
+      indicator-dots="{{true}}"
+      autoplay="{{true}}"
+      circular="{{true}}"
+      interval="1000000"
+      duration="1000"
+    >
+      <swiper-item wx:for="{{heroSlides}}" wx:key="id">
+        <view class="hero__slide hero__slide--{{item.variant}} {{item.tone === 'muted' ? 'hero__slide--muted' : ''}}" bindtap="onHeroTap" data-slug="{{item.targetIdeaSlug}}">
+          <block wx:if="{{item.variant === 'photo'}}">
+            <image class="hero__image" src="{{item.image}}" mode="aspectFill" binderror="onHeroImageError" data-src="{{item.image}}" data-id="{{item.id}}"></image>
+            <view wx:if="{{item.showMask !== false}}" class="hero__mask"></view>
+          </block>
+          <block wx:else>
+            <view class="hero__art">
+              <view class="hero__art-band hero__art-band--top"></view>
+              <view class="hero__art-band hero__art-band--middle"></view>
+              <view class="hero__art-band hero__art-band--bottom"></view>
+              <text class="hero__art-logo">野哉</text>
+            </view>
+            <view class="hero__mask hero__mask--art"></view>
+          </block>
+          <view wx:if="{{item.mark || item.title || item.desc || item.subDesc}}" class="hero__content">
+            <text wx:if="{{item.mark}}" class="hero__mark">{{item.mark}}</text>
+            <text class="hero__title">{{item.title}}</text>
+            <text class="hero__desc">{{item.desc}}</text>
+            <text wx:if="{{item.subDesc}}" class="hero__desc hero__desc--secondary">{{item.subDesc}}</text>
+          </view>
+        </view>
+      </swiper-item>
+    </swiper>
   </view>
 
   <view class="page-shell">
     <view class="home-note">
-      <text class="home-note__text">这里不是商品货架，而是一册关于地方、同行者与路途节奏的田野手记。</text>
+      <text class="home-note__text">看见那些沉淀着在地经验、有温度的路线\n为每一位奔赴山海的旅行者\n照亮一条通往真实旅途的路径</text>
     </view>
 
     <view class="section-block">
       <view class="section-head">
         <view>
-          <text class="eyebrow">真实创作者网络</text>
-          <text class="section-title">精选创作者</text>
+          <text class="eyebrow">精选创作者</text>
         </view>
         <text class="section-link" bindtap="goCreators">查看全部 →</text>
       </view>
@@ -30,8 +54,7 @@
     <view class="section-block">
       <view class="section-head">
         <view>
-          <text class="eyebrow">在地风景</text>
-          <text class="section-title">精选目的地</text>
+          <text class="eyebrow">精选目的地</text>
         </view>
         <text class="section-link" bindtap="goDestinations">浏览目的地 →</text>
       </view>
@@ -43,39 +66,12 @@
     <view class="section-block">
       <view class="section-head">
         <view>
-          <text class="eyebrow">灵感与长文</text>
-          <text class="section-title">旅行灵感</text>
+          <text class="eyebrow">旅行文学</text>
         </view>
         <text class="section-link" bindtap="goIdeas">阅读更多 →</text>
       </view>
       <view class="card-stack">
         <idea-card wx:for="{{featuredIdeas}}" wx:key="id" idea="{{item}}" author-name="{{item.authorName}}" bind:cardtap="onIdeaTap"></idea-card>
-      </view>
-    </view>
-
-    <view class="section-block paper-block">
-      <view class="section-head home-simple-head">
-        <view>
-          <text class="eyebrow">托管机制</text>
-          <text class="section-title">如何运作</text>
-        </view>
-        <button class="primary-button home-inline-button" bindtap="handleOfflineOrder">离线模式说明</button>
-      </view>
-      <view class="step-list">
-        <view wx:for="{{steps}}" wx:key="title" class="step-item">
-          <text class="step-item__title">{{item.title}}</text>
-          <text class="step-item__detail">{{item.detail}}</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="section-block home-join">
-      <text class="eyebrow">成为创作者</text>
-      <text class="section-title">提交合作意向</text>
-      <text class="page-subtitle home-join__desc">野哉欢迎常驻在地、坚持真实表达的创作者加入。PHASE 1 仅保留离线展示，后续再接入正式申请链路。</text>
-      <view class="home-join__actions">
-        <button class="primary-button home__wide-button" bindtap="handleOfflineOrder">离线演示，暂不开放申请</button>
-        <button class="outline-button home__wide-button" bindtap="goHowItWorks">了解审核流程</button>
       </view>
     </view>
   </view>

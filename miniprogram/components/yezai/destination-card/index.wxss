@@ -16,12 +16,14 @@
 
 .destination-card__head {
   display: flex;
-  flex-direction: column;
-  gap: 10rpx;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
 }
 
 .destination-card__name {
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  flex: 0 0 auto;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 42rpx;
   line-height: 1.45;
   font-weight: 500;
@@ -29,14 +31,19 @@
 }
 
 .destination-card__stats {
-  font-size: 22rpx;
-  color: #6a5a4b;
+  flex: 1;
+  padding-top: 8rpx;
+  font-size: 20rpx;
+  line-height: 1.5;
+  text-align: right;
+  letter-spacing: 1rpx;
+  color: #8a5a38;
 }
 
 .destination-card__desc {
   display: block;
   margin-top: 18rpx;
-  font-size: 27rpx;
+  font-size: 24rpx;
   line-height: 1.95;
   color: #6a5a4b;
 }

@@ -1,11 +1,49 @@
+.service-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.service-gallery__hero {
+  display: block;
+  width: 100%;
+  height: 520rpx;
+  border-radius: 18rpx;
+}
+
+.service-gallery__strip {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.service-gallery__row {
+  display: inline-flex;
+  gap: 16rpx;
+}
+
+.service-gallery__thumb {
+  flex: 0 0 auto;
+  width: 220rpx;
+  height: 168rpx;
+  border-radius: 12rpx;
+}
+
 .service-hero {
   display: flex;
   flex-direction: column;
   gap: 24rpx;
 }
 
-.service-hero__title {
+.service-hero__title-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
   margin-top: 8rpx;
+}
+
+.service-hero__title {
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: 62rpx;
 }
 
@@ -47,7 +85,7 @@
 .service-creator__name {
   display: block;
   margin-top: 16rpx;
-  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 36rpx;
   font-weight: 500;
   color: #2b241d;

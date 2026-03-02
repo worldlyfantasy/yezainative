@@ -1,5 +1,19 @@
+function buildServiceMockImage(seed, width, height) {
+  return `https://picsum.photos/seed/${seed}/${width}/${height}`;
+}
 
-const services = [
+function buildServiceMedia(slug) {
+  return {
+    cover: buildServiceMockImage(`yezai-service-${slug}-cover`, 1200, 900),
+    gallery: [
+      buildServiceMockImage(`yezai-service-${slug}-detail-1`, 1200, 900),
+      buildServiceMockImage(`yezai-service-${slug}-detail-2`, 1200, 900),
+      buildServiceMockImage(`yezai-service-${slug}-detail-3`, 1200, 900)
+    ]
+  };
+}
+
+const rawServices = [
   {
     id: "svc-ridge-journal",
     slug: "ridge-journal",
@@ -229,5 +243,9 @@ const services = [
     styles: ["慢旅行", "徒步自然"]
   }
 ];
+
+const services = rawServices.map((service) =>
+  Object.assign({}, service, buildServiceMedia(service.slug))
+);
 
 module.exports = { services };

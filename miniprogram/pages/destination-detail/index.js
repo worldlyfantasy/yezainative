@@ -1,10 +1,12 @@
 const { getDestinationDetailData } = require("../../services/content");
 const { setPendingCreatorFilter, goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
 const { toggleFavorite } = require("../../services/favorites");
+const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
 
 Page({
   data: {
     destination: null,
+    favoriteNoticeState: "",
     typeOptions: [],
     styleOptions: [],
     typeLabels: [],
@@ -30,6 +32,10 @@ Page({
     }
     this.setData(payload);
     this.applyFilters();
+  },
+
+  onUnload() {
+    clearFavoriteNotice(this, "favoriteNoticeState", true);
   },
 
   applyFilters() {
@@ -91,6 +97,19 @@ Page({
     const favorited = toggleFavorite("destinations", this.data.destination.slug);
     this.setData({
       "destination.isFavorited": favorited
+    });
+
+    if (favorited) {
+      showFavoriteNotice(this);
+      return;
+    }
+
+    clearFavoriteNotice(this);
+  },
+
+  goFavorites() {
+    wx.navigateTo({
+      url: "/pages/favorites/index"
     });
   }
 });

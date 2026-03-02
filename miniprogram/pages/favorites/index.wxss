@@ -1,0 +1,58 @@
+.favorites-page {
+  padding-bottom: 120rpx;
+}
+
+.favorites-section__head {
+  margin-bottom: 20rpx;
+}
+
+.favorites-section__meta {
+  display: block;
+  padding-top: 12rpx;
+  font-size: 22rpx;
+  letter-spacing: 2rpx;
+  color: #8a5a38;
+}
+
+.favorites-empty__text {
+  margin-top: 18rpx;
+}
+
+.favorites-idea-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.favorites-idea-card {
+  padding: 28rpx;
+  border-radius: 24rpx;
+  border: 1rpx solid rgba(153, 57, 33, 0.1);
+  background: rgba(255, 250, 241, 0.48);
+}
+
+.favorites-idea-card__title {
+  display: block;
+  margin-top: 6rpx;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 36rpx;
+  line-height: 1.5;
+  font-weight: 500;
+  color: #2b241d;
+}
+
+.favorites-idea-card__summary,
+.favorites-idea-card__meta {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 24rpx;
+  line-height: 1.9;
+  color: #6a5a4b;
+}
+
+.favorites-idea-card__meta {
+  margin-top: 16rpx;
+  font-size: 22rpx;
+  letter-spacing: 1rpx;
+  color: #993921;
+}

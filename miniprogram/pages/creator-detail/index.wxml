@@ -3,15 +3,23 @@
 
   <view class="section-block creator-opening">
     <view class="creator-top">
-      <image class="creator-top__avatar" src="{{creator.avatar}}" mode="aspectFill"></image>
       <view class="creator-top__body">
         <text class="eyebrow">创作者</text>
-        <text class="page-title creator-top__name">{{creator.name}}</text>
+        <view class="creator-top__title-row">
+          <text class="page-title creator-top__name">{{creator.name}}</text>
+          <favorite-star
+            favorited="{{creator.isFavorited}}"
+            notice-state="{{favoriteNoticeState}}"
+            bind:toggle="toggleFavorite"
+            bind:navigatefavorites="goFavorites"
+          ></favorite-star>
+        </view>
         <text class="page-subtitle creator-top__stance">{{creator.stance}}</text>
         <view class="creator-top__tags">
           <text wx:for="{{creator.tags}}" wx:key="*this" class="creator-top__descriptor">{{item}}</text>
         </view>
       </view>
+      <image class="creator-top__avatar" src="{{creator.avatar}}" mode="aspectFill"></image>
     </view>
   </view>
 
@@ -25,65 +33,43 @@
   <view class="section-block paper-block">
     <text class="section-title">常在这些地方停留</text>
     <view class="creator-place-list">
-      <button
+      <view
         wx:for="{{creatorDestinations}}"
         wx:key="id"
         class="creator-place-item"
+        hover-class="creator-place-item--hover"
         data-slug="{{item.slug}}"
         bindtap="onDestinationTap"
       >
-        {{item.name}}
-      </button>
+        <text class="creator-place-item__label">{{item.name}}</text>
+        <text class="creator-place-item__icon">↗</text>
+      </view>
     </view>
   </view>
 
   <view class="section-block">
     <text class="section-title">同行的旅程</text>
     <view class="card-stack creator-detail__list">
-      <service-card wx:for="{{relatedServices}}" wx:key="id" service="{{item}}" creator-name="{{item.creatorName}}" bind:cardtap="onServiceTap"></service-card>
+      <service-card
+        wx:for="{{relatedServices}}"
+        wx:key="id"
+        service="{{item}}"
+        hide-duration-in-price="{{true}}"
+        bind:cardtap="onServiceTap"
+      ></service-card>
     </view>
   </view>
 
-  <view wx:if="{{groupServices.length}}" class="section-block">
-    <text class="section-title">目前可约的同行</text>
-    <view class="group-list">
-      <view wx:for="{{groupServices}}" wx:key="id" class="group-item">
-        <text class="group-item__name">{{item.name}}</text>
-        <text class="group-item__meta">节奏：{{item.durationTag}} · 费用：{{item.price}}</text>
-      </view>
-    </view>
-  </view>
-
-  <view class="section-block paper-block">
-    <text class="section-title detail-card__title">适合怎样的同行节奏</text>
-    <view class="compare-block">
-      <view class="compare-block__col">
-        <text class="compare-block__title">适合</text>
-        <view class="detail-list">
-          <text wx:for="{{creator.suitable}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
-        </view>
-      </view>
-      <view class="compare-block__col">
-        <text class="compare-block__title">不适合</text>
-        <view class="detail-list">
-          <text wx:for="{{creator.notSuitable}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
-        </view>
-      </view>
-    </view>
-  </view>
-
-  <view class="section-block">
+  <view class="section-block creator-feedback">
+    <text class="eyebrow creator-feedback__eyebrow">队员反馈</text>
     <text class="section-title">旅人回声</text>
     <view class="review-list">
       <view wx:for="{{creator.reviews}}" wx:key="content" class="review-item">
+        <text class="review-item__mark">“</text>
         <text class="review-item__content">{{item.content}}</text>
-        <text class="review-item__audience">— {{item.audience}}</text>
+        <text class="review-item__audience">来自 {{item.audience}}</text>
       </view>
     </view>
-  </view>
-
-  <view class="section-block creator-bottom-action">
-    <button class="primary-button creator-top__button" bindtap="handleOfflineOrder">邀约同行（离线演示）</button>
   </view>
 </view>
 

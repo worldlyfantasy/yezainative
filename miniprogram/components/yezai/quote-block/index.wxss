@@ -5,7 +5,9 @@
 
 .quote-block__text {
   display: block;
+  font-family: "KaiTi", "STKaiti", serif;
   font-size: 28rpx;
   line-height: 2.05;
   color: #6a5a4b;
+  opacity: 0.85;
 }

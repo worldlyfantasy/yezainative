@@ -5,11 +5,16 @@
     <image class="destination-hero__cover" src="{{destination.cover}}" mode="aspectFill"></image>
     <view class="destination-hero__body">
       <text class="eyebrow">目的地</text>
-      <text class="page-title destination-hero__title">{{destination.name}}</text>
-      <text class="page-subtitle">{{destination.description}}</text>
-      <view class="action-row">
-        <button class="ghost-button" bindtap="toggleFavorite">{{destination.isFavorited ? '已收藏' : '收藏土地'}}</button>
+      <view class="destination-hero__title-row">
+        <text class="page-title destination-hero__title">{{destination.name}}</text>
+        <favorite-star
+          favorited="{{destination.isFavorited}}"
+          notice-state="{{favoriteNoticeState}}"
+          bind:toggle="toggleFavorite"
+          bind:navigatefavorites="goFavorites"
+        ></favorite-star>
       </view>
+      <text class="page-subtitle">{{destination.description}}</text>
     </view>
   </view>
 
@@ -34,13 +39,25 @@
     <text class="section-title destination-filter__title">想沿着怎样的节奏靠近</text>
     <view class="filter-item">
       <text class="filter-label">服务类型</text>
-      <picker mode="selector" range="{{typeLabels}}" value="{{typeIndex}}" bindchange="onTypeChange">
+      <picker
+        class="filter-picker-trigger"
+        mode="selector"
+        range="{{typeLabels}}"
+        value="{{typeIndex}}"
+        bindchange="onTypeChange"
+      >
         <view class="filter-picker">{{typeLabels[typeIndex]}}</view>
       </picker>
     </view>
     <view class="filter-item">
       <text class="filter-label">旅行风格</text>
-      <picker mode="selector" range="{{styleLabels}}" value="{{styleIndex}}" bindchange="onStyleChange">
+      <picker
+        class="filter-picker-trigger"
+        mode="selector"
+        range="{{styleLabels}}"
+        value="{{styleIndex}}"
+        bindchange="onStyleChange"
+      >
         <view class="filter-picker">{{styleLabels[styleIndex]}}</view>
       </picker>
     </view>

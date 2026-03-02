@@ -1,4 +1,5 @@
 <view class="service-card" bindtap="handleTap">
+  <image wx:if="{{service.cover}}" class="service-card__cover" src="{{service.cover}}" mode="aspectFill"></image>
   <view class="service-card__meta">
     <text class="service-card__type">{{service.type}}</text>
     <text class="service-card__duration">{{service.durationTag}}</text>
@@ -7,7 +8,7 @@
   <text class="service-card__summary">{{service.summary}}</text>
   <text wx:if="{{creatorName}}" class="service-card__creator">由 {{creatorName}}</text>
   <view class="service-card__foot">
-    <text class="service-card__price">{{service.price}}</text>
-    <text class="service-card__link">翻看这段路 →</text>
+    <text class="service-card__price">{{resolvedPrice}}</text>
+    <text class="service-card__link">{{linkText}} →</text>
   </view>
 </view>

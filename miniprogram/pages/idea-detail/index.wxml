@@ -3,11 +3,16 @@
 
   <view class="section-block article-card">
     <text class="eyebrow">主题：{{idea.theme}}</text>
-    <text class="page-title article-card__title">{{idea.title}}</text>
-    <text class="page-subtitle">{{idea.summary}}</text>
-    <view class="action-row">
-      <button class="ghost-button" bindtap="toggleFavorite">{{idea.isFavorited ? '已收藏' : '收藏故事'}}</button>
+    <view class="article-card__title-row">
+      <text class="page-title article-card__title">{{idea.title}}</text>
+      <favorite-star
+        favorited="{{idea.isFavorited}}"
+        notice-state="{{favoriteNoticeState}}"
+        bind:toggle="toggleFavorite"
+        bind:navigatefavorites="goFavorites"
+      ></favorite-star>
     </view>
+    <text class="page-subtitle">{{idea.summary}}</text>
 
     <view class="article-blocks">
       <block wx:for="{{blocks}}" wx:key="id">

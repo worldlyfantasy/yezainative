@@ -1,0 +1,27 @@
+<view class="favorite-star">
+  <view
+    class="favorite-star__button {{favorited ? 'favorite-star__button--active' : ''}}"
+    bindtap="handleToggle"
+  >
+    <view class="favorite-star__leaf {{favorited ? 'favorite-star__leaf--active' : ''}}">
+      <view class="favorite-star__leaf-shape"></view>
+      <view class="favorite-star__leaf-vein"></view>
+    </view>
+  </view>
+
+  <view
+    wx:if="{{noticeState}}"
+    class="favorite-star__notice favorite-star__notice--{{noticeState}}"
+  >
+    <view class="favorite-star__notice-main">
+      <view class="favorite-star__notice-check">
+        <text class="favorite-star__notice-check-icon">✓</text>
+      </view>
+      <text class="favorite-star__notice-label">收藏成功</text>
+    </view>
+    <view class="favorite-star__notice-action" catchtap="handleNavigateFavorites">
+      <text class="favorite-star__notice-link">进入我的收藏</text>
+      <text class="favorite-star__notice-arrow">›</text>
+    </view>
+  </view>
+</view>

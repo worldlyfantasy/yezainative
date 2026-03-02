@@ -3,9 +3,15 @@
   <text class="page-title">目的地</text>
   <text class="page-subtitle">它们或许没有喧闹的景点，却有清晰的生活节奏。试着以关键词搜索，你会看见不同肌理。</text>
 
-  <view class="section-block search-row">
-    <input class="search-input" placeholder="搜索目的地或关键词" value="{{searchValue}}" bindinput="onSearchInput" bindconfirm="onSearch" confirm-type="search" />
-    <button class="outline-button search-button" bindtap="onSearch">搜索</button>
+  <view class="section-block filter-shell">
+    <input
+      class="search-input destination-search-input"
+      placeholder="搜索目的地或关键词"
+      value="{{searchValue}}"
+      bindinput="onSearchInput"
+      bindconfirm="onSearch"
+      confirm-type="search"
+    />
   </view>
 
   <view class="section-block">
