@@ -14,57 +14,42 @@
           bind:navigatefavorites="goFavorites"
         ></favorite-star>
       </view>
-      <text class="page-subtitle">{{destination.description}}</text>
+      <text class="page-subtitle">{{destination.descriptionDetail || destination.description}}</text>
     </view>
   </view>
 
-  <view class="section-block">
-    <text class="section-title">在此停留的人</text>
-    <view class="presence-list">
+  <view wx:if="{{relatedIdeas.length}}" class="section-block destination-stories">
+    <text class="section-title destination-stories__title">此地故事</text>
+    <view class="destination-story-list">
       <view
-        wx:for="{{relatedCreators}}"
+        wx:for="{{relatedIdeas}}"
         wx:key="id"
-        class="presence-item"
+        class="destination-story-item"
         data-slug="{{item.slug}}"
-        bindtap="onCreatorTap"
+        bindtap="onStoryTap"
       >
-        <text class="presence-item__name">{{item.name}}</text>
-        <text class="presence-item__stance">{{item.stance}}</text>
+        <view class="destination-story-item__main">
+          <text class="destination-story-item__title">{{item.title}}</text>
+          <text class="destination-story-item__summary">{{item.summary}}</text>
+          <text class="destination-story-item__author">作者：{{item.authorName}}</text>
+        </view>
+        <text class="destination-story-item__arrow">→</text>
       </view>
     </view>
-    <button class="ghost-button destination-link__ghost" bindtap="goCreatorList">翻到更多同行者</button>
   </view>
 
-  <view class="section-block filter-shell">
-    <text class="section-title destination-filter__title">想沿着怎样的节奏靠近</text>
-    <view class="filter-item">
-      <text class="filter-label">服务类型</text>
-      <picker
-        class="filter-picker-trigger"
-        mode="selector"
-        range="{{typeLabels}}"
-        value="{{typeIndex}}"
-        bindchange="onTypeChange"
-      >
-        <view class="filter-picker">{{typeLabels[typeIndex]}}</view>
-      </picker>
+  <view class="section-block">
+    <view class="section-head">
+      <text class="section-title">驻足之人</text>
+      <text class="section-link" bindtap="goCreatorList">查看全部 →</text>
     </view>
-    <view class="filter-item">
-      <text class="filter-label">旅行风格</text>
-      <picker
-        class="filter-picker-trigger"
-        mode="selector"
-        range="{{styleLabels}}"
-        value="{{styleIndex}}"
-        bindchange="onStyleChange"
-      >
-        <view class="filter-picker">{{styleLabels[styleIndex]}}</view>
-      </picker>
+    <view wx:if="{{relatedCreators.length}}" class="card-stack">
+      <creator-card wx:for="{{relatedCreators}}" wx:key="id" creator="{{item}}" bind:cardtap="onCreatorTap"></creator-card>
     </view>
   </view>
 
   <view class="section-block">
-    <text class="section-title destination-journeys__title">沿地而行</text>
+    <text class="section-title destination-journeys__title">在彼途中</text>
     <view wx:if="{{services.length}}" class="card-stack">
       <service-card wx:for="{{services}}" wx:key="id" service="{{item}}" creator-name="{{item.creatorName}}" bind:cardtap="onServiceTap"></service-card>
     </view>

@@ -7,13 +7,8 @@ Page({
   data: {
     destination: null,
     favoriteNoticeState: "",
-    typeOptions: [],
-    styleOptions: [],
-    typeLabels: [],
-    styleLabels: [],
     relatedCreators: [],
-    typeIndex: 0,
-    styleIndex: 0,
+    relatedIdeas: [],
     services: []
   },
 
@@ -31,43 +26,10 @@ Page({
       return;
     }
     this.setData(payload);
-    this.applyFilters();
   },
 
   onUnload() {
     clearFavoriteNotice(this, "favoriteNoticeState", true);
-  },
-
-  applyFilters() {
-    const type = this.data.typeOptions[this.data.typeIndex] ? this.data.typeOptions[this.data.typeIndex].value : "";
-    const style = this.data.styleOptions[this.data.styleIndex] ? this.data.styleOptions[this.data.styleIndex].value : "";
-    const payload = getDestinationDetailData(this.data.destination.slug, {
-      type,
-      style
-    });
-    this.setData({
-      destination: payload.destination,
-      relatedCreators: payload.relatedCreators,
-      services: payload.services
-    });
-  },
-
-  onTypeChange(event) {
-    this.setData(
-      {
-        typeIndex: Number(event.detail.value)
-      },
-      () => this.applyFilters()
-    );
-  },
-
-  onStyleChange(event) {
-    this.setData(
-      {
-        styleIndex: Number(event.detail.value)
-      },
-      () => this.applyFilters()
-    );
   },
 
   goBack() {
@@ -82,8 +44,17 @@ Page({
 
   onCreatorTap(event) {
     wx.navigateTo({
-      url: `/pages/creator-detail/index?slug=${event.currentTarget.dataset.slug}`
+      url: `/pages/creator-detail/index?slug=${event.detail.slug}`
     });
+  },
+
+  onStoryTap(event) {
+    const slug = event.currentTarget.dataset.slug;
+    if (slug) {
+      wx.navigateTo({
+        url: `/pages/idea-detail/index?slug=${slug}`
+      });
+    }
   },
 
   goCreatorList() {

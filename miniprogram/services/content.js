@@ -123,12 +123,19 @@ function getDestinationDetailData(slug, filters) {
   const styleOptions = buildOptionList(getUniqueServiceStyles());
   const relatedCreators = creators
     .filter((creator) => creator.destinationSlugs.includes(destination.slug))
-    .map((creator) => ({
-      id: creator.id,
-      slug: creator.slug,
-      name: creator.name,
-      stance: creator.stance
-    }));
+    .map((creator) =>
+      Object.assign({}, creator, {
+        isFavorited: isFavorited("creators", creator.slug)
+      })
+    );
+  const relatedIdeas = (ideas || [])
+    .filter((idea) => idea.destinationSlugs && idea.destinationSlugs.includes(destination.slug))
+    .map((idea) => {
+      const author = creators.find((c) => c.id === idea.authorId);
+      return Object.assign({}, idea, {
+        authorName: author ? author.name : ""
+      });
+    });
   const matchedServices = filterServices(
     Object.assign(
       {
@@ -152,6 +159,7 @@ function getDestinationDetailData(slug, filters) {
     typeLabels: typeOptions.map((item) => item.label),
     styleLabels: styleOptions.map((item) => item.label),
     relatedCreators,
+    relatedIdeas,
     services: matchedServices
   };
 }

@@ -2,7 +2,6 @@
   <text class="back-link" bindtap="goBack">← 返回文章列表</text>
 
   <view class="section-block article-card">
-    <text class="eyebrow">主题：{{idea.theme}}</text>
     <view class="article-card__title-row">
       <text class="page-title article-card__title">{{idea.title}}</text>
       <favorite-star
@@ -12,7 +11,6 @@
         bind:navigatefavorites="goFavorites"
       ></favorite-star>
     </view>
-    <text class="page-subtitle">{{idea.summary}}</text>
 
     <view class="article-blocks">
       <block wx:for="{{blocks}}" wx:key="id">
@@ -21,21 +19,15 @@
         <text wx:else class="article-block article-block--paragraph">{{item.content}}</text>
       </block>
     </view>
-
-    <view class="article-cta">
-      <text class="eyebrow">文末引导</text>
-      <text class="article-cta__text">{{idea.cta}}</text>
-    </view>
   </view>
 
-  <view wx:if="{{author}}" class="section-block article-author">
-    <text class="eyebrow">作者</text>
-    <text class="section-title">{{author.name}}</text>
-    <text class="page-subtitle">{{author.stance}}</text>
-    <view class="article-author__actions">
-      <button class="outline-button article-author__button" bindtap="goCreatorDetail">查看创作者</button>
-      <button class="primary-button article-author__button" bindtap="handleOfflineOrder">离线模式，暂不开放联系</button>
+  <view wx:if="{{author}}" class="section-block article-author" bindtap="goCreatorDetail">
+    <image class="article-author__avatar" src="{{author.avatar}}" mode="aspectFill"></image>
+    <view class="article-author__body">
+      <text class="section-title article-author__name">{{author.name}}</text>
+      <text class="page-subtitle article-author__stance">{{author.stance}}</text>
     </view>
+    <text class="article-author__arrow">→</text>
   </view>
 </view>
 

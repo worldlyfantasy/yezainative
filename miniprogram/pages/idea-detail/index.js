@@ -2,7 +2,6 @@ const { getIdeaDetailData } = require("../../services/content");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
 const { toggleFavorite } = require("../../services/favorites");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
-const { showOfflineOrderNotice } = require("../../utils/offline");
 
 Page({
   data: {
@@ -44,10 +43,6 @@ Page({
     wx.navigateTo({
       url: `/pages/creator-detail/index?slug=${this.data.author.slug}`
     });
-  },
-
-  handleOfflineOrder() {
-    showOfflineOrderNotice();
   },
 
   toggleFavorite() {
