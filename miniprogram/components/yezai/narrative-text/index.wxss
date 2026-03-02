@@ -1,0 +1,15 @@
+.narrative-text {
+  display: block;
+  font-size: 28rpx;
+  line-height: 2;
+  color: #6a5a4b;
+}
+
+.narrative-text--indent {
+  text-indent: 2em;
+}
+
+.narrative-text--meta {
+  font-size: 24rpx;
+  line-height: 1.85;
+}

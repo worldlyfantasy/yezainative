@@ -1,0 +1,84 @@
+<view class="home-page">
+  <view class="hero">
+    <image class="hero__image" src="https://picsum.photos/seed/yezai-landing/1600/900" mode="aspectFill"></image>
+    <view class="hero__mask"></view>
+    <view class="hero__content">
+      <text class="hero__mark">野哉</text>
+      <text class="hero__title">山风缓下来，人才听见远处的路。</text>
+      <text class="hero__desc">先靠近一片土地，再靠近在那里生活的人。</text>
+    </view>
+  </view>
+
+  <view class="page-shell">
+    <view class="home-note">
+      <text class="home-note__text">这里不是商品货架，而是一册关于地方、同行者与路途节奏的田野手记。</text>
+    </view>
+
+    <view class="section-block">
+      <view class="section-head">
+        <view>
+          <text class="eyebrow">真实创作者网络</text>
+          <text class="section-title">精选创作者</text>
+        </view>
+        <text class="section-link" bindtap="goCreators">查看全部 →</text>
+      </view>
+      <view class="card-stack">
+        <creator-card wx:for="{{featuredCreators}}" wx:key="id" creator="{{item}}" bind:cardtap="onCreatorTap"></creator-card>
+      </view>
+    </view>
+
+    <view class="section-block">
+      <view class="section-head">
+        <view>
+          <text class="eyebrow">在地风景</text>
+          <text class="section-title">精选目的地</text>
+        </view>
+        <text class="section-link" bindtap="goDestinations">浏览目的地 →</text>
+      </view>
+      <view class="card-stack">
+        <destination-card wx:for="{{featuredDestinations}}" wx:key="id" destination="{{item}}" bind:cardtap="onDestinationTap"></destination-card>
+      </view>
+    </view>
+
+    <view class="section-block">
+      <view class="section-head">
+        <view>
+          <text class="eyebrow">灵感与长文</text>
+          <text class="section-title">旅行灵感</text>
+        </view>
+        <text class="section-link" bindtap="goIdeas">阅读更多 →</text>
+      </view>
+      <view class="card-stack">
+        <idea-card wx:for="{{featuredIdeas}}" wx:key="id" idea="{{item}}" author-name="{{item.authorName}}" bind:cardtap="onIdeaTap"></idea-card>
+      </view>
+    </view>
+
+    <view class="section-block paper-block">
+      <view class="section-head home-simple-head">
+        <view>
+          <text class="eyebrow">托管机制</text>
+          <text class="section-title">如何运作</text>
+        </view>
+        <button class="primary-button home-inline-button" bindtap="handleOfflineOrder">离线模式说明</button>
+      </view>
+      <view class="step-list">
+        <view wx:for="{{steps}}" wx:key="title" class="step-item">
+          <text class="step-item__title">{{item.title}}</text>
+          <text class="step-item__detail">{{item.detail}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-block home-join">
+      <text class="eyebrow">成为创作者</text>
+      <text class="section-title">提交合作意向</text>
+      <text class="page-subtitle home-join__desc">野哉欢迎常驻在地、坚持真实表达的创作者加入。PHASE 1 仅保留离线展示，后续再接入正式申请链路。</text>
+      <view class="home-join__actions">
+        <button class="primary-button home__wide-button" bindtap="handleOfflineOrder">离线演示，暂不开放申请</button>
+        <button class="outline-button home__wide-button" bindtap="goHowItWorks">了解审核流程</button>
+      </view>
+    </view>
+  </view>
+</view>
+
+<app-tab-bar></app-tab-bar>

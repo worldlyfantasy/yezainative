@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "野哉",
+  "usingComponents": {
+    "creator-card": "/components/yezai/creator-card/index",
+    "destination-card": "/components/yezai/destination-card/index",
+    "idea-card": "/components/yezai/idea-card/index"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "我的订单",
+  "usingComponents": {
+    "order-card": "/components/yezai/order-card/index"
+  }
+}

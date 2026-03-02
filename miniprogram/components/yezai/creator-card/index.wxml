@@ -1,0 +1,16 @@
+<view class="creator-card" bindtap="handleTap">
+  <view class="creator-card__head">
+    <image class="creator-card__avatar" src="{{creator.avatar}}" mode="aspectFill"></image>
+    <view class="creator-card__meta">
+      <text class="creator-card__name">{{creator.name}}</text>
+      <text class="creator-card__stance">{{creator.stance}}</text>
+    </view>
+  </view>
+  <view class="creator-card__tags">
+    <text wx:for="{{creator.tags}}" wx:key="*this" class="creator-card__tag">{{item}}</text>
+  </view>
+  <view class="creator-card__foot">
+    <text>停留 {{creator.destinationSlugs.length}} 处地方</text>
+    <text>可同行 {{creator.serviceIds.length}} 段路</text>
+  </view>
+</view>

@@ -1,0 +1,5 @@
+<view class="page-title-block page-title-block--{{tone}}">
+  <text wx:if="{{eyebrow}}" class="page-title-block__eyebrow">{{eyebrow}}</text>
+  <text class="page-title-block__title">{{title}}</text>
+  <text wx:if="{{subtitle}}" class="page-title-block__subtitle">{{subtitle}}</text>
+</view>

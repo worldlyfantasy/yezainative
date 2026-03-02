@@ -1,0 +1,15 @@
+<view class="order-card">
+  <view class="order-card__head">
+    <text class="order-card__id">订单 #{{order.shortId}}</text>
+    <text class="order-card__status">{{order.statusText}}</text>
+  </view>
+  <text class="order-card__name">{{order.serviceName}}</text>
+  <view class="order-card__meta">
+    <text>出行日期 {{order.travelDate}}</text>
+    <text>金额 {{order.payableText}}</text>
+  </view>
+  <view class="order-card__actions">
+    <button class="outline-button order-card__button" bindtap="handleTap">查看详情</button>
+    <button wx:if="{{order.canContinuePay}}" class="primary-button order-card__button" bindtap="handlePayTap">继续支付</button>
+  </view>
+</view>

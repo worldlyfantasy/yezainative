@@ -1,0 +1,11 @@
+<view class="custom-tab-bar">
+  <button
+    wx:for="{{list}}"
+    wx:key="pagePath"
+    class="custom-tab-bar__item {{selectedPath === item.pagePath ? 'custom-tab-bar__item--active' : ''}}"
+    data-path="{{item.pagePath}}"
+    bindtap="onSwitchTab"
+  >
+    <text class="custom-tab-bar__text">{{item.text}}</text>
+  </button>
+</view>

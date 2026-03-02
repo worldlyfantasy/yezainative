@@ -1,0 +1,51 @@
+.service-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+  padding: 0 0 28rpx;
+  border-bottom: 1rpx solid rgba(153, 57, 33, 0.12);
+}
+
+.service-card__meta,
+.service-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.service-card__type {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 22rpx;
+  letter-spacing: 3rpx;
+  color: #993921;
+}
+
+.service-card__duration,
+.service-card__link {
+  font-size: 22rpx;
+  color: #6a5a4b;
+}
+
+.service-card__name {
+  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 40rpx;
+  line-height: 1.55;
+  font-weight: 500;
+  color: #2b241d;
+}
+
+.service-card__summary,
+.service-card__creator {
+  font-size: 27rpx;
+  line-height: 1.95;
+  color: #6a5a4b;
+}
+
+.service-card__price {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #2b241d;
+}

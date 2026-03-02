@@ -1,0 +1,54 @@
+.service-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.service-hero__title {
+  margin-top: 8rpx;
+  font-size: 62rpx;
+}
+
+.service-hero__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.service-hero__price {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #2b241d;
+}
+
+.service-hero__duration,
+.service-info__body,
+.service-creator__stance {
+  font-size: 26rpx;
+  line-height: 1.95;
+  color: #6a5a4b;
+}
+
+.service-hero__button,
+.service-creator__button {
+  width: 100%;
+  margin-top: 24rpx;
+}
+
+.service-info__title {
+  display: block;
+}
+
+.service-info__body--top {
+  display: block;
+  margin-top: 16rpx;
+}
+
+.service-creator__name {
+  display: block;
+  margin-top: 16rpx;
+  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 36rpx;
+  font-weight: 500;
+  color: #2b241d;
+}

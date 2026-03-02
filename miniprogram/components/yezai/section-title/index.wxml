@@ -1,0 +1,7 @@
+<view class="section-title-block">
+  <divider-line></divider-line>
+  <view class="section-title-block__body">
+    <text class="section-title-block__title">{{title}}</text>
+    <text wx:if="{{subtitle}}" class="section-title-block__subtitle">{{subtitle}}</text>
+  </view>
+</view>

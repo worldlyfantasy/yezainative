@@ -1,0 +1,23 @@
+<view class="page-shell">
+  <view class="paper-block">
+    <text class="eyebrow">信任机制</text>
+    <text class="page-title">如何运作</text>
+    <text class="page-subtitle">野哉以托管支付与分账机制保障双方。当前 PHASE 1 只迁移页面与离线数据，不接支付、合同与云端履约。</text>
+
+    <view class="flow-list">
+      <view wx:for="{{flows}}" wx:key="title" class="flow-item">
+        <text class="flow-item__title">{{item.title}}</text>
+        <text class="flow-item__desc">{{item.description}}</text>
+      </view>
+    </view>
+
+    <view class="flow-cta">
+      <text class="eyebrow">准备好了？</text>
+      <text class="section-title">后续阶段再接入下单链路</text>
+      <text class="page-subtitle">当前小程序用于离线浏览与结构迁移验收。</text>
+      <button class="primary-button flow-cta__button" bindtap="handleOfflineOrder">离线模式说明</button>
+    </view>
+  </view>
+</view>
+
+<app-tab-bar></app-tab-bar>

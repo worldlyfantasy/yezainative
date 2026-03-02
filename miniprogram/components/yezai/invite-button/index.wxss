@@ -1,0 +1,27 @@
+.invite-button {
+  width: 100%;
+  min-height: 88rpx;
+  padding: 0 32rpx;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  letter-spacing: 1rpx;
+}
+
+.invite-button--primary {
+  background-color: #D15E14;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.03) 6rpx,
+    rgba(0, 0, 0, 0.015) 6rpx,
+    rgba(0, 0, 0, 0.015) 12rpx
+  );
+  color: #F2E6C9;
+}
+
+.invite-button--outline {
+  border: 1rpx solid rgba(153, 57, 33, 0.4);
+  background: rgba(242, 230, 201, 0.5);
+  color: #993921;
+}

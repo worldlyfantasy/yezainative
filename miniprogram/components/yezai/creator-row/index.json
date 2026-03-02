@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "divider-line": "/components/yezai/divider-line/index"
+  }
+}

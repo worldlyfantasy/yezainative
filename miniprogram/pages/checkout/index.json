@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "确认下单",
+  "usingComponents": {
+    "bottom-action-bar": "/components/yezai/bottom-action-bar/index"
+  }
+}

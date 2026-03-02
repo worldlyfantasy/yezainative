@@ -1,0 +1,40 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/creators/index",
+    "pages/creator-detail/index",
+    "pages/destinations/index",
+    "pages/destination-detail/index",
+    "pages/ideas/index",
+    "pages/idea-detail/index",
+    "pages/service-detail/index",
+    "pages/how-it-works/index",
+    "pages/profile/index",
+    "pages/orders/index",
+    "pages/order-detail/index",
+    "pages/checkout/index",
+    "pages/payment-result/index"
+  ],
+  "usingComponents": {
+    "app-tab-bar": "/custom-tab-bar/index",
+    "hero-image": "/components/yezai/hero-image/index",
+    "page-title": "/components/yezai/page-title/index",
+    "section-title": "/components/yezai/section-title/index",
+    "narrative-text": "/components/yezai/narrative-text/index",
+    "quote-block": "/components/yezai/quote-block/index",
+    "creator-row": "/components/yezai/creator-row/index",
+    "journey-item": "/components/yezai/journey-item/index",
+    "invite-button": "/components/yezai/invite-button/index",
+    "divider-line": "/components/yezai/divider-line/index"
+  },
+  "window": {
+    "backgroundColor": "#f5efe3",
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#f5efe3",
+    "navigationBarTitleText": "野哉",
+    "navigationBarTextStyle": "black"
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

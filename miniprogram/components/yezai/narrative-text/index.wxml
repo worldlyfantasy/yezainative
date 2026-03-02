@@ -1,0 +1,1 @@
+<text class="narrative-text narrative-text--{{tone}} {{indent ? 'narrative-text--indent' : ''}}">{{text}}</text>

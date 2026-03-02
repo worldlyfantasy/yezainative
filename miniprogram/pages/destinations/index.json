@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "目的地",
+  "usingComponents": {
+    "destination-card": "/components/yezai/destination-card/index"
+  }
+}

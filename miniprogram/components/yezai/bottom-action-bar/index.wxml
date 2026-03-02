@@ -1,0 +1,7 @@
+<view class="bottom-action-bar">
+  <view>
+    <text class="bottom-action-bar__label">应付金额</text>
+    <text class="bottom-action-bar__price">{{priceText}}</text>
+  </view>
+  <button class="primary-button bottom-action-bar__button" bindtap="handleTap">{{buttonText}}</button>
+</view>

@@ -1,0 +1,1 @@
+<button class="invite-button invite-button--{{variant}}" bindtap="onTap">{{text}}</button>

@@ -1,0 +1,95 @@
+<view wx:if="{{service}}" class="page-shell">
+  <text class="back-link" bindtap="goBack">← 返回目的地</text>
+
+  <view class="section-block paper-block">
+    <view class="service-hero">
+      <view class="service-hero__content">
+        <text class="eyebrow">{{service.type}}</text>
+        <text class="page-title service-hero__title">{{service.name}}</text>
+        <text class="page-subtitle">{{service.summary}}</text>
+        <view class="action-row">
+          <button class="ghost-button" bindtap="toggleFavorite">{{service.isFavorited ? '已收藏' : '收藏路线'}}</button>
+        </view>
+      </view>
+      <view class="service-hero__meta">
+        <text class="service-hero__price">{{service.price}}</text>
+        <text class="service-hero__duration">节奏：{{service.durationTag}}</text>
+      </view>
+    </view>
+    <button class="primary-button service-hero__button" bindtap="handleCheckout">提交订单（模拟）</button>
+  </view>
+
+  <view class="section-block detail-grid">
+    <view class="paper-block">
+      <text class="section-title detail-card__title">适合谁</text>
+      <view class="detail-list">
+        <text wx:for="{{service.suitable}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
+      </view>
+    </view>
+    <view class="paper-block">
+      <text class="section-title detail-card__title">不适合谁</text>
+      <view class="detail-list">
+        <text wx:for="{{service.notSuitable}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-block detail-grid">
+    <view class="paper-block">
+      <text class="section-title detail-card__title">交付物</text>
+      <view class="detail-list">
+        <text wx:for="{{service.deliverables}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
+      </view>
+    </view>
+    <view class="paper-block">
+      <text class="section-title detail-card__title">不包含</text>
+      <view class="detail-list">
+        <text wx:for="{{service.exclusions}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-block detail-grid">
+    <view class="paper-block">
+      <text class="section-title service-info__title">交付周期</text>
+      <text class="service-info__body">{{service.timeline}}</text>
+    </view>
+    <view class="paper-block">
+      <text class="section-title service-info__title">修改规则</text>
+      <text class="service-info__body">{{service.revision}}</text>
+    </view>
+    <view class="paper-block">
+      <text class="section-title service-info__title">离线提醒</text>
+      <text class="service-info__body">当前阶段仅保留服务说明，不接支付、合同与分账。</text>
+    </view>
+  </view>
+
+  <view class="section-block paper-block">
+    <text class="section-title detail-card__title">退款规则</text>
+    <text class="service-info__body service-info__body--top">{{service.refund}}</text>
+  </view>
+
+  <view wx:if="{{creator}}" class="section-block paper-block">
+    <text class="section-title">创作者</text>
+    <text class="service-creator__name">{{creator.name}}</text>
+    <text class="service-creator__stance">{{creator.stance}}</text>
+    <button class="outline-button service-creator__button" bindtap="goCreatorDetail">查看创作者详情</button>
+  </view>
+
+  <view class="section-block paper-block">
+    <text class="section-title">涉及目的地</text>
+    <view class="row-tags creator-detail__destinations">
+      <button
+        wx:for="{{relatedDestinations}}"
+        wx:key="id"
+        class="destination-pill"
+        data-slug="{{item.slug}}"
+        bindtap="onDestinationTap"
+      >
+        {{item.name}}
+      </button>
+    </view>
+  </view>
+</view>
+
+<app-tab-bar></app-tab-bar>

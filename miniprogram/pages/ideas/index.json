@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "旅行灵感",
+  "usingComponents": {
+    "idea-card": "/components/yezai/idea-card/index"
+  }
+}

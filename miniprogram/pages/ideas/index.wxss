@@ -1,0 +1,20 @@
+.theme-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18rpx 26rpx;
+}
+
+.theme-chip {
+  padding: 0 0 8rpx;
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1rpx solid transparent;
+  background: transparent;
+  font-size: 24rpx;
+  color: #6a5a4b;
+}
+
+.theme-chip--active {
+  border-color: rgba(153, 57, 33, 0.34);
+  color: #2b241d;
+}

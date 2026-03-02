@@ -1,0 +1,40 @@
+.order-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+  padding: 0 0 28rpx;
+  border-bottom: 1rpx solid rgba(153, 57, 33, 0.12);
+}
+
+.order-card__head,
+.order-card__meta,
+.order-card__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.order-card__id,
+.order-card__meta text {
+  font-size: 22rpx;
+  color: #6a5a4b;
+}
+
+.order-card__status {
+  font-size: 22rpx;
+  color: #993921;
+}
+
+.order-card__name {
+  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 34rpx;
+  line-height: 1.5;
+  font-weight: 500;
+  color: #2b241d;
+}
+
+.order-card__button {
+  flex: 1;
+  min-height: 72rpx;
+  font-size: 24rpx;
+}

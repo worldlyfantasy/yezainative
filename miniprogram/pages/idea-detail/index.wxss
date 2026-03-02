@@ -1,0 +1,74 @@
+.article-page {
+  padding-left: 56rpx;
+  padding-right: 56rpx;
+}
+
+.article-card {
+  padding-bottom: 40rpx;
+  border-bottom: 1rpx solid rgba(153, 57, 33, 0.14);
+}
+
+.article-card__title {
+  margin-top: 8rpx;
+  font-size: 62rpx;
+}
+
+.article-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 28rpx;
+  margin-top: 36rpx;
+}
+
+.article-block {
+  display: block;
+}
+
+.article-block--heading {
+  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 36rpx;
+  line-height: 1.8;
+  font-weight: 500;
+  color: #2b241d;
+}
+
+.article-block--quote {
+  padding-left: 24rpx;
+  border-left: 3rpx solid rgba(153, 57, 33, 0.22);
+  font-size: 28rpx;
+  line-height: 2.05;
+  color: #6a5a4b;
+}
+
+.article-block--paragraph,
+.article-cta__text {
+  font-size: 30rpx;
+  line-height: 2.15;
+  color: #5f5246;
+}
+
+.article-block--paragraph {
+  text-indent: 2em;
+}
+
+.article-cta {
+  margin-top: 44rpx;
+  padding-top: 28rpx;
+  border-top: 1rpx solid rgba(153, 57, 33, 0.12);
+}
+
+.article-author {
+  padding-bottom: 24rpx;
+  border-bottom: 1rpx solid rgba(153, 57, 33, 0.12);
+}
+
+.article-author__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 28rpx;
+}
+
+.article-author__button {
+  width: 100%;
+}

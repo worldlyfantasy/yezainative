@@ -1,0 +1,16 @@
+<view class="journey-item" bindtap="onTap">
+  <image wx:if="{{cover}}" class="journey-item__cover" src="{{cover}}" mode="aspectFill"></image>
+  <view class="journey-item__body">
+    <view class="journey-item__head">
+      <text wx:if="{{eyebrow}}" class="journey-item__eyebrow">{{eyebrow}}</text>
+      <text wx:if="{{meta}}" class="journey-item__meta">{{meta}}</text>
+    </view>
+    <text class="journey-item__title">{{title}}</text>
+    <text wx:if="{{description}}" class="journey-item__description">{{description}}</text>
+    <view wx:if="{{extra || tail}}" class="journey-item__foot">
+      <text wx:if="{{extra}}" class="journey-item__extra">{{extra}}</text>
+      <text wx:if="{{tail}}" class="journey-item__tail">{{tail}}</text>
+    </view>
+  </view>
+  <divider-line></divider-line>
+</view>

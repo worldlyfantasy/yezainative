@@ -1,0 +1,35 @@
+<view wx:if="{{service}}" class="page-shell checkout-page">
+  <view class="paper-block">
+    <text class="section-title">确认服务</text>
+    <text class="checkout-service__name">{{service.name}}</text>
+    <text class="checkout-service__meta">{{service.type}} · {{service.price}}</text>
+  </view>
+
+  <view class="section-block paper-block">
+    <text class="section-title">选择出行日期</text>
+    <picker mode="date" value="{{travelDate}}" start="2026-03-01" end="2027-12-31" bindchange="onDateChange">
+      <view class="filter-picker checkout-field">{{travelDate}}</view>
+    </picker>
+  </view>
+
+  <view class="section-block paper-block">
+    <text class="section-title">选择人数</text>
+    <view class="stepper">
+      <button class="stepper__button" bindtap="decreasePeople">-</button>
+      <text class="stepper__value">{{peopleCount}}</text>
+      <button class="stepper__button" bindtap="increasePeople">+</button>
+    </view>
+  </view>
+
+  <view class="section-block paper-block">
+    <text class="section-title">填写出行人</text>
+    <input class="search-input checkout-field" placeholder="姓名" data-field="travelerName" value="{{travelerName}}" bindinput="onInput" />
+    <input class="search-input checkout-field" placeholder="证件号" data-field="travelerIdCard" value="{{travelerIdCard}}" bindinput="onInput" />
+    <input class="search-input checkout-field" placeholder="手机号" data-field="travelerPhone" value="{{travelerPhone}}" bindinput="onInput" />
+    <textarea class="checkout-note" placeholder="备注需求" data-field="note" value="{{note}}" bindinput="onInput"></textarea>
+  </view>
+
+  <bottom-action-bar price-text="{{payableText}}" button-text="提交订单并支付" bind:actiontap="submitOrder"></bottom-action-bar>
+</view>
+
+<app-tab-bar></app-tab-bar>

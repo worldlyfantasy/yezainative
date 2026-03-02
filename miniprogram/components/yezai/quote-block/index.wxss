@@ -1,0 +1,11 @@
+.quote-block {
+  padding-left: 24rpx;
+  border-left: 3rpx solid rgba(153, 57, 33, 0.22);
+}
+
+.quote-block__text {
+  display: block;
+  font-size: 28rpx;
+  line-height: 2.05;
+  color: #6a5a4b;
+}

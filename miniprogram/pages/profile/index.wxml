@@ -1,0 +1,63 @@
+<view class="page-shell profile-page">
+  <view wx:if="{{!loggedIn}}" class="paper-block profile-empty">
+    <image class="profile-empty__banner" src="https://picsum.photos/seed/yezai-landing/1600/900" mode="aspectFill"></image>
+    <view class="profile-empty__mask"></view>
+    <view class="profile-empty__content">
+      <text class="page-title profile-empty__title">欢迎来到野哉</text>
+      <text class="page-subtitle profile-empty__desc">登录后可查看订单、收藏与个人信息。当前为离线原型阶段，登录为本地模拟的一键登录。</text>
+      <button class="primary-button profile-empty__button" bindtap="handleLogin">微信一键登录（模拟）</button>
+    </view>
+  </view>
+
+  <block wx:else>
+    <view class="paper-block profile-user">
+      <view class="profile-user__head">
+        <image class="profile-user__avatar" src="{{user.avatarUrl}}" mode="aspectFill"></image>
+        <view class="profile-user__meta">
+          <text class="section-title">{{user.nickname}}</text>
+          <text class="profile-user__member">{{user.memberLabel}}</text>
+        </view>
+        <button class="ghost-action" bindtap="handleLogout">退出</button>
+      </view>
+    </view>
+
+    <view class="section-block shortcut-grid">
+      <button
+        wx:for="{{shortcuts}}"
+        wx:key="key"
+        class="paper-block shortcut-item"
+        data-key="{{item.key}}"
+        bindtap="onShortcutTap"
+      >
+        <text class="shortcut-item__label">{{item.label}}</text>
+      </button>
+    </view>
+
+    <view class="section-block paper-block">
+      <text class="section-title">进行中的旅行</text>
+      <view wx:if="{{activeTrips.length}}" class="mini-order-list">
+        <view wx:for="{{activeTrips}}" wx:key="id" class="mini-order" data-id="{{item.id}}" bindtap="onOrderTap">
+          <text class="mini-order__name">{{item.serviceName}}</text>
+          <text class="mini-order__meta">{{item.travelDate}} · {{item.statusText}}</text>
+        </view>
+      </view>
+      <view wx:else class="empty-state profile-empty-state">当前没有进行中的旅行。</view>
+    </view>
+
+    <view class="section-block paper-block">
+      <view class="section-head profile-section-head">
+        <text class="section-title">最近订单</text>
+        <text class="section-link" bindtap="onShortcutTap" data-key="orders">查看全部</text>
+      </view>
+      <view wx:if="{{recentOrders.length}}" class="mini-order-list">
+        <view wx:for="{{recentOrders}}" wx:key="id" class="mini-order" data-id="{{item.id}}" bindtap="onOrderTap">
+          <text class="mini-order__name">{{item.serviceName}}</text>
+          <text class="mini-order__meta">#{{item.shortId}} · {{item.payableText}} · {{item.statusText}}</text>
+        </view>
+      </view>
+      <view wx:else class="empty-state profile-empty-state">暂时还没有订单。</view>
+    </view>
+  </block>
+</view>
+
+<app-tab-bar></app-tab-bar>

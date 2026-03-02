@@ -1,0 +1,66 @@
+.creator-card {
+  display: flex;
+  flex-direction: column;
+  gap: 22rpx;
+  padding-bottom: 28rpx;
+  border-bottom: 1rpx solid rgba(153, 57, 33, 0.12);
+}
+
+.creator-card__head {
+  display: flex;
+  gap: 20rpx;
+  align-items: flex-start;
+}
+
+.creator-card__avatar {
+  width: 144rpx;
+  height: 144rpx;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1rpx solid rgba(189, 154, 95, 0.34);
+}
+
+.creator-card__meta {
+  flex: 1;
+}
+
+.creator-card__name {
+  display: block;
+  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 40rpx;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #2b241d;
+}
+
+.creator-card__stance {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 25rpx;
+  line-height: 1.9;
+  color: #6a5a4b;
+}
+
+.creator-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx 16rpx;
+}
+
+.creator-card__tag {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 22rpx;
+  color: #6a5a4b;
+}
+
+.creator-card__foot {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  padding-top: 6rpx;
+  border-top: 0;
+  font-size: 22rpx;
+  color: #6a5a4b;
+}

@@ -1,0 +1,58 @@
+<view wx:if="{{destination}}" class="page-shell">
+  <text class="back-link" bindtap="goBack">← 返回目的地</text>
+
+  <view class="section-block destination-hero">
+    <image class="destination-hero__cover" src="{{destination.cover}}" mode="aspectFill"></image>
+    <view class="destination-hero__body">
+      <text class="eyebrow">目的地</text>
+      <text class="page-title destination-hero__title">{{destination.name}}</text>
+      <text class="page-subtitle">{{destination.description}}</text>
+      <view class="action-row">
+        <button class="ghost-button" bindtap="toggleFavorite">{{destination.isFavorited ? '已收藏' : '收藏土地'}}</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-block">
+    <text class="section-title">在此停留的人</text>
+    <view class="presence-list">
+      <view
+        wx:for="{{relatedCreators}}"
+        wx:key="id"
+        class="presence-item"
+        data-slug="{{item.slug}}"
+        bindtap="onCreatorTap"
+      >
+        <text class="presence-item__name">{{item.name}}</text>
+        <text class="presence-item__stance">{{item.stance}}</text>
+      </view>
+    </view>
+    <button class="ghost-button destination-link__ghost" bindtap="goCreatorList">翻到更多同行者</button>
+  </view>
+
+  <view class="section-block filter-shell">
+    <text class="section-title destination-filter__title">想沿着怎样的节奏靠近</text>
+    <view class="filter-item">
+      <text class="filter-label">服务类型</text>
+      <picker mode="selector" range="{{typeLabels}}" value="{{typeIndex}}" bindchange="onTypeChange">
+        <view class="filter-picker">{{typeLabels[typeIndex]}}</view>
+      </picker>
+    </view>
+    <view class="filter-item">
+      <text class="filter-label">旅行风格</text>
+      <picker mode="selector" range="{{styleLabels}}" value="{{styleIndex}}" bindchange="onStyleChange">
+        <view class="filter-picker">{{styleLabels[styleIndex]}}</view>
+      </picker>
+    </view>
+  </view>
+
+  <view class="section-block">
+    <text class="section-title destination-journeys__title">沿地而行</text>
+    <view wx:if="{{services.length}}" class="card-stack">
+      <service-card wx:for="{{services}}" wx:key="id" service="{{item}}" creator-name="{{item.creatorName}}" bind:cardtap="onServiceTap"></service-card>
+    </view>
+    <view wx:else class="empty-state">暂无符合筛选的服务。</view>
+  </view>
+</view>
+
+<app-tab-bar></app-tab-bar>

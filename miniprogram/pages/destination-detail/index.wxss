@@ -1,0 +1,56 @@
+.destination-hero {
+  overflow: hidden;
+  padding: 0 0 40rpx;
+  border-bottom: 1rpx solid rgba(153, 57, 33, 0.14);
+}
+
+.destination-hero__cover {
+  display: block;
+  width: 100%;
+  height: 520rpx;
+}
+
+.destination-hero__body {
+  padding-top: 30rpx;
+}
+
+.destination-hero__title {
+  margin-top: 8rpx;
+  font-size: 62rpx;
+}
+
+.presence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 26rpx;
+  margin-top: 24rpx;
+}
+
+.presence-item {
+  padding-bottom: 22rpx;
+  border-bottom: 1rpx solid rgba(153, 57, 33, 0.08);
+}
+
+.presence-item__name {
+  display: block;
+  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 34rpx;
+  color: #2b241d;
+}
+
+.presence-item__stance {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  line-height: 1.95;
+  color: #6a5a4b;
+}
+
+.destination-link__ghost {
+  margin-top: 26rpx;
+}
+
+.destination-filter__title,
+.destination-journeys__title {
+  margin-bottom: 24rpx;
+}

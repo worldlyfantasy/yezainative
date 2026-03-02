@@ -1,0 +1,14 @@
+<view class="creator-row" bindtap="onTap">
+  <view class="creator-row__main">
+    <image class="creator-row__avatar" src="{{avatar}}" mode="aspectFill"></image>
+    <view class="creator-row__body">
+      <text class="creator-row__name">{{name}}</text>
+      <text class="creator-row__description">{{description}}</text>
+      <view wx:if="{{descriptors.length}}" class="creator-row__descriptors">
+        <text wx:for="{{descriptors}}" wx:key="index" class="creator-row__descriptor">{{item}}</text>
+      </view>
+      <text wx:if="{{meta}}" class="creator-row__meta">{{meta}}</text>
+    </view>
+  </view>
+  <divider-line></divider-line>
+</view>

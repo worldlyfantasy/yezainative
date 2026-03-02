@@ -1,0 +1,18 @@
+.payment-card {
+  text-align: center;
+}
+
+.payment-card__icon {
+  display: block;
+  font-size: 72rpx;
+  color: #8f3d24;
+}
+
+.payment-card__title {
+  margin-top: 12rpx;
+}
+
+.payment-card__button {
+  width: 100%;
+  margin-top: 16rpx;
+}

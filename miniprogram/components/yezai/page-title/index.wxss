@@ -1,0 +1,37 @@
+.page-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.page-title-block__eyebrow {
+  font-size: 24rpx;
+  letter-spacing: 4rpx;
+  color: #993921;
+  opacity: 0.84;
+}
+
+.page-title-block__title {
+  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 60rpx;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #2b241d;
+}
+
+.page-title-block__subtitle {
+  margin-top: 6rpx;
+  font-size: 30rpx;
+  line-height: 1.95;
+  color: #6a5a4b;
+}
+
+.page-title-block--light .page-title-block__eyebrow,
+.page-title-block--light .page-title-block__title,
+.page-title-block--light .page-title-block__subtitle {
+  color: #F2E6C9;
+}
+
+.page-title-block--light .page-title-block__subtitle {
+  opacity: 0.9;
+}

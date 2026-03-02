@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "发现创作者",
+  "usingComponents": {
+    "creator-card": "/components/yezai/creator-card/index"
+  }
+}

@@ -1,0 +1,5 @@
+.search-button {
+  width: 160rpx;
+  border-radius: 999rpx;
+  min-height: 76rpx;
+}

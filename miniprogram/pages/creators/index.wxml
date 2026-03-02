@@ -1,0 +1,29 @@
+<view class="page-shell">
+  <text class="eyebrow">真实在场 · 创作者档案</text>
+  <text class="page-title">发现创作者</text>
+  <text class="page-subtitle">他们有自己的节奏与价值观，我们负责透明呈现。选择目的地或旅行风格，即可筛选合适的同行者。</text>
+
+  <view class="section-block filter-shell">
+    <view class="filter-item">
+      <text class="filter-label">目的地</text>
+      <picker mode="selector" range="{{destinationLabels}}" value="{{destinationIndex}}" bindchange="onDestinationChange">
+        <view class="filter-picker">{{destinationLabels[destinationIndex]}}</view>
+      </picker>
+    </view>
+    <view class="filter-item">
+      <text class="filter-label">旅行风格</text>
+      <picker mode="selector" range="{{styleLabels}}" value="{{styleIndex}}" bindchange="onStyleChange">
+        <view class="filter-picker">{{styleLabels[styleIndex]}}</view>
+      </picker>
+    </view>
+  </view>
+
+  <view class="section-block">
+    <view wx:if="{{creators.length}}" class="card-stack">
+      <creator-card wx:for="{{creators}}" wx:key="id" creator="{{item}}" bind:cardtap="onCreatorTap"></creator-card>
+    </view>
+    <view wx:else class="empty-state">暂无符合条件的创作者。</view>
+  </view>
+</view>
+
+<app-tab-bar></app-tab-bar>

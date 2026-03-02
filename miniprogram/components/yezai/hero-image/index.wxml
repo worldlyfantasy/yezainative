@@ -1,0 +1,6 @@
+<view class="hero-image">
+  <image class="hero-image__media" src="{{src}}" mode="aspectFill"></image>
+  <view class="hero-image__overlay">
+    <slot></slot>
+  </view>
+</view>

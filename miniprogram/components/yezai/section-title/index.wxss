@@ -1,0 +1,25 @@
+.section-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.section-title-block__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.section-title-block__title {
+  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 42rpx;
+  line-height: 1.5;
+  font-weight: 500;
+  color: #2b241d;
+}
+
+.section-title-block__subtitle {
+  font-size: 26rpx;
+  line-height: 1.9;
+  color: #6a5a4b;
+}

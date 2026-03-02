@@ -1,0 +1,9 @@
+<view class="idea-card" bindtap="handleTap">
+  <image class="idea-card__cover" src="{{idea.cover}}" mode="aspectFill"></image>
+  <view class="idea-card__body">
+    <text class="idea-card__theme">{{idea.theme}}</text>
+    <text class="idea-card__title">{{idea.title}}</text>
+    <text class="idea-card__summary">{{idea.summary}}</text>
+    <text wx:if="{{authorName}}" class="idea-card__author">作者：{{authorName}}</text>
+  </view>
+</view>

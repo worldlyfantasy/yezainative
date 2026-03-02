@@ -1,0 +1,61 @@
+<view wx:if="{{order}}" class="page-shell order-detail-page">
+  <view class="paper-block">
+    <text class="eyebrow">订单状态</text>
+    <text class="page-title order-detail__status">{{order.statusText}}</text>
+    <text class="page-subtitle">订单号：#{{order.shortId}} · 创建时间：{{order.createdAt}}</text>
+  </view>
+
+  <view class="section-block paper-block">
+    <text class="section-title">商品信息</text>
+    <view class="order-product">
+      <image class="order-product__cover" src="{{order.cover}}" mode="aspectFill"></image>
+      <view class="order-product__body">
+        <text class="order-product__name">{{order.serviceName}}</text>
+        <text class="order-product__meta">日期 {{order.travelDate}} · {{order.peopleCount}} 人 · {{order.serviceType}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-block paper-block">
+    <text class="section-title">价格明细</text>
+    <view class="price-row"><text>商品价</text><text>{{order.amountText}}</text></view>
+    <view class="price-row"><text>优惠</text><text>¥{{order.discount}}</text></view>
+    <view class="price-row price-row--strong"><text>应付</text><text>{{order.payableText}}</text></view>
+  </view>
+
+  <view class="section-block paper-block">
+    <text class="section-title">出行人信息</text>
+    <view class="detail-list">
+      <text class="detail-list-item">姓名：{{order.traveler.name}}</text>
+      <text class="detail-list-item">证件：{{order.traveler.idCard}}</text>
+      <text class="detail-list-item">手机：{{order.traveler.phone}}</text>
+    </view>
+  </view>
+
+  <view class="section-block paper-block">
+    <text class="section-title">联系与服务</text>
+    <view class="detail-list">
+      <text class="detail-list-item">联系创作者：离线原型阶段暂不接入</text>
+      <text class="detail-list-item">联系客服：离线原型阶段暂不接入</text>
+    </view>
+  </view>
+
+  <view class="order-actions">
+    <button
+      wx:if="{{order.status === 'pending' || order.status === 'paid' || order.status === 'completed'}}"
+      class="primary-button order-actions__button"
+      bindtap="handlePrimary"
+    >
+      {{order.status === 'pending' ? '立即支付' : (order.status === 'paid' ? '查看集合信息' : '再次购买')}}
+    </button>
+    <button
+      wx:if="{{order.status === 'pending' || order.status === 'paid'}}"
+      class="outline-button order-actions__button"
+      bindtap="handleSecondary"
+    >
+      {{order.status === 'pending' ? '取消订单' : '申请退款'}}
+    </button>
+  </view>
+</view>
+
+<app-tab-bar></app-tab-bar>

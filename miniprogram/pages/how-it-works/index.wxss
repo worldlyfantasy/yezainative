@@ -1,0 +1,39 @@
+.flow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  margin-top: 28rpx;
+}
+
+.flow-item {
+  padding-left: 20rpx;
+  border-left: 6rpx solid rgba(143, 61, 36, 0.28);
+}
+
+.flow-item__title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #241b14;
+}
+
+.flow-item__desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.75;
+  color: #6b594d;
+}
+
+.flow-cta {
+  margin-top: 36rpx;
+  padding: 28rpx 24rpx;
+  border: 1rpx solid #e6d9cb;
+  border-radius: 24rpx;
+  background: rgba(255, 250, 244, 0.72);
+}
+
+.flow-cta__button {
+  width: 100%;
+  margin-top: 24rpx;
+}

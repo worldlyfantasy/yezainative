@@ -1,0 +1,10 @@
+<view class="destination-card" bindtap="handleTap">
+  <image class="destination-card__cover" src="{{destination.cover}}" mode="aspectFill"></image>
+  <view class="destination-card__body">
+    <view class="destination-card__head">
+      <text class="destination-card__name">{{destination.name}}</text>
+      <text class="destination-card__stats">{{destination.routeCount}} 段旅程 · {{destination.creatorCount}} 位同行者</text>
+    </view>
+    <text class="destination-card__desc">{{destination.description}}</text>
+  </view>
+</view>

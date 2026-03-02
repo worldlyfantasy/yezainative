@@ -1,0 +1,26 @@
+<view class="page-shell">
+  <text class="eyebrow">阅读在地经验</text>
+  <text class="page-title">旅行灵感</text>
+  <text class="page-subtitle">这些文章来自创作者与旅人共同写下的现场笔记，远离空洞宣传语。</text>
+
+  <view class="section-block theme-row">
+    <button
+      wx:for="{{themes}}"
+      wx:key="*this"
+      class="theme-chip {{currentTheme === item ? 'theme-chip--active' : ''}}"
+      data-theme="{{item}}"
+      bindtap="toggleTheme"
+    >
+      {{item}}
+    </button>
+  </view>
+
+  <view class="section-block">
+    <view wx:if="{{ideas.length}}" class="card-stack">
+      <idea-card wx:for="{{ideas}}" wx:key="id" idea="{{item}}" author-name="{{item.authorName}}" bind:cardtap="onIdeaTap"></idea-card>
+    </view>
+    <view wx:else class="empty-state">暂无相关文章。</view>
+  </view>
+</view>
+
+<app-tab-bar></app-tab-bar>

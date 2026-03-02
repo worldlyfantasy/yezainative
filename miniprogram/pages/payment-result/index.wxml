@@ -1,0 +1,11 @@
+<view class="page-shell">
+  <view class="paper-block payment-card">
+    <text class="payment-card__icon">✓</text>
+    <text class="page-title payment-card__title">模拟支付成功</text>
+    <text class="page-subtitle">当前仍是离线原型。这里模拟了支付成功状态，用于打通下单到订单详情的原型链路。</text>
+    <button class="primary-button payment-card__button" bindtap="goOrderDetail">查看订单详情</button>
+    <button class="outline-button payment-card__button" bindtap="goOrders">返回订单列表</button>
+  </view>
+</view>
+
+<app-tab-bar></app-tab-bar>

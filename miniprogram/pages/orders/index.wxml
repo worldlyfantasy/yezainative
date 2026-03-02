@@ -1,0 +1,22 @@
+<view class="page-shell">
+  <view class="order-tabs">
+    <button
+      wx:for="{{tabs}}"
+      wx:key="key"
+      class="order-tab {{currentStatus === item.key ? 'order-tab--active' : ''}}"
+      data-status="{{item.key}}"
+      bindtap="switchTab"
+    >
+      {{item.label}}
+    </button>
+  </view>
+
+  <view class="section-block">
+    <view wx:if="{{orders.length}}" class="card-stack">
+      <order-card wx:for="{{orders}}" wx:key="id" order="{{item}}" bind:cardtap="onOrderTap" bind:paytap="onOrderPay"></order-card>
+    </view>
+    <view wx:else class="empty-state">当前筛选下暂无订单。</view>
+  </view>
+</view>
+
+<app-tab-bar></app-tab-bar>
