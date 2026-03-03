@@ -51,6 +51,22 @@ Page({
     showOfflineOrderNotice();
   },
 
+  onActiveTripTap(event) {
+    const slug = event.currentTarget.dataset.slug;
+    if (!slug) return;
+    wx.navigateTo({
+      url: `/pages/service-detail/index?slug=${slug}`
+    });
+  },
+
+  onActiveTripCreatorTap(event) {
+    const slug = event.currentTarget.dataset.slug;
+    if (!slug) return;
+    wx.navigateTo({
+      url: `/pages/creator-detail/index?slug=${slug}`
+    });
+  },
+
   onOrderTap(event) {
     wx.navigateTo({
       url: `/pages/order-detail/index?id=${event.currentTarget.dataset.id}`

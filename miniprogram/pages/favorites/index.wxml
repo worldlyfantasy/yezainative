@@ -1,8 +1,7 @@
 <view class="page-shell favorites-page">
   <text class="back-link" bindtap="goBack">← 返回我的</text>
-  <text class="eyebrow">已收藏的对象</text>
+  <text class="eyebrow">真实在场 · 收藏盒</text>
   <text class="page-title">我的收藏</text>
-  <text class="page-subtitle">按土地、人物、行程分类浏览，点击卡片可回到对应详情页。</text>
 
   <view wx:if="{{!loggedIn}}" class="section-block paper-block">
     <text class="section-title">登录后查看收藏</text>

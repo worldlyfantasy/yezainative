@@ -1,14 +1,17 @@
 <view class="page-shell">
-  <view class="order-tabs">
-    <button
+  <view class="order-tabs-bar">
+    <view
       wx:for="{{tabs}}"
       wx:key="key"
       class="order-tab {{currentStatus === item.key ? 'order-tab--active' : ''}}"
+      hover-class="order-tab--hover"
+      hover-stay-time="80"
       data-status="{{item.key}}"
       bindtap="switchTab"
     >
-      {{item.label}}
-    </button>
+      <text class="order-tab__text">{{item.label}}</text>
+      <view wx:if="{{currentStatus === item.key}}" class="order-tab__underline"></view>
+    </view>
   </view>
 
   <view class="section-block">

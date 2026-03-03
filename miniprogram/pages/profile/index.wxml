@@ -1,61 +1,93 @@
 <view class="page-shell profile-page">
-  <view wx:if="{{!loggedIn}}" class="paper-block profile-empty">
-    <image class="profile-empty__banner" src="https://picsum.photos/seed/yezai-landing/1600/900" mode="aspectFill"></image>
-    <view class="profile-empty__mask"></view>
-    <view class="profile-empty__content">
-      <text class="page-title profile-empty__title">欢迎来到野哉</text>
-      <text class="page-subtitle profile-empty__desc">登录后可查看订单、收藏与个人信息。当前为离线原型阶段，登录为本地模拟的一键登录。</text>
-      <button class="primary-button profile-empty__button" bindtap="handleLogin">微信一键登录（模拟）</button>
+  <view wx:if="{{!loggedIn}}" class="profile-guest-wrap">
+    <view class="profile-guest-card">
+      <image class="profile-guest-card__bg" src="cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/野哉-新媒体尺寸-小红书.jpg" mode="widthFix"></image>
+      <view class="profile-guest-card__content">
+        <text class="profile-guest-card__title">野于本心\n在彼途中</text>
+        <view class="profile-guest-card__button" bindtap="handleLogin" hover-class="profile-guest-card__button--pressing" hover-stay-time="100">微信登录</view>
+      </view>
     </view>
   </view>
 
   <block wx:else>
-    <view class="paper-block profile-user">
-      <view class="profile-user__head">
-        <image class="profile-user__avatar" src="{{user.avatarUrl}}" mode="aspectFill"></image>
-        <view class="profile-user__meta">
-          <text class="section-title">{{user.nickname}}</text>
-          <text class="profile-user__member">{{user.memberLabel}}</text>
+    <view class="profile-hero">
+      <text class="profile-hero__eyebrow">MY YEZAI</text>
+      <view class="profile-identity">
+        <view class="profile-identity__row">
+          <image class="profile-identity__avatar" src="{{user.avatarUrl}}" mode="aspectFill"></image>
+          <view class="profile-identity__meta">
+            <text class="profile-identity__name">{{user.nickname}}</text>
+            <text class="profile-identity__member">{{user.memberLabel}}</text>
+          </view>
+          <view class="profile-identity__logout" bindtap="handleLogout" hover-class="profile-identity__logout--pressing" hover-stay-time="100"><text class="profile-identity__logout-text">退出</text><text class="profile-identity__logout-arrow">→</text></view>
         </view>
-        <button class="ghost-action" bindtap="handleLogout">退出</button>
+        <text class="profile-identity__note">你的旅程、收藏与回望，都收在这一页。</text>
       </view>
     </view>
 
-    <view class="section-block shortcut-grid">
+    <view class="section-block profile-entry-grid">
       <button
         wx:for="{{shortcuts}}"
         wx:key="key"
-        class="paper-block shortcut-item"
+        class="profile-entry-card {{item.cardClassName}}"
+        hover-class="is-pressing-card"
         data-key="{{item.key}}"
         bindtap="onShortcutTap"
       >
-        <text class="shortcut-item__label">{{item.label}}</text>
+        <image class="profile-entry-card__glyph" src="{{item.glyphSrc}}" mode="aspectFit"></image>
+        <text class="profile-entry-card__eyebrow">{{item.eyebrow}}</text>
+        <view class="profile-entry-card__head">
+          <text class="profile-entry-card__title">{{item.label}}</text>
+          <text class="profile-entry-card__arrow">›</text>
+        </view>
       </button>
     </view>
 
-    <view class="section-block paper-block">
-      <text class="section-title">进行中的旅行</text>
-      <view wx:if="{{activeTrips.length}}" class="mini-order-list">
-        <view wx:for="{{activeTrips}}" wx:key="id" class="mini-order" data-id="{{item.id}}" bindtap="onOrderTap">
-          <text class="mini-order__name">{{item.serviceName}}</text>
-          <text class="mini-order__meta">{{item.travelDate}} · {{item.statusText}}</text>
-        </view>
-      </view>
-      <view wx:else class="empty-state profile-empty-state">当前没有进行中的旅行。</view>
-    </view>
-
-    <view class="section-block paper-block">
+    <view class="section-block profile-trip-group">
       <view class="section-head profile-section-head">
-        <text class="section-title">最近订单</text>
-        <text class="section-link" bindtap="onShortcutTap" data-key="orders">查看全部</text>
-      </view>
-      <view wx:if="{{recentOrders.length}}" class="mini-order-list">
-        <view wx:for="{{recentOrders}}" wx:key="id" class="mini-order" data-id="{{item.id}}" bindtap="onOrderTap">
-          <text class="mini-order__name">{{item.serviceName}}</text>
-          <text class="mini-order__meta">#{{item.shortId}} · {{item.payableText}} · {{item.statusText}}</text>
+        <view class="profile-section-head__body">
+          <text class="section-title">进行中的旅行</text>
+          <text class="profile-section__note">正在发生的旅途，会在这里轻声提醒你。</text>
         </view>
       </view>
-      <view wx:else class="empty-state profile-empty-state">暂时还没有订单。</view>
+      <view wx:if="{{activeTrips.length}}" class="active-trip-list">
+        <view
+          wx:for="{{activeTrips}}"
+          wx:key="id"
+          class="active-trip-row"
+        >
+          <view
+            class="active-trip-creator"
+            hover-class="is-pressing-card"
+            hover-stay-time="100"
+            data-slug="{{item.creatorSlug}}"
+            bindtap="onActiveTripCreatorTap"
+          >
+            <image class="active-trip-creator__avatar" src="{{item.creatorAvatar}}" mode="aspectFill"></image>
+            <view class="active-trip-creator__info">
+              <text class="active-trip-creator__name">{{item.creatorName}}</text>
+            </view>
+          </view>
+          <view class="active-trip-connector"></view>
+          <view
+            class="active-trip-card-wrap"
+            hover-class="is-pressing-card"
+            hover-stay-time="100"
+            data-slug="{{item.serviceSlug}}"
+            bindtap="onActiveTripTap"
+          >
+            <image class="active-trip-card__cover" src="{{item.serviceCover}}" mode="aspectFill"></image>
+            <view class="active-trip-card__body">
+              <view class="active-trip-card__top">
+                <text class="active-trip-card__title">{{item.serviceName}}</text>
+                <text class="active-trip-card__badge">{{item.statusText}}</text>
+              </view>
+              <text class="active-trip-card__desc">{{item.serviceSummary}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view wx:else class="empty-state profile-empty-state">当前没有进行中的旅行，下一段山野还在路上。</view>
     </view>
   </block>
 </view>

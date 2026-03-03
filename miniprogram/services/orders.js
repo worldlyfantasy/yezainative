@@ -4,12 +4,21 @@ const ORDERS_KEY = "yezai_orders";
 
 const STATUS_META = {
   all: { key: "all", label: "全部" },
-  pending: { key: "pending", label: "待付款" },
+  pending: { key: "pending", label: "待支付" },
   paid: { key: "paid", label: "已付款" },
   traveling: { key: "traveling", label: "进行中" },
   completed: { key: "completed", label: "已完成" },
-  canceled: { key: "canceled", label: "已取消" }
+  canceled: { key: "canceled", label: "已退订" }
 };
+
+/** 订单列表页使用的 5 个 Tab：全部、待支付、未出行、已退订、待反馈 */
+const ORDER_TABS = [
+  { key: "all", label: "全部" },
+  { key: "pending", label: "待支付" },
+  { key: "not_departed", label: "未出行" },
+  { key: "canceled", label: "已退订" },
+  { key: "to_review", label: "待反馈" }
+];
 
 function createDefaultOrders() {
   const sampleService = services[0];
@@ -66,12 +75,23 @@ function buildOrderCard(order) {
 }
 
 function getOrderStatusTabs() {
-  return Object.keys(STATUS_META).map((key) => STATUS_META[key]);
+  return ORDER_TABS;
 }
 
 function getOrders(statusKey) {
   const orders = ensureOrders();
-  const list = statusKey && statusKey !== "all" ? orders.filter((order) => order.status === statusKey) : orders;
+  let list = orders;
+  if (statusKey && statusKey !== "all") {
+    if (statusKey === "pending") {
+      list = orders.filter((o) => o.status === "pending");
+    } else if (statusKey === "not_departed") {
+      list = orders.filter((o) => o.status === "paid" || o.status === "traveling");
+    } else if (statusKey === "canceled") {
+      list = orders.filter((o) => o.status === "canceled");
+    } else if (statusKey === "to_review") {
+      list = orders.filter((o) => o.status === "completed");
+    }
+  }
   return list.map(buildOrderCard);
 }
 

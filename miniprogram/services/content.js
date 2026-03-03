@@ -52,9 +52,7 @@ function getHomePageData() {
         variant: "photo",
         tone: "muted",
         cloudFileID:
-          "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/hero.png",
-        image:
-          "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/brandasset/hero.png?sign=9865caf7bf0857f23ca36b8b3c4e5a21&t=1772431222",
+          "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/hero2.png",
         showMask: true,
         mark: "",
         title: "",
@@ -193,6 +191,25 @@ function getIdeaDetailData(slug) {
   };
 }
 
+const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+
+function formatPeriodDate(dateStr) {
+  const d = new Date(dateStr);
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  const week = WEEKDAY_NAMES[d.getDay()];
+  return `${String(m).padStart(2, "0")}/${String(day).padStart(2, "0")} ${week}`;
+}
+
+function buildGroupPeriodDisplay(period) {
+  const dateLabel =
+    period.dateStart === period.dateEnd
+      ? formatPeriodDate(period.dateStart)
+      : `${formatPeriodDate(period.dateStart)} - ${formatPeriodDate(period.dateEnd)}`;
+  const statusText = period.status === "confirmed" ? "确定成行" : "可报名";
+  return Object.assign({}, period, { dateLabel, statusText });
+}
+
 function getServiceDetailData(slug) {
   const service = getServiceBySlug(slug);
   if (!service) {
@@ -202,18 +219,45 @@ function getServiceDetailData(slug) {
   const creator = creators.find((item) => item.id === service.creatorId) || null;
   const relatedDestinations = destinations.filter((item) => service.destinationSlugs.includes(item.slug));
   const heroCover = service.cover || (relatedDestinations[0] ? relatedDestinations[0].cover : "");
-  const photoGallery = service.gallery && service.gallery.length
-    ? service.gallery
-    : (heroCover ? [heroCover] : []);
+  const photoGallery =
+    service.gallery && service.gallery.length ? service.gallery : heroCover ? [heroCover] : [];
+
+  const photoBaseList = heroCover ? [heroCover].concat(photoGallery) : photoGallery;
+  const photoTotal = photoBaseList.length;
+
+  const mediaTabs = [
+    {
+      key: "landscape",
+      label: "景观",
+      images: photoBaseList.slice(0, 2)
+    },
+    {
+      key: "experience",
+      label: "体验",
+      images: photoBaseList.slice(1, 3).length ? photoBaseList.slice(1, 3) : photoBaseList.slice(0, 1)
+    },
+    {
+      key: "stay",
+      label: "住宿",
+      images: photoBaseList.slice(2, 4).length ? photoBaseList.slice(2, 4) : photoBaseList.slice(0, 1)
+    }
+  ];
+
+  const groupPeriods = (service.groupPeriods || []).map(buildGroupPeriodDisplay);
+  const tags = Array.isArray(service.tags) ? service.tags : [];
 
   return {
     service: Object.assign({}, service, {
-      isFavorited: isFavorited("services", service.slug)
+      isFavorited: isFavorited("services", service.slug),
+      tags
     }),
     creator,
     relatedDestinations,
     heroCover,
-    photoGallery
+    photoGallery,
+    photoTotal,
+    mediaTabs,
+    groupPeriods
   };
 }
 

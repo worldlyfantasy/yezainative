@@ -1,6 +1,6 @@
 <view class="page-shell">
-  <text class="eyebrow">阅读在地经验</text>
-  <text class="page-title">旅行灵感</text>
+  <text class="eyebrow">真实在场 · 在地经验</text>
+  <text class="page-title">旅行故事</text>
   <text class="page-subtitle">这些文章来自创作者与旅人共同写下的现场笔记，远离空洞宣传语。</text>
 
   <scroll-view class="section-block theme-scroll" scroll-x="true" show-scrollbar="false">

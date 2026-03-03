@@ -1,7 +1,10 @@
 const { getServiceDetailData } = require("../../services/content");
 const { createOrder } = require("../../services/orders");
 
-function getBasePrice(service) {
+function getBasePrice(service, unitPriceFromQuery) {
+  if (unitPriceFromQuery != null && !isNaN(Number(unitPriceFromQuery))) {
+    return Number(unitPriceFromQuery);
+  }
   const matched = String(service.price || "").match(/\d+/);
   return matched ? Number(matched[0]) : 0;
 }
@@ -28,16 +31,25 @@ Page({
       return;
     }
 
+    const travelDate = options.travelDate || "2026-03-20";
+    const peopleCount = Math.max(1, parseInt(options.peopleCount, 10) || 1);
+    const unitPrice = options.unitPrice;
+
     this.setData(
       {
-        service: payload.service
+        service: payload.service,
+        travelDate,
+        peopleCount,
+        _unitPrice: unitPrice
       },
       () => this.updatePayable()
     );
   },
 
   updatePayable() {
-    const base = this.data.service ? getBasePrice(this.data.service) : 0;
+    const base = this.data.service
+      ? getBasePrice(this.data.service, this.data._unitPrice)
+      : 0;
     const payable = base * this.data.peopleCount;
     this.setData({
       payableText: `¥${payable}`

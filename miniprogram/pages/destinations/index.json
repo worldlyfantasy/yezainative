@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "目的地",
+  "navigationBarTitleText": "土地",
   "usingComponents": {
     "destination-card": "/components/yezai/destination-card/index"
   }

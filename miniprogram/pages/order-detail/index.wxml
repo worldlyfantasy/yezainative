@@ -6,7 +6,7 @@
   </view>
 
   <view class="section-block paper-block">
-    <text class="section-title">商品信息</text>
+    <text class="section-title">旅程信息</text>
     <view class="order-product">
       <image class="order-product__cover" src="{{order.cover}}" mode="aspectFill"></image>
       <view class="order-product__body">
@@ -18,9 +18,9 @@
 
   <view class="section-block paper-block">
     <text class="section-title">价格明细</text>
-    <view class="price-row"><text>商品价</text><text>{{order.amountText}}</text></view>
+    <view class="price-row"><text>价格</text><text>{{order.amountText}}</text></view>
     <view class="price-row"><text>优惠</text><text>¥{{order.discount}}</text></view>
-    <view class="price-row price-row--strong"><text>应付</text><text>{{order.payableText}}</text></view>
+    <view class="price-row price-row--strong"><text>已付</text><text>{{order.payableText}}</text></view>
   </view>
 
   <view class="section-block paper-block">
@@ -40,20 +40,27 @@
     </view>
   </view>
 
-  <view class="order-actions">
+  <view class="order-actions" wx:if="{{order.status === 'pending' || order.status === 'completed'}}">
     <button
-      wx:if="{{order.status === 'pending' || order.status === 'paid' || order.status === 'completed'}}"
+      wx:if="{{order.status === 'pending'}}"
       class="primary-button order-actions__button"
       bindtap="handlePrimary"
     >
-      {{order.status === 'pending' ? '立即支付' : (order.status === 'paid' ? '查看集合信息' : '再次购买')}}
+      立即支付
     </button>
     <button
-      wx:if="{{order.status === 'pending' || order.status === 'paid'}}"
+      wx:if="{{order.status === 'pending'}}"
       class="outline-button order-actions__button"
       bindtap="handleSecondary"
     >
-      {{order.status === 'pending' ? '取消订单' : '申请退款'}}
+      取消订单
+    </button>
+    <button
+      wx:if="{{order.status === 'completed'}}"
+      class="primary-button order-actions__button"
+      bindtap="handlePrimary"
+    >
+      再次购买
     </button>
   </view>
 </view>

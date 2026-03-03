@@ -1,6 +1,6 @@
 <view class="page-shell">
   <text class="eyebrow">真实在场 · 创作者档案</text>
-  <text class="page-title">发现创作者</text>
+  <text class="page-title">创作者</text>
   <text class="page-subtitle">他们有自己的节奏与价值观，我们负责透明呈现。选择目的地或旅行风格，即可筛选合适的同行者。</text>
 
   <view class="section-block filter-shell creators-filter-shell">

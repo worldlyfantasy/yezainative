@@ -3,7 +3,7 @@ const { getOrderStatusTabs, getOrders, payOrder } = require("../../services/orde
 Page({
   data: {
     tabs: [],
-    currentStatus: "all",
+    currentStatus: "pending",
     orders: []
   },
 
