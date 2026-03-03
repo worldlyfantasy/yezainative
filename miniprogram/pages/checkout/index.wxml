@@ -1,35 +1,80 @@
 <view wx:if="{{service}}" class="page-shell checkout-page">
-  <view class="paper-block">
-    <text class="section-title">确认服务</text>
-    <text class="checkout-service__name">{{service.name}}</text>
-    <text class="checkout-service__meta">{{service.type}} · {{service.price}}</text>
-  </view>
-
-  <view class="section-block paper-block">
-    <text class="section-title">选择出行日期</text>
-    <picker mode="date" value="{{travelDate}}" start="2026-03-01" end="2027-12-31" bindchange="onDateChange">
-      <view class="filter-picker checkout-field">{{travelDate}}</view>
-    </picker>
-  </view>
-
-  <view class="section-block paper-block">
-    <text class="section-title">选择人数</text>
-    <view class="stepper">
-      <button class="stepper__button" bindtap="decreasePeople">-</button>
-      <text class="stepper__value">{{peopleCount}}</text>
-      <button class="stepper__button" bindtap="increasePeople">+</button>
+  <!-- 订单摘要模块 -->
+  <view class="checkout-summary paper-block">
+    <text class="section-title">订单摘要</text>
+    <view class="checkout-summary__row">
+      <text class="checkout-summary__label">行程名称</text>
+      <text class="checkout-summary__value">{{service.name}}</text>
+    </view>
+    <view class="checkout-summary__row">
+      <text class="checkout-summary__label">版本名称</text>
+      <text class="checkout-summary__value">{{selectedVersion}}</text>
+    </view>
+    <view class="checkout-summary__row">
+      <text class="checkout-summary__label">出发日期</text>
+      <text class="checkout-summary__value">{{selectedDate}}</text>
+    </view>
+    <view class="checkout-summary__row">
+      <text class="checkout-summary__label">单价</text>
+      <text class="checkout-summary__value">¥{{summaryPrice}}</text>
+    </view>
+    <view class="checkout-summary__row">
+      <text class="checkout-summary__label">出行人数</text>
+      <text class="checkout-summary__value">{{summaryCount}} 人</text>
+    </view>
+    <view class="checkout-summary__row">
+      <text class="checkout-summary__label">小计</text>
+      <text class="checkout-summary__value checkout-summary__value--em">¥{{summarySubtotal}}</text>
+    </view>
+    <view class="checkout-summary__row checkout-summary__row--total">
+      <text class="checkout-summary__label">总价</text>
+      <text class="checkout-summary__total">¥{{summaryTotal}}</text>
     </view>
   </view>
 
-  <view class="section-block paper-block">
-    <text class="section-title">填写出行人</text>
-    <input class="search-input checkout-field" placeholder="姓名" data-field="travelerName" value="{{travelerName}}" bindinput="onInput" />
-    <input class="search-input checkout-field" placeholder="证件号" data-field="travelerIdCard" value="{{travelerIdCard}}" bindinput="onInput" />
-    <input class="search-input checkout-field" placeholder="手机号" data-field="travelerPhone" value="{{travelerPhone}}" bindinput="onInput" />
-    <textarea class="checkout-note" placeholder="备注需求" data-field="note" value="{{note}}" bindinput="onInput"></textarea>
+  <!-- 出行人信息（动态数量） -->
+  <view class="section-block paper-block checkout-travelers-block">
+    <text class="section-title">出行人信息</text>
+    <view class="checkout-travelers">
+      <view wx:for="{{travelPersons}}" wx:key="index" class="checkout-traveler">
+        <text class="checkout-traveler__title">出行人 {{item.index}}</text>
+        <input class="search-input checkout-field" placeholder="姓名（必填）" data-index="{{item.index}}" data-field="name" value="{{item.name}}" bindinput="onTravelPersonInput" />
+        <input class="search-input checkout-field" placeholder="身份证号/护照号（必填）" data-index="{{item.index}}" data-field="idCard" value="{{item.idCard}}" bindinput="onTravelPersonInput" />
+        <input class="search-input checkout-field" placeholder="手机号（必填）" data-index="{{item.index}}" data-field="phone" value="{{item.phone}}" bindinput="onTravelPersonInput" />
+        <input class="search-input checkout-field" placeholder="微信号（选填）" data-index="{{item.index}}" data-field="wechat" value="{{item.wechat}}" bindinput="onTravelPersonInput" />
+        <textarea class="checkout-note" placeholder="备注需求（选填）" data-index="{{item.index}}" data-field="note" value="{{item.note}}" bindinput="onTravelPersonInput"></textarea>
+      </view>
+    </view>
   </view>
 
-  <bottom-action-bar price-text="{{payableText}}" button-text="提交订单并支付" bind:actiontap="submitOrder"></bottom-action-bar>
+  <!-- 联系人信息 -->
+  <view class="section-block paper-block">
+    <text class="section-title">联系人信息</text>
+    <text class="checkout-contact-hint">默认等于出行人1，可修改</text>
+    <input class="search-input checkout-field" placeholder="联系人姓名" data-field="contactName" value="{{contactName}}" bindinput="onContactInput" />
+    <input class="search-input checkout-field" placeholder="联系电话" data-field="contactPhone" value="{{contactPhone}}" bindinput="onContactInput" />
+  </view>
+
+  <!-- 协议确认 -->
+  <view class="section-block paper-block checkout-agreements">
+    <text class="checkout-agreement-intro">我已阅读并同意：</text>
+    <checkbox-group class="checkout-agreement-list" bindchange="onAgreementChange">
+      <label class="checkout-agreement__label">
+        <checkbox value="service" checked="{{agreedService}}" color="#6b5344" />
+        <text>《服务协议》</text>
+      </label>
+      <label class="checkout-agreement__label">
+        <checkbox value="risk" checked="{{agreedRisk}}" color="#6b5344" />
+        <text>《风险告知书》</text>
+      </label>
+      <label class="checkout-agreement__label">
+        <checkbox value="refund" checked="{{agreedRefund}}" color="#6b5344" />
+        <text>《退订规则》</text>
+      </label>
+    </checkbox-group>
+  </view>
+
+  <bottom-action-bar price-text="{{payableText}}" button-text="提交订单并支付" bind:actiontap="submitOrder" class="checkout-bottom-bar"></bottom-action-bar>
 </view>
 
 <app-tab-bar></app-tab-bar>

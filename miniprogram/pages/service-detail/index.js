@@ -3,6 +3,8 @@ const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
 const { toggleFavorite } = require("../../services/favorites");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
 
+const SECTION_SCROLL_DURATION = 320;
+
 function getMonthLabel(dateStr) {
   const m = new Date(dateStr).getMonth() + 1;
   return `${m}月`;
@@ -32,9 +34,69 @@ function filterPeriodsByVersionAndMonth(periods, version, monthLabel) {
   });
 }
 
+function buildCostTableGroups(costs) {
+  if (!costs) return [];
+  return [
+    {
+      key: "include",
+      title: "费用包含",
+      rows: (costs.include || []).map((item) => ({
+        label: item.label,
+        content: item.content
+      }))
+    },
+    {
+      key: "exclude",
+      title: "费用不含",
+      rows: (costs.exclude || []).map((item) => ({
+        label: item.label,
+        content: item.content
+      }))
+    },
+    {
+      key: "refundRules",
+      title: "退订规则",
+      rows: (costs.refundRules || []).map((item) => ({
+        label: item.days,
+        content: item.percent
+      }))
+    }
+  ].filter((group) => group.rows.length);
+}
+
+function buildTravelDetailState(travelDetail) {
+  if (!travelDetail) {
+    return {
+      travelDetail: null,
+      costTableGroups: [],
+      activeSectionKey: ""
+    };
+  }
+
+  const sections = Array.isArray(travelDetail.sections)
+    ? travelDetail.sections.filter((item) => item && item.key && item.anchorId)
+    : [];
+
+  return {
+    travelDetail: Object.assign({}, travelDetail, {
+      sections
+    }),
+    costTableGroups: buildCostTableGroups(travelDetail.costs),
+    activeSectionKey: sections[0] ? sections[0].key : ""
+  };
+}
+
 Page({
   data: {
     service: null,
+    travelDetail: null,
+    costTableGroups: [],
+    activeSectionKey: "",
+    sectionOffsets: [],
+    sectionNavHeight: 0,
+    sectionNavTop: 0,
+    isSectionTabsSticky: false,
+    isAutoScrolling: false,
     favoriteNoticeState: "",
     creator: null,
     relatedDestinations: [],
@@ -64,6 +126,7 @@ Page({
   },
 
   onLoad(options) {
+    this.pageScrollTop = 0;
     const payload = getServiceDetailData(options.slug);
     if (!payload) {
       wx.showToast({
@@ -76,21 +139,233 @@ Page({
       }, 300);
       return;
     }
+
     const groupPeriods = Array.isArray(payload.groupPeriods) ? payload.groupPeriods : [];
-    this.setData({
-      service: payload.service,
-      creator: payload.creator,
-      relatedDestinations: payload.relatedDestinations || [],
-      heroCover: payload.heroCover || "",
-      photoGallery: payload.photoGallery || [],
-      photoTotal: payload.photoTotal || 0,
-      mediaTabs: payload.mediaTabs || [],
-      groupPeriods
-    });
+    const detailState = buildTravelDetailState(payload.travelDetail);
+
+    this.setData(
+      Object.assign(
+        {
+          service: payload.service,
+          creator: payload.creator,
+          relatedDestinations: payload.relatedDestinations || [],
+          heroCover: payload.heroCover || "",
+          photoGallery: payload.photoGallery || [],
+          photoTotal: payload.photoTotal || 0,
+          mediaTabs: payload.mediaTabs || [],
+          groupPeriods,
+          sectionOffsets: [],
+          sectionNavHeight: 0,
+          sectionNavTop: 0,
+          isSectionTabsSticky: false,
+          isAutoScrolling: false
+        },
+        detailState
+      ),
+      () => {
+        if (detailState.travelDetail) {
+          this.scheduleMeasureTravelDetailLayout();
+        }
+      }
+    );
+  },
+
+  onReady() {
+    if (this.data.travelDetail) {
+      this.scheduleMeasureTravelDetailLayout();
+    }
+  },
+
+  onPageScroll(event) {
+    const scrollTop = event.scrollTop || 0;
+    this.pageScrollTop = scrollTop;
+
+    if (!this.data.travelDetail) {
+      return;
+    }
+
+    if (!this.data.sectionOffsets.length || !this.data.sectionNavTop) {
+      this.scheduleMeasureTravelDetailLayout();
+      return;
+    }
+
+    this.updateSectionScrollState(scrollTop);
   },
 
   onUnload() {
+    if (this.autoScrollTimer) {
+      clearTimeout(this.autoScrollTimer);
+    }
+    if (this.sectionMeasureTimer) {
+      clearTimeout(this.sectionMeasureTimer);
+    }
     clearFavoriteNotice(this, "favoriteNoticeState", true);
+  },
+
+  getActiveSectionKey(scrollTop, sectionOffsets, navHeight) {
+    const offsets = sectionOffsets || this.data.sectionOffsets;
+    if (!offsets.length) return "";
+
+    const currentTop = scrollTop + (navHeight != null ? navHeight : this.data.sectionNavHeight) + 20;
+    let activeKey = offsets[0].key;
+
+    offsets.forEach((item) => {
+      if (currentTop >= item.top) {
+        activeKey = item.key;
+      }
+    });
+
+    return activeKey;
+  },
+
+  updateSectionScrollState(scrollTop) {
+    const nextData = {};
+    let shouldUpdate = false;
+
+    if (this.data.sectionNavTop) {
+      const isSticky = scrollTop >= this.data.sectionNavTop;
+      if (isSticky !== this.data.isSectionTabsSticky) {
+        nextData.isSectionTabsSticky = isSticky;
+        shouldUpdate = true;
+      }
+    }
+
+    if (!this.data.isAutoScrolling && this.data.sectionOffsets.length) {
+      const activeSectionKey = this.getActiveSectionKey(scrollTop);
+      if (activeSectionKey && activeSectionKey !== this.data.activeSectionKey) {
+        nextData.activeSectionKey = activeSectionKey;
+        shouldUpdate = true;
+      }
+    }
+
+    if (shouldUpdate) {
+      this.setData(nextData);
+    }
+  },
+
+  scheduleMeasureTravelDetailLayout(callback) {
+    if (!this.data.travelDetail) {
+      if (typeof callback === "function") callback();
+      return;
+    }
+
+    if (this.sectionMeasureTimer) {
+      clearTimeout(this.sectionMeasureTimer);
+    }
+
+    this.sectionMeasureTimer = setTimeout(() => {
+      this.measureTravelDetailLayout(callback);
+    }, 60);
+  },
+
+  measureTravelDetailLayout(callback) {
+    if (!this.data.travelDetail) {
+      if (typeof callback === "function") callback();
+      return;
+    }
+
+    const sections = this.data.travelDetail.sections || [];
+    if (!sections.length) {
+      if (typeof callback === "function") callback();
+      return;
+    }
+
+    const query = wx.createSelectorQuery();
+    query.selectViewport().scrollOffset();
+    query.select(".js-section-tabs-anchor").boundingClientRect();
+    query.select(".js-section-tabs").boundingClientRect();
+    sections.forEach((section) => {
+      query.select(`#${section.anchorId}`).boundingClientRect();
+    });
+
+    query.exec((res) => {
+      const viewport = res[0] || {};
+      const anchorRect = res[1];
+      const navRect = res[2];
+      if (!anchorRect || !navRect) {
+        if (typeof callback === "function") callback();
+        return;
+      }
+
+      const scrollTop = viewport.scrollTop || this.pageScrollTop || 0;
+      const sectionOffsets = sections
+        .map((section, index) => {
+          const rect = res[index + 3];
+          if (!rect) return null;
+          return {
+            key: section.key,
+            top: rect.top + scrollTop
+          };
+        })
+        .filter(Boolean);
+
+      if (!sectionOffsets.length) {
+        if (typeof callback === "function") callback();
+        return;
+      }
+
+      const nextData = {
+        sectionOffsets,
+        sectionNavHeight: navRect.height || 0,
+        sectionNavTop: anchorRect.top + scrollTop,
+        activeSectionKey:
+          this.getActiveSectionKey(scrollTop, sectionOffsets, navRect.height || 0) || this.data.activeSectionKey,
+        isSectionTabsSticky: (anchorRect.top || 0) <= 0
+      };
+
+      this.setData(nextData, () => {
+        if (typeof callback === "function") callback();
+      });
+    });
+  },
+
+  onSectionTabTap(event) {
+    const key = event.detail.key;
+    if (!key || !this.data.travelDetail) {
+      return;
+    }
+
+    const targetSection = (this.data.travelDetail.sections || []).find((item) => item.key === key);
+    if (!targetSection) {
+      return;
+    }
+
+    const scrollToSection = () => {
+      if (this.autoScrollTimer) {
+        clearTimeout(this.autoScrollTimer);
+      }
+
+      this.setData({
+        activeSectionKey: key,
+        isAutoScrolling: true
+      });
+
+      wx.pageScrollTo({
+        selector: `#${targetSection.anchorId}`,
+        offsetTop: -Math.round(this.data.sectionNavHeight || 0),
+        duration: SECTION_SCROLL_DURATION
+      });
+
+      this.autoScrollTimer = setTimeout(() => {
+        this.setData({
+          isAutoScrolling: false
+        });
+        this.updateSectionScrollState(this.pageScrollTop || 0);
+      }, SECTION_SCROLL_DURATION + 80);
+    };
+
+    if (!this.data.sectionNavHeight || !this.data.sectionOffsets.length) {
+      this.measureTravelDetailLayout(scrollToSection);
+      return;
+    }
+
+    scrollToSection();
+  },
+
+  onTravelDetailMediaLoad() {
+    if (this.data.travelDetail) {
+      this.scheduleMeasureTravelDetailLayout();
+    }
   },
 
   goBack() {
@@ -174,9 +449,10 @@ Page({
       periodSheetSelectedVersion: version,
       periodSheetDates: dates,
       periodSheetSelectedDateId: first ? first.id : null,
-      periodSheetGroupHint: first && first.minGroup && first.remainingSeats != null
-        ? `${first.minGroup}人成行/当期余位${first.remainingSeats}人`
-        : "",
+      periodSheetGroupHint:
+        first && first.minGroup && first.remainingSeats != null
+          ? `${first.minGroup}人成行/当期余位${first.remainingSeats}人`
+          : "",
       periodSheetTotalPrice: first ? first.price * this.data.periodSheetPeople : 0,
       periodSheetDateRange: first ? `${first.dateStart} ~ ${first.dateEnd}` : "",
       periodSheetStatusText: first ? first.statusText : ""
@@ -192,9 +468,10 @@ Page({
       periodSheetActiveMonth: month,
       periodSheetDates: dates,
       periodSheetSelectedDateId: first ? first.id : null,
-      periodSheetGroupHint: first && first.minGroup && first.remainingSeats != null
-        ? `${first.minGroup}人成行/当期余位${first.remainingSeats}人`
-        : "",
+      periodSheetGroupHint:
+        first && first.minGroup && first.remainingSeats != null
+          ? `${first.minGroup}人成行/当期余位${first.remainingSeats}人`
+          : "",
       periodSheetTotalPrice: first ? first.price * this.data.periodSheetPeople : 0,
       periodSheetDateRange: first ? `${first.dateStart} ~ ${first.dateEnd}` : "",
       periodSheetStatusText: first ? first.statusText : ""
@@ -206,9 +483,10 @@ Page({
     if (!period) return;
     this.setData({
       periodSheetSelectedDateId: period.id,
-      periodSheetGroupHint: period.minGroup && period.remainingSeats != null
-        ? `${period.minGroup}人成行/当期余位${period.remainingSeats}人`
-        : "",
+      periodSheetGroupHint:
+        period.minGroup && period.remainingSeats != null
+          ? `${period.minGroup}人成行/当期余位${period.remainingSeats}人`
+          : "",
       periodSheetTotalPrice: period.price * this.data.periodSheetPeople,
       periodSheetDateRange: `${period.dateStart} ~ ${period.dateEnd}`,
       periodSheetStatusText: period.statusText
@@ -247,8 +525,9 @@ Page({
     const travelDate = selected.dateStart;
     const peopleCount = this.data.periodSheetPeople;
     const unitPrice = selected.price;
+    const versionName = selected.versionName ? encodeURIComponent(selected.versionName) : "";
     wx.navigateTo({
-      url: `/pages/checkout/index?slug=${slug}&travelDate=${travelDate}&peopleCount=${peopleCount}&unitPrice=${unitPrice}`
+      url: `/pages/checkout/index?slug=${slug}&travelDate=${travelDate}&peopleCount=${peopleCount}&unitPrice=${unitPrice}&versionName=${versionName}`
     });
   },
 
@@ -322,8 +601,8 @@ Page({
   },
 
   onMediaTabChange(event) {
-    const index = event.currentTarget.dataset.index;
-    if (typeof index === "number") {
+    const index = Number(event.currentTarget.dataset.index);
+    if (!Number.isNaN(index)) {
       this.setData({
         activeMediaTabIndex: index
       });

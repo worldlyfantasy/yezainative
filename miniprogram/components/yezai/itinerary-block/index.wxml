@@ -1,0 +1,98 @@
+<view class="itinerary-block" wx:if="{{normalizedDays.length}}">
+  <view class="itinerary-block__layout">
+    <scroll-view class="itinerary-block__nav" scroll-y="true" show-scrollbar="{{false}}">
+      <view class="itinerary-block__nav-inner">
+        <view
+          wx:for="{{normalizedDays}}"
+          wx:key="key"
+          wx:for-item="dayItem"
+          class="itinerary-day-chip {{activeDayKey === dayItem.key ? 'itinerary-day-chip--active' : ''}}"
+          data-key="{{dayItem.key}}"
+          bindtap="onDayTap"
+        >
+          <text class="itinerary-day-chip__text">{{dayItem.dayLabel}}</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <scroll-view
+      class="itinerary-block__content"
+      scroll-y="true"
+      show-scrollbar="{{false}}"
+      scroll-with-animation="true"
+      scroll-into-view="{{scrollIntoView}}"
+      bindscroll="onContentScroll"
+    >
+      <view class="itinerary-block__content-inner">
+        <view
+          wx:for="{{normalizedDays}}"
+          wx:key="key"
+          wx:for-item="dayItem"
+          class="itinerary-day-card"
+          id="itinerary-day-{{dayItem.key}}"
+        >
+          <view class="itinerary-day-card__head">
+            <view class="itinerary-day-card__title-row">
+              <text class="itinerary-day-card__day">{{dayItem.dayLabel}}</text>
+              <text class="itinerary-day-card__title">{{dayItem.title}}</text>
+            </view>
+          </view>
+          <view class="itinerary-day-card__modules">
+            <view
+              wx:for="{{dayItem.modules}}"
+              wx:key="key"
+              wx:for-item="module"
+              class="itinerary-module"
+            >
+              <view class="itinerary-module__head">
+                <view class="itinerary-module__icon itinerary-module__icon--{{module.iconType}}">
+                  <block wx:if="{{module.iconType === 'schedule'}}">
+                    <view class="itinerary-icon__sheet"></view>
+                    <view class="itinerary-icon__line itinerary-icon__line--a"></view>
+                    <view class="itinerary-icon__line itinerary-icon__line--b"></view>
+                  </block>
+                  <block wx:elif="{{module.iconType === 'transport'}}">
+                    <view class="itinerary-icon__car-top"></view>
+                    <view class="itinerary-icon__car-body"></view>
+                    <view class="itinerary-icon__wheel itinerary-icon__wheel--left"></view>
+                    <view class="itinerary-icon__wheel itinerary-icon__wheel--right"></view>
+                  </block>
+                  <block wx:elif="{{module.iconType === 'meals'}}">
+                    <view class="itinerary-icon__bowl"></view>
+                    <view class="itinerary-icon__bowl-base"></view>
+                  </block>
+                  <block wx:elif="{{module.iconType === 'accommodation'}}">
+                    <view class="itinerary-icon__roof"></view>
+                    <view class="itinerary-icon__house"></view>
+                  </block>
+                  <block wx:elif="{{module.iconType === 'tips'}}">
+                    <view class="itinerary-icon__bulb"></view>
+                    <view class="itinerary-icon__bulb-base"></view>
+                  </block>
+                  <block wx:elif="{{module.iconType === 'gear'}}">
+                    <view class="itinerary-icon__pack"></view>
+                    <view class="itinerary-icon__pack-top"></view>
+                  </block>
+                  <block wx:elif="{{module.iconType === 'terrain'}}">
+                    <view class="itinerary-icon__mountain itinerary-icon__mountain--back"></view>
+                    <view class="itinerary-icon__mountain itinerary-icon__mountain--front"></view>
+                  </block>
+                  <block wx:elif="{{module.iconType === 'support'}}">
+                    <view class="itinerary-icon__supply-box"></view>
+                    <view class="itinerary-icon__supply-cross-h"></view>
+                    <view class="itinerary-icon__supply-cross-v"></view>
+                  </block>
+                  <block wx:else>
+                    <view class="itinerary-icon__dot"></view>
+                  </block>
+                </view>
+                <text class="itinerary-module__title">{{module.displayTitle}}</text>
+              </view>
+              <text class="itinerary-module__content">{{module.content}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+</view>

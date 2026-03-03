@@ -1,0 +1,12 @@
+<view class="section-tabs">
+  <view
+    wx:for="{{sections}}"
+    wx:key="key"
+    class="section-tabs__item {{activeKey === item.key ? 'section-tabs__item--active' : ''}}"
+    data-key="{{item.key}}"
+    bindtap="onTabTap"
+  >
+    <text class="section-tabs__label">{{item.title}}</text>
+    <view class="section-tabs__indicator"></view>
+  </view>
+</view>

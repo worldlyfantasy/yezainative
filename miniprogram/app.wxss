@@ -66,8 +66,8 @@ button::after {
 
 .eyebrow {
   display: block;
-  margin-bottom: 10rpx;
-  font-size: 24rpx;
+  margin-bottom: 20rpx;
+  font-size: 36rpx;
   letter-spacing: 4rpx;
   color: #993921;
   opacity: 0.84;
@@ -82,6 +82,7 @@ button::after {
   align-items: flex-start;
   justify-content: space-between;
   gap: 24rpx;
+  margin-top: -20rpx;
   margin-bottom: 28rpx;
 }
 
@@ -96,6 +97,7 @@ button::after {
 
 .section-link {
   display: block;
+  margin-top: 8rpx;
   font-size: 24rpx;
   line-height: 1.8;
   color: #993921;

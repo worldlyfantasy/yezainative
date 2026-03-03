@@ -1,0 +1,25 @@
+<view class="cost-table" wx:if="{{rows.length || content}}">
+  <view class="cost-table__header" bindtap="onToggle">
+    <text wx:if="{{title}}" class="cost-table__title">{{title}}</text>
+    <text class="cost-table__arrow {{expanded ? 'cost-table__arrow--open' : ''}}">›</text>
+  </view>
+  <view wx:if="{{expanded}}" class="cost-table__body">
+    <block wx:if="{{rows.length}}">
+      <view
+        wx:for="{{rows}}"
+        wx:key="index"
+        class="cost-table__row {{index === rows.length - 1 ? 'cost-table__row--last' : ''}}"
+      >
+        <view class="cost-table__cell cost-table__cell--label">
+          <text class="cost-table__label">{{item.label}}</text>
+        </view>
+        <view class="cost-table__cell cost-table__cell--content">
+          <text class="cost-table__content">{{item.content}}</text>
+        </view>
+      </view>
+    </block>
+    <view wx:elif="{{content}}" class="cost-table__text-panel">
+      <text class="cost-table__content">{{content}}</text>
+    </view>
+  </view>
+</view>

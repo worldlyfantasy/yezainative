@@ -1,57 +1,159 @@
 .checkout-page {
-  padding-bottom: 180rpx;
+  padding-bottom: 320rpx;
 }
 
-.checkout-service__name {
-  display: block;
-  margin-top: 16rpx;
-  font-size: 32rpx;
+/* ---------- 订单摘要 ---------- */
+.checkout-summary {
+  padding-bottom: 28rpx;
+}
+
+.checkout-summary__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 20rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+}
+
+.checkout-summary__label {
+  color: #6a5a4b;
+  flex-shrink: 0;
+  margin-right: 24rpx;
+}
+
+.checkout-summary__value {
+  color: #2b241d;
+  text-align: right;
+}
+
+.checkout-summary__value--em {
+  font-weight: 500;
+}
+
+.checkout-summary__row--total {
+  margin-top: 24rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid rgba(153, 57, 33, 0.12);
+}
+
+.checkout-summary__total {
+  font-size: 36rpx;
   font-weight: 600;
-  color: #241b14;
+  color: #2b241d;
 }
 
-.checkout-service__meta {
+/* ---------- 出行人信息 ---------- */
+.checkout-travelers-block {
+  min-height: 200rpx;
+}
+.checkout-travelers {
+  display: flex;
+  flex-direction: column;
+  gap: 36rpx;
+}
+
+.checkout-traveler {
+  padding: 24rpx 0 0;
+  border-top: 1rpx solid rgba(153, 57, 33, 0.08);
+}
+
+.checkout-traveler:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.checkout-traveler__title {
   display: block;
-  margin-top: 8rpx;
-  font-size: 24rpx;
-  color: #6b594d;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #2b241d;
+  margin-bottom: 16rpx;
 }
 
 .checkout-field {
   margin-top: 16rpx;
 }
 
-.stepper {
-  display: flex;
-  align-items: center;
-  gap: 20rpx;
-  margin-top: 20rpx;
-}
-
-.stepper__button {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 18rpx;
-  background: #efe4d5;
-  font-size: 36rpx;
-  color: #241b14;
-}
-
-.stepper__value {
-  min-width: 60rpx;
-  text-align: center;
-  font-size: 30rpx;
-  color: #241b14;
-}
-
 .checkout-note {
   width: 100%;
-  min-height: 180rpx;
+  min-height: 140rpx;
   margin-top: 16rpx;
   padding: 20rpx 24rpx;
-  border: 1rpx solid #d6c1aa;
-  border-radius: 18rpx;
-  background: #fffaf4;
-  color: #241b14;
+  border: 1rpx solid rgba(189, 154, 95, 0.35);
+  border-radius: 16rpx;
+  background: rgba(255, 250, 241, 0.5);
+  color: #2b241d;
   font-size: 26rpx;
+  box-sizing: border-box;
+}
+
+/* ---------- 联系人 ---------- */
+.checkout-contact-hint {
+  display: block;
+  font-size: 22rpx;
+  color: #6a5a4b;
+  margin-top: 8rpx;
+  margin-bottom: 16rpx;
+}
+
+/* ---------- 协议确认 ---------- */
+.checkout-agreements {
+  padding-bottom: 24rpx;
+}
+
+.checkout-agreement-intro {
+  display: block;
+  font-size: 26rpx;
+  color: #2b241d;
+  margin-bottom: 16rpx;
+}
+
+.checkout-agreement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.checkout-agreement__label {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  font-size: 26rpx;
+  color: #2b241d;
+}
+
+/* ---------- 底部栏：金额大号 + 按钮深棕圆角、约 60% ---------- */
+.checkout-page .checkout-bottom-bar.bottom-action-bar {
+  padding: 24rpx 28rpx 24rpx;
+  align-items: center;
+}
+
+.checkout-page .checkout-bottom-bar .bottom-action-bar__label {
+  font-size: 24rpx;
+  color: #6a5a4b;
+}
+
+.checkout-page .checkout-bottom-bar .bottom-action-bar__price {
+  font-size: 44rpx;
+  font-weight: 600;
+  color: #2b241d;
+  margin-top: 4rpx;
+}
+
+.checkout-page .checkout-bottom-bar .bottom-action-bar__button {
+  flex: 0 0 58%;
+  max-width: 58%;
+  min-width: 0;
+  min-height: 88rpx;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+  background-color: #5c4a3d;
+  background-image: none;
+  color: #f5efe6;
+}
+
+.checkout-page .checkout-bottom-bar .bottom-action-bar__button::after {
+  border: 0;
 }

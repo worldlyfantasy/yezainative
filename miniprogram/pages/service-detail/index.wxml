@@ -57,7 +57,6 @@
       </view>
     </view>
 
-    <!-- 自定义标签（后台可配置） -->
     <view wx:if="{{service.tags && service.tags.length > 0}}" class="service-tags">
       <view
         wx:for="{{service.tags}}"
@@ -74,7 +73,6 @@
       </view>
     </view>
 
-    <!-- 选择团期（横向滑动） -->
     <view wx:if="{{groupPeriods && groupPeriods.length > 0}}" class="service-periods">
       <view class="service-periods__head">
         <text class="section-title service-periods__title">选择团期</text>
@@ -99,57 +97,141 @@
     </view>
   </view>
 
-  <view class="section-block detail-grid">
-    <view class="paper-block">
-      <text class="section-title detail-card__title">适合谁</text>
-      <view class="detail-list">
-        <text wx:for="{{service.suitable}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
+  <view wx:if="{{travelDetail}}" class="section-block travel-detail-shell">
+    <view class="js-section-tabs-anchor travel-detail-tabs-anchor"></view>
+    <view class="js-section-tabs travel-detail-tabs {{isSectionTabsSticky ? 'travel-detail-tabs--sticky' : ''}}">
+      <section-tabs
+        sections="{{travelDetail.sections}}"
+        active-key="{{activeSectionKey}}"
+        bind:tabtap="onSectionTabTap"
+      ></section-tabs>
+    </view>
+
+    <block wx:for="{{travelDetail.sections}}" wx:key="key" wx:for-item="sectionItem">
+      <view wx:if="{{sectionItem.key === 'highlights'}}" id="{{sectionItem.anchorId}}" class="travel-section">
+        <view class="travel-section__head">
+          <text class="section-title travel-section__title">{{sectionItem.title}}</text>
+        </view>
+        <view class="travel-highlights">
+          <view
+            wx:for="{{travelDetail.highlights}}"
+            wx:key="id"
+            wx:for-item="highlight"
+            class="travel-highlight-card"
+          >
+            <text class="travel-highlight-card__title">{{highlight.title}}</text>
+            <text class="travel-highlight-card__desc">{{highlight.description}}</text>
+            <scroll-view
+              wx:if="{{highlight.images && highlight.images.length}}"
+              class="travel-highlight-card__gallery"
+              scroll-x="true"
+              enable-flex="true"
+              show-scrollbar="{{false}}"
+            >
+              <view class="travel-highlight-card__gallery-row">
+                <image
+                  wx:for="{{highlight.images}}"
+                  wx:key="*this"
+                  wx:for-item="imageUrl"
+                  class="travel-highlight-card__image"
+                  src="{{imageUrl}}"
+                  mode="aspectFill"
+                  bindload="onTravelDetailMediaLoad"
+                ></image>
+              </view>
+            </scroll-view>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{sectionItem.key === 'itinerary'}}" id="{{sectionItem.anchorId}}" class="travel-section">
+        <view class="travel-section__head">
+          <text class="section-title travel-section__title">{{sectionItem.title}}</text>
+        </view>
+        <itinerary-block itinerary="{{travelDetail.itinerary}}"></itinerary-block>
+      </view>
+
+      <view wx:if="{{sectionItem.key === 'costs'}}" id="{{sectionItem.anchorId}}" class="travel-section">
+        <view class="travel-section__head">
+          <text class="section-title travel-section__title">{{sectionItem.title}}</text>
+        </view>
+        <view class="travel-cost-stack">
+          <cost-table
+            wx:for="{{costTableGroups}}"
+            wx:key="key"
+            title="{{item.title}}"
+            rows="{{item.rows}}"
+          ></cost-table>
+        </view>
+      </view>
+
+      <view wx:if="{{sectionItem.key === 'notices'}}" id="{{sectionItem.anchorId}}" class="travel-section">
+        <view class="travel-section__head">
+          <text class="section-title travel-section__title">{{sectionItem.title}}</text>
+        </view>
+        <view class="travel-cost-stack">
+          <cost-table
+            wx:for="{{travelDetail.notices}}"
+            wx:key="key"
+            title="{{item.title}}"
+            content="{{item.content}}"
+          ></cost-table>
+        </view>
+      </view>
+    </block>
+  </view>
+  <block wx:else>
+    <view class="section-block detail-grid">
+      <view class="paper-block">
+        <text class="section-title detail-card__title">适合谁</text>
+        <view class="detail-list">
+          <text wx:for="{{service.suitable}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
+        </view>
+      </view>
+      <view class="paper-block">
+        <text class="section-title detail-card__title">不适合谁</text>
+        <view class="detail-list">
+          <text wx:for="{{service.notSuitable}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
+        </view>
       </view>
     </view>
-    <view class="paper-block">
-      <text class="section-title detail-card__title">不适合谁</text>
-      <view class="detail-list">
-        <text wx:for="{{service.notSuitable}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
+
+    <view class="section-block detail-grid">
+      <view class="paper-block">
+        <text class="section-title detail-card__title">交付物</text>
+        <view class="detail-list">
+          <text wx:for="{{service.deliverables}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
+        </view>
+      </view>
+      <view class="paper-block">
+        <text class="section-title detail-card__title">不包含</text>
+        <view class="detail-list">
+          <text wx:for="{{service.exclusions}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
+        </view>
       </view>
     </view>
-  </view>
 
-  <view class="section-block detail-grid">
-    <view class="paper-block">
-      <text class="section-title detail-card__title">交付物</text>
-      <view class="detail-list">
-        <text wx:for="{{service.deliverables}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
+    <view class="section-block detail-grid">
+      <view class="paper-block">
+        <text class="section-title service-info__title">交付周期</text>
+        <text class="service-info__body">{{service.timeline}}</text>
+      </view>
+      <view class="paper-block">
+        <text class="section-title service-info__title">修改规则</text>
+        <text class="service-info__body">{{service.revision}}</text>
+      </view>
+      <view class="paper-block">
+        <text class="section-title service-info__title">离线提醒</text>
+        <text class="service-info__body">当前阶段仅保留服务说明，不接支付、合同与分账。</text>
       </view>
     </view>
-    <view class="paper-block">
-      <text class="section-title detail-card__title">不包含</text>
-      <view class="detail-list">
-        <text wx:for="{{service.exclusions}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
-      </view>
-    </view>
-  </view>
 
-  <view class="section-block detail-grid">
-    <view class="paper-block">
-      <text class="section-title service-info__title">交付周期</text>
-      <text class="service-info__body">{{service.timeline}}</text>
+    <view class="section-block paper-block">
+      <text class="section-title detail-card__title">退款规则</text>
+      <text class="service-info__body service-info__body--top">{{service.refund}}</text>
     </view>
-    <view class="paper-block">
-      <text class="section-title service-info__title">修改规则</text>
-      <text class="service-info__body">{{service.revision}}</text>
-    </view>
-    <view class="paper-block">
-      <text class="section-title service-info__title">离线提醒</text>
-      <text class="service-info__body">当前阶段仅保留服务说明，不接支付、合同与分账。</text>
-    </view>
-  </view>
+  </block>
 
-  <view class="section-block paper-block">
-    <text class="section-title detail-card__title">退款规则</text>
-    <text class="service-info__body service-info__body--top">{{service.refund}}</text>
-  </view>
-
-  <!-- 团期选择底部面板（版本/日期/人数） -->
   <view wx:if="{{periodSheetVisible}}" class="period-sheet">
     <view class="period-sheet__backdrop" bindtap="closePeriodSheet"></view>
     <view class="period-sheet__panel {{periodSheetAnimating ? 'period-sheet__panel--active' : ''}}">

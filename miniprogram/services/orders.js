@@ -125,6 +125,7 @@ function createOrder(payload) {
     status: "pending",
     statusText: STATUS_META.pending.label,
     traveler: payload.traveler,
+    travelers: payload.travelers || (payload.traveler ? [payload.traveler] : []),
     note: payload.note || "",
     createdAt: new Date(timestamp).toLocaleString("zh-CN", { hour12: false })
   };

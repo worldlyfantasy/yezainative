@@ -9,16 +9,46 @@ function getBasePrice(service, unitPriceFromQuery) {
   return matched ? Number(matched[0]) : 0;
 }
 
+function buildEmptyTravelPerson(index) {
+  return {
+    index,
+    name: "",
+    idCard: "",
+    phone: "",
+    wechat: "",
+    note: ""
+  };
+}
+
+function buildTravelPersons(count) {
+  const list = [];
+  for (let i = 0; i < count; i++) {
+    list.push(buildEmptyTravelPerson(i + 1));
+  }
+  return list;
+}
+
 Page({
   data: {
-    service: null,
-    travelDate: "2026-03-20",
-    peopleCount: 1,
-    travelerName: "",
-    travelerIdCard: "",
-    travelerPhone: "",
-    note: "",
-    payableText: "¥0"
+    travelDetail: null,
+    selectedVersion: "",
+    selectedDate: "",
+    selectedPrice: 0,
+    selectedCount: 1,
+    unitPrice: 0,
+    subtotal: 0,
+    total: 0,
+    summaryPrice: "0",
+    summaryCount: "1",
+    summarySubtotal: "0",
+    summaryTotal: "0",
+    payableText: "¥0",
+    travelPersons: [],
+    contactName: "",
+    contactPhone: "",
+    agreedService: false,
+    agreedRisk: false,
+    agreedRefund: false
   },
 
   onLoad(options) {
@@ -31,86 +61,118 @@ Page({
       return;
     }
 
-    const travelDate = options.travelDate || "2026-03-20";
+    const service = payload.service;
+    const travelDate = String(options.travelDate || "").trim();
     const peopleCount = Math.max(1, parseInt(options.peopleCount, 10) || 1);
-    const unitPrice = options.unitPrice;
+    const unitPrice = getBasePrice(service, options.unitPrice);
+    const subtotal = unitPrice * peopleCount;
+    const total = subtotal;
 
-    this.setData(
-      {
-        service: payload.service,
-        travelDate,
-        peopleCount,
-        _unitPrice: unitPrice
-      },
-      () => this.updatePayable()
-    );
-  },
+    const versionName = options.versionName ? decodeURIComponent(options.versionName) : (service.type || "");
 
-  updatePayable() {
-    const base = this.data.service
-      ? getBasePrice(this.data.service, this.data._unitPrice)
-      : 0;
-    const payable = base * this.data.peopleCount;
+    const travelPersons = buildTravelPersons(peopleCount);
+
     this.setData({
-      payableText: `¥${payable}`
+      travelDetail: payload.travelDetail || null,
+      selectedVersion: versionName,
+      selectedDate: travelDate,
+      selectedPrice: unitPrice,
+      selectedCount: peopleCount,
+      unitPrice,
+      subtotal,
+      total,
+      summaryPrice: String(unitPrice),
+      summaryCount: String(peopleCount),
+      summarySubtotal: String(subtotal),
+      summaryTotal: String(total),
+      payableText: `¥${subtotal}`,
+      travelPersons,
+      service,
+      contactName: "",
+      contactPhone: ""
     });
   },
 
-  onDateChange(event) {
-    this.setData({
-      travelDate: event.detail.value
-    });
-  },
-
-  increasePeople() {
-    this.setData(
-      {
-        peopleCount: this.data.peopleCount + 1
-      },
-      () => this.updatePayable()
+  onTravelPersonInput(e) {
+    const { index, field } = e.currentTarget.dataset;
+    const value = e.detail.value;
+    const travelPersons = this.data.travelPersons.map((p) =>
+      String(p.index) === String(index) ? { ...p, [field]: value } : p
     );
+    this.setData({ travelPersons }, () => this.syncContactFromFirst());
   },
 
-  decreasePeople() {
-    if (this.data.peopleCount <= 1) {
-      return;
+  syncContactFromFirst() {
+    const first = this.data.travelPersons[0];
+    if (!first) return;
+    if (!this.data.contactName && first.name) {
+      this.setData({ contactName: first.name });
     }
-    this.setData(
-      {
-        peopleCount: this.data.peopleCount - 1
-      },
-      () => this.updatePayable()
-    );
+    if (!this.data.contactPhone && first.phone) {
+      this.setData({ contactPhone: first.phone });
+    }
   },
 
-  onInput(event) {
-    const field = event.currentTarget.dataset.field;
+  onContactInput(e) {
+    const field = e.currentTarget.dataset.field;
+    this.setData({ [field]: e.detail.value });
+  },
+
+  onAgreementChange(e) {
+    const selected = e.detail.value || [];
     this.setData({
-      [field]: event.detail.value
+      agreedService: selected.includes("service"),
+      agreedRisk: selected.includes("risk"),
+      agreedRefund: selected.includes("refund")
     });
   },
 
   submitOrder() {
-    if (!this.data.travelerName || !this.data.travelerPhone) {
+    const { travelPersons, contactName, contactPhone, agreedService, agreedRisk, agreedRefund } = this.data;
+    if (!agreedService || !agreedRisk || !agreedRefund) {
       wx.showToast({
-        title: "请填写出行人姓名和手机号",
+        title: "请先阅读并同意全部协议",
+        icon: "none"
+      });
+      return;
+    }
+    for (let i = 0; i < travelPersons.length; i++) {
+      const p = travelPersons[i];
+      if (!p.name || !p.idCard || !p.phone) {
+        wx.showToast({
+          title: `请完善出行人${i + 1}的姓名、证件号与手机号`,
+          icon: "none"
+        });
+        return;
+      }
+    }
+    if (!contactName || !contactPhone) {
+      wx.showToast({
+        title: "请填写联系人姓名与联系电话",
         icon: "none"
       });
       return;
     }
 
-    const payable = Number(this.data.payableText.replace("¥", ""));
+    const payable = this.data.total;
     const order = createOrder({
       serviceSlug: this.data.service.slug,
-      travelDate: this.data.travelDate,
-      peopleCount: this.data.peopleCount,
+      travelDate: this.data.selectedDate,
+      peopleCount: this.data.selectedCount,
       amount: payable,
       traveler: {
-        name: this.data.travelerName,
-        idCard: this.data.travelerIdCard || "未填写",
-        phone: this.data.travelerPhone
+        name: contactName,
+        idCard: travelPersons[0] ? travelPersons[0].idCard : "",
+        phone: contactPhone
       },
-      note: this.data.note
+      travelers: travelPersons.map((p) => ({
+        name: p.name,
+        idCard: p.idCard,
+        phone: p.phone,
+        wechat: p.wechat,
+        note: p.note
+      })),
+      note: travelPersons[0] ? travelPersons[0].note : ""
     });
 
     wx.navigateTo({

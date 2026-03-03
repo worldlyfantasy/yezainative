@@ -13,6 +13,333 @@ function buildServiceMedia(slug) {
   };
 }
 
+function buildTravelDetailMock(slug) {
+  return {
+    id: `travel-detail-${slug}`,
+    title: "高原谷地徒步手帐",
+    sections: [
+      { key: "highlights", title: "亮点", anchorId: "section_highlights" },
+      { key: "itinerary", title: "行程", anchorId: "section_itinerary" },
+      { key: "costs", title: "费用", anchorId: "section_costs" },
+      { key: "notices", title: "须知", anchorId: "section_notices" }
+    ],
+    highlights: [
+      {
+        id: "highlight-alpine-ridge",
+        title: "从谷地牧场一路抬升到高原褶皱",
+        description: "沿溪谷、碎石坡和高山草甸连续行走，海拔梯度清晰，适合用脚去感受高原的空间层次。",
+        images: [
+          buildServiceMockImage(`yezai-${slug}-highlight-1a`, 1200, 760),
+          buildServiceMockImage(`yezai-${slug}-highlight-1b`, 1200, 760)
+        ]
+      },
+      {
+        id: "highlight-handbook",
+        title: "边走边记录的徒步手帐方法",
+        description: "每天留出固定记录时段，创作者会带着大家整理地形、天气、步速与沿途观察，形成可复用的手帐模板。",
+        images: [
+          buildServiceMockImage(`yezai-${slug}-highlight-2a`, 1200, 760)
+        ]
+      },
+      {
+        id: "highlight-local-life",
+        title: "和寺院、村落、牧场建立真实连接",
+        description: "不是只看风景。路线把寺院停留、牧场午餐和在地家庭借宿串在一起，让行程里有稳定的人与土地关系。",
+        images: [
+          buildServiceMockImage(`yezai-${slug}-highlight-3a`, 1200, 760),
+          buildServiceMockImage(`yezai-${slug}-highlight-3b`, 1200, 760)
+        ]
+      }
+    ],
+    itinerary: {
+      days: [
+        {
+          key: "day-1",
+          day: 1,
+          title: "保山集合，完成出发前校准",
+          modules: [
+            {
+              type: "schedule",
+              title: "当日行程",
+              content: "全国各地抵达保山集合酒店，傍晚完成装备检查、路线说明和高反注意事项同步，建立本次徒步记录模板。"
+            },
+            {
+              type: "transport",
+              title: "交通",
+              content: "到达保山的大交通自理，集合后统一从酒店步行前往说明会地点。"
+            },
+            {
+              type: "meals",
+              title: "餐食",
+              content: "晚餐敬请自理，建议在集合酒店周边补充第二天所需高热量零食。"
+            },
+            {
+              type: "accommodation",
+              title: "住宿",
+              content: "保山市区轻徒友好酒店，双人标间。"
+            }
+          ]
+        },
+        {
+          key: "day-2",
+          day: 2,
+          title: "谷地热身徒步，进入牧场线",
+          modules: [
+            {
+              type: "schedule",
+              title: "当日行程",
+              content: "早餐后乘车至谷地起点，完成 8 公里热身徒步，学习沿途标记溪流、坡向和补给点，傍晚抵达牧场营地。"
+            },
+            {
+              type: "transport",
+              title: "交通",
+              content: "酒店至徒步起点统一包车约 1.5 小时，之后全程步行。"
+            },
+            {
+              type: "meals",
+              title: "餐食",
+              content: "含早餐、路餐和营地热食晚餐。"
+            },
+            {
+              type: "accommodation",
+              title: "住宿",
+              content: "牧场轻露营，双人帐篷。"
+            }
+          ]
+        },
+        {
+          key: "day-3",
+          day: 3,
+          title: "穿越峡谷台地，学习地形记录",
+          modules: [
+            {
+              type: "schedule",
+              title: "当日行程",
+              content: "今天是整条线路里信息量最高的一天。清晨从溪谷借宿点出发后，先沿着碎石河床缓慢抬升，经过两次短坡切换到台地边缘，再沿着牦牛小道连续横切进入开阔坡面。领队会在第一个垭口示范如何用最少的线条记录坡向、风口、补水点和撤退路线，大家需要在停留的 40 分钟里各自完成一页手帐草图。午后这段会进入长距离缓下撤，看起来好走，但因为地形连续变化、植被遮挡和风向转换，体感并不轻松。我们会边走边复盘早上的记录，把观察到的光线、温差、脚下路感、补给消耗和心理状态一并写进当天模板里。接近傍晚时抵达溪边平台，统一整理装备、补热水、核对第二天的寺院线节奏，再进入借宿点休整。整天虽然没有技术攀登，但对节奏控制、记录专注度和体能分配都有较高要求，因此会把行进速度压得更稳，确保每个人都能把内容真正消化下来。为了让这一天的记录更完整，晚上还会安排一次 20 分钟的复盘，把每个人在高点看到的风向变化、云层移动、身体反馈和节奏失衡时刻逐条补回到手帐里，避免第二天再回忆时丢失细节。"
+            },
+            {
+              type: "transport",
+              title: "交通",
+              content: "全天徒步，无车程，需自行背负个人小包。"
+            },
+            {
+              type: "meals",
+              title: "餐食",
+              content: "含早餐、路餐、晚餐；午间补给点可补充热水。"
+            },
+            {
+              type: "accommodation",
+              title: "住宿",
+              content: "溪谷在地家庭借宿，多人间。"
+            },
+            {
+              type: "tips",
+              title: "温馨提示",
+              content: "下午温差大，外层防风衣建议随手可取，避免在垭口久停受凉。"
+            },
+            {
+              type: "gear",
+              title: "装备建议",
+              content: "建议今天把防风层、护膝、能量胶和备用袜放在最外层，便于在垭口与长下撤阶段快速取用。"
+            }
+          ]
+        },
+        {
+          key: "day-4",
+          day: 4,
+          title: "寺院线轻装慢走，拉长观察时间",
+          modules: [
+            {
+              type: "schedule",
+              title: "当日行程",
+              content: "轻装沿寺院古道慢走，途中预留更长的停留时段，完成寺院、山口与村落关系的记录整理。"
+            },
+            {
+              type: "transport",
+              title: "交通",
+              content: "上午短驳包车 40 分钟至古道口，之后轻装徒步。"
+            },
+            {
+              type: "meals",
+              title: "餐食",
+              content: "含早餐与晚餐，中午在寺院附近用简餐。"
+            },
+            {
+              type: "accommodation",
+              title: "住宿",
+              content: "山口客栈标间。"
+            }
+          ]
+        },
+        {
+          key: "day-5",
+          day: 5,
+          title: "高处牧道长距离推进，完成节奏训练",
+          modules: [
+            {
+              type: "schedule",
+              title: "当日行程",
+              content: "从山口客栈出发进入高处牧道，今天是偏耐力型的一天，要求稳定步频和更强的补给纪律。途中会安排两次短暂停留，检查前几天的记录方式是否已经形成个人习惯。"
+            },
+            {
+              type: "transport",
+              title: "交通",
+              content: "全天徒步为主，仅在终点前有 20 分钟短驳接驳。"
+            },
+            {
+              type: "meals",
+              title: "餐食",
+              content: "含早餐、路餐和晚间热食。"
+            },
+            {
+              type: "accommodation",
+              title: "住宿",
+              content: "高地营地，双人帐篷。"
+            },
+            {
+              type: "support",
+              title: "补给说明",
+              content: "今天中段没有补给点，建议早上出发前补满 1.5L 饮水并带上两份高热量零食。"
+            }
+          ]
+        },
+        {
+          key: "day-6",
+          day: 6,
+          title: "高点驻留，做一次完整观察记录",
+          modules: [
+            {
+              type: "schedule",
+              title: "当日行程",
+              content: "上午在高点周边做轻装环线，下午集中进行一次完整的观察记录复盘，包括天气、地形、体感和同伴协作。"
+            },
+            {
+              type: "transport",
+              title: "交通",
+              content: "轻装徒步，无外部交通接驳。"
+            },
+            {
+              type: "meals",
+              title: "餐食",
+              content: "含早餐、午间热汤和晚餐。"
+            },
+            {
+              type: "accommodation",
+              title: "住宿",
+              content: "高地营地，双人帐篷。"
+            }
+          ]
+        },
+        {
+          key: "day-7",
+          day: 7,
+          title: "下撤回到谷口，串联村落与牧场线索",
+          modules: [
+            {
+              type: "schedule",
+              title: "当日行程",
+              content: "沿山脊缓下撤回到谷口，途中重新经过牧场与村落交界带，把前几天分散的观察点串成完整路线认知。"
+            },
+            {
+              type: "transport",
+              title: "交通",
+              content: "上午徒步，下午短驳包车返回谷口驻地。"
+            },
+            {
+              type: "meals",
+              title: "餐食",
+              content: "含早餐、路餐与晚餐。"
+            },
+            {
+              type: "accommodation",
+              title: "住宿",
+              content: "谷口客栈标间。"
+            },
+            {
+              type: "terrain",
+              title: "地形提醒",
+              content: "今天下撤路段碎石较多，建议放慢速度并适当使用登山杖减轻膝盖压力。"
+            }
+          ]
+        },
+        {
+          key: "day-8",
+          day: 8,
+          title: "返回保山，集中整理手帐后解散",
+          modules: [
+            {
+              type: "schedule",
+              title: "当日行程",
+              content: "早餐后统一返回保山，午后完成全程手帐整理、路线复盘与个体反馈，确认资料打包方式后解散返程。"
+            },
+            {
+              type: "transport",
+              title: "交通",
+              content: "谷口至保山市区统一包车，约 2 小时。"
+            },
+            {
+              type: "meals",
+              title: "餐食",
+              content: "含早餐、路餐，晚餐解散后自理。"
+            },
+            {
+              type: "accommodation",
+              title: "住宿",
+              content: "当日不含住宿，可根据返程时间自行预订。"
+            }
+          ]
+        }
+      ]
+    },
+    costs: {
+      include: [
+        { label: "交通", content: "行程内包车、短驳接送及司机食宿。"},
+        { label: "住宿", content: "7 晚行程住宿（酒店、借宿与营地露营按行程安排）。" },
+        { label: "餐食", content: "行程标注的早餐、路餐与营地餐食。" },
+        { label: "带领", content: "创作者带领、线路协作与徒步手帐共创指导。" },
+        { label: "公用装备", content: "对讲机、急救包、基础营地公用装备。" }
+      ],
+      exclude: [
+        { label: "大交通", content: "往返保山的机票、火车等大交通费用自理。" },
+        { label: "个人消费", content: "自由活动期间个人餐饮、购物及额外饮品消费。" },
+        { label: "单房差", content: "若因个人原因要求单住，需补足相应房差。" },
+        { label: "保险", content: "建议自行购买高海拔徒步相关保险。" }
+      ],
+      refundRules: [
+        { days: "集合日前 30 天前", percent: "收取旅游费用总额 1% 的违约金" },
+        { days: "集合日前 23-29 天", percent: "收取旅游费用总额 20% 的违约金" },
+        { days: "集合日前 16-22 天", percent: "收取旅游费用总额 30% 的违约金" },
+        { days: "集合日前 10-15 天", percent: "收取旅游费用总额 60% 的违约金" },
+        { days: "集合日前 5-9 天", percent: "收取旅游费用总额 70% 的违约金" },
+        { days: "集合日前 1-4 天", percent: "收取旅游费用总额 90% 的违约金" },
+        { days: "集合日当天", percent: "因个人原因未集合或中途退出，费用不退" }
+      ]
+    },
+    notices: [
+      {
+        key: "traffic",
+        title: "关于交通",
+        content: "建议预订集合日 15:00 前抵达保山的航班或高铁，返程尽量预留 17:00 之后的离开时间，以免受山路与天气影响。"
+      },
+      {
+        key: "local",
+        title: "关于当地",
+        content: "沿线昼夜温差明显，部分借宿点热水供应有限。进入寺院与村落时请遵守带领者说明，避免大声喧哗或未经允许拍摄。"
+      },
+      {
+        key: "safety",
+        title: "安全告知",
+        content: "本行程海拔最高约 3900 米，需具备基础徒步经验。若近期有严重感冒、心肺不适或高反史，请在报名时提前沟通评估。"
+      },
+      {
+        key: "packing",
+        title: "准备清单",
+        content: "建议携带 25-30L 小背包、防风保暖层、徒步鞋、速干衣物、头灯、水壶、防晒用品及常备个人药品。"
+      }
+    ]
+  };
+}
+
 const rawServices = [
   {
     id: "svc-ridge-journal",
@@ -45,7 +372,8 @@ const rawServices = [
       { id: "gp-3", versionName: "高原谷地全程", dateStart: "2026-03-08", dateEnd: "2026-03-14", price: 4580, status: "confirmed", badge: "期+油", remainingSeats: 20, minGroup: 4 },
       { id: "gp-4", versionName: "高原谷地全程", dateStart: "2026-03-15", dateEnd: "2026-03-21", price: 4580, status: "available", badge: "期+油", remainingSeats: 28, minGroup: 4 },
       { id: "gp-5", versionName: "高原谷地全程", dateStart: "2026-03-22", dateEnd: "2026-03-28", price: 4580, status: "available", badge: "期+油", remainingSeats: 15, minGroup: 4 }
-    ]
+    ],
+    travelDetail: buildTravelDetailMock("ridge-journal")
   },
   {
     id: "svc-hexicorridor",

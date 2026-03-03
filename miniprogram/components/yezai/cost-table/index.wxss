@@ -1,0 +1,86 @@
+.cost-table {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.cost-table__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 8rpx 0;
+}
+
+.cost-table__title {
+  display: block;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 40rpx;
+  line-height: 1.45;
+  font-weight: 600;
+  color: #2b241d;
+}
+
+.cost-table__arrow {
+  flex: 0 0 auto;
+  font-size: 34rpx;
+  line-height: 1;
+  color: #8a5a38;
+  transform: rotate(0deg);
+  transition: transform 0.2s ease;
+}
+
+.cost-table__arrow--open {
+  transform: rotate(90deg);
+}
+
+.cost-table__body {
+  overflow: hidden;
+  border: 1rpx solid rgba(153, 57, 33, 0.18);
+  border-radius: 20rpx;
+  background: rgba(247, 240, 223, 0.92);
+}
+
+.cost-table__text-panel {
+  padding: 24rpx 24rpx;
+}
+
+.cost-table__row {
+  display: flex;
+  border-bottom: 1rpx solid rgba(153, 57, 33, 0.14);
+}
+
+.cost-table__row--last {
+  border-bottom: 0;
+}
+
+.cost-table__cell {
+  padding: 24rpx 24rpx;
+}
+
+.cost-table__cell--label {
+  flex: 0 0 184rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1rpx solid rgba(153, 57, 33, 0.14);
+  background: rgba(189, 154, 95, 0.12);
+}
+
+.cost-table__cell--content {
+  flex: 1;
+}
+
+.cost-table__label {
+  font-size: 28rpx;
+  line-height: 1.55;
+  font-weight: 600;
+  color: #2b241d;
+  text-align: center;
+}
+
+.cost-table__content {
+  font-size: 26rpx;
+  line-height: 1.85;
+  color: #6a5a4b;
+}
