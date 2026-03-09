@@ -16,6 +16,7 @@ const {
 const { howItWorksFlows } = require("../mock/static-content");
 const { parseIdeaBody } = require("../utils/content");
 const { isFavorited, getFavoriteState } = require("./favorites");
+const { getServiceCreatorRoles } = require("./service-roles");
 
 function buildOptionList(items, mode) {
   return [{ label: "全部", value: "" }].concat(
@@ -513,12 +514,14 @@ function getServiceDetailData(slug) {
 
   const groupPeriods = (service.groupPeriods || []).map(buildGroupPeriodDisplay);
   const tags = Array.isArray(service.tags) ? service.tags : [];
+  const creatorRoles = getServiceCreatorRoles(service);
   const travelDetail = service.travelDetail || buildServiceTravelDetail(service, tags, photoBaseList);
 
   return {
     service: Object.assign({}, service, {
       isFavorited: isFavorited("services", service.slug),
-      tags
+      tags,
+      creatorRoles
     }),
     travelDetail,
     creator,

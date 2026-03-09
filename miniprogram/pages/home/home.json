@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "野哉",
+  "navigationBarTitleText": "",
   "usingComponents": {
     "creator-card": "/components/yezai/creator-card/index",
     "destination-card": "/components/yezai/destination-card/index",

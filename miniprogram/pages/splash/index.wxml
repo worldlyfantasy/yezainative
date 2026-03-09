@@ -1,0 +1,13 @@
+<view class="splash-page {{isFading ? 'splash-page--fade' : ''}}">
+  <view class="splash-page__content">
+    <view class="splash-quote">
+      <view wx:for="{{quoteColumns}}" wx:key="index" class="splash-quote__column">
+        <text wx:for="{{item}}" wx:key="index" class="splash-quote__char">{{item}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="splash-page__footer">
+    <image class="splash-page__logo" src="{{logoSrc}}" mode="aspectFit" binderror="onLogoError"></image>
+  </view>
+</view>

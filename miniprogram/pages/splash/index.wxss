@@ -1,0 +1,72 @@
+.splash-page {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0) 42%),
+    linear-gradient(180deg, #f6f4ef 0%, #f3f1ec 44%, #efede8 100%);
+  opacity: 1;
+  transition: opacity 420ms ease;
+}
+
+.splash-page--fade {
+  opacity: 0;
+}
+
+.splash-page__content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 160rpx 0 180rpx;
+}
+
+.splash-quote {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  transform: translateX(10rpx);
+}
+
+.splash-quote__column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 两列文案之间的水平间距 */
+.splash-quote__column + .splash-quote__column {
+  margin-left: 40rpx;
+}
+
+/* 同一列内字与字的垂直间距 */
+.splash-quote__char + .splash-quote__char {
+  margin-top: 26rpx;
+}
+
+/* 中间诗句字体大小 */
+.splash-quote__char {
+  color: #171514;
+  font-size: 50rpx;
+  line-height: 1;
+  font-family: "Songti SC", "STSong", serif;
+  font-weight: 400;
+}
+
+.splash-page__footer {
+  display: flex;
+  justify-content: center;
+  padding: 0 0 calc(68rpx + env(safe-area-inset-bottom));
+}
+
+.splash-page__logo {
+  width: 220rpx;
+  height: 116rpx;
+}

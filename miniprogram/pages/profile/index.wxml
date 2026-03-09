@@ -21,7 +21,6 @@
           </view>
           <view class="profile-identity__logout" bindtap="handleLogout" hover-class="profile-identity__logout--pressing" hover-stay-time="100"><text class="profile-identity__logout-text">退出</text><text class="profile-identity__logout-arrow">→</text></view>
         </view>
-        <text class="profile-identity__note">你的旅程、收藏与回望，都收在这一页。</text>
       </view>
     </view>
 
@@ -37,7 +36,13 @@
         <image class="profile-entry-card__glyph" src="{{item.glyphSrc}}" mode="aspectFit"></image>
         <text class="profile-entry-card__eyebrow">{{item.eyebrow}}</text>
         <view class="profile-entry-card__head">
-          <text class="profile-entry-card__title">{{item.label}}</text>
+          <view class="profile-entry-card__title-wrap">
+            <text class="profile-entry-card__title">{{item.label}}</text>
+            <view wx:if="{{item.key === 'favorites'}}" class="profile-entry-card__leaf">
+              <view class="profile-entry-card__leaf-shape"></view>
+              <view class="profile-entry-card__leaf-vein"></view>
+            </view>
+          </view>
           <text class="profile-entry-card__arrow">›</text>
         </view>
       </button>
@@ -47,7 +52,7 @@
       <view class="section-head profile-section-head">
         <view class="profile-section-head__body">
           <text class="section-title">进行中的旅行</text>
-          <text class="profile-section__note">正在发生的旅途，会在这里轻声提醒你。</text>
+
         </view>
       </view>
       <view wx:if="{{activeTrips.length}}" class="active-trip-list">
@@ -66,6 +71,7 @@
             <image class="active-trip-creator__avatar" src="{{item.creatorAvatar}}" mode="aspectFill"></image>
             <view class="active-trip-creator__info">
               <text class="active-trip-creator__name">{{item.creatorName}}</text>
+              <text wx:if="{{item.creatorRoleText}}" class="active-trip-creator__role">{{item.creatorRoleText}}</text>
             </view>
           </view>
           <view class="active-trip-connector"></view>
@@ -88,6 +94,11 @@
         </view>
       </view>
       <view wx:else class="empty-state profile-empty-state">当前没有进行中的旅行，下一段山野还在路上。</view>
+    </view>
+
+    <view class="profile-contact">
+      <text class="profile-contact__label">写信给野哉</text>
+      <text class="profile-contact__email">zhayeye@yezai.me</text>
     </view>
   </block>
 </view>

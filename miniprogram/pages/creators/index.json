@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "人物",
+  "navigationBarTitleText": "",
   "usingComponents": {
     "creator-card": "/components/yezai/creator-card/index"
   }

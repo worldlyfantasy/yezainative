@@ -307,14 +307,50 @@
   margin-top: 14rpx;
 }
 
-.profile-entry-card__title {
-  display: block;
+.profile-entry-card__title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 14rpx;
   flex: 1;
   min-width: 0;
+}
+
+.profile-entry-card__title {
+  display: block;
   font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 34rpx;
   line-height: 1.28;
   color: #2a2119;
+}
+
+.profile-entry-card__leaf {
+  position: relative;
+  width: 28rpx;
+  height: 34rpx;
+  margin-left: 4rpx;
+  flex-shrink: 0;
+  transform: rotate(32deg);
+}
+
+.profile-entry-card__leaf-shape {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border: 2rpx solid #d15e14;
+  border-radius: 90% 10% 90% 10%;
+  background: rgba(209, 94, 20, 0.92);
+}
+
+.profile-entry-card__leaf-vein {
+  position: absolute;
+  top: 7rpx;
+  left: 12rpx;
+  width: 2rpx;
+  height: 18rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 248, 241, 0.92);
+  transform: rotate(14deg);
+  transform-origin: top center;
 }
 
 .profile-entry-card__desc {
@@ -410,6 +446,15 @@
   color: #2a2119;
 }
 
+.active-trip-creator__role {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  line-height: 1.5;
+  letter-spacing: 1rpx;
+  color: rgba(143, 61, 36, 0.72);
+}
+
 /* 中间连接线：体现路线由左侧创作者设计 */
 .active-trip-connector {
   flex-shrink: 0;
@@ -497,4 +542,27 @@
 .is-pressing-card {
   opacity: 0.94;
   transform: translateY(2rpx);
+}
+
+.profile-contact {
+  margin-top: 48rpx;
+  padding: 12rpx 24rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.profile-contact__label {
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: rgba(102, 88, 74, 0.72);
+}
+
+.profile-contact__email {
+  margin-left: 4rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: rgba(102, 88, 74, 0.5);
 }

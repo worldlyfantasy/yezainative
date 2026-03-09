@@ -1,4 +1,5 @@
 const { getRecentOrders } = require("./orders");
+const { getServiceCreatorRoles, getServiceCreatorRoleText } = require("./service-roles");
 const { services = [] } = require("../mock/services");
 const { creators = [] } = require("../mock/creators");
 
@@ -45,6 +46,8 @@ function buildActiveTrips(orders) {
         creatorName: creator ? creator.name : "野哉创作者",
         creatorSlug: creator ? creator.slug : "",
         creatorAvatar: creator ? creator.avatar : "",
+        creatorRoles: service ? getServiceCreatorRoles(service) : ["创作者"],
+        creatorRoleText: service ? getServiceCreatorRoleText(service) : "创作者",
         creatorStance: creator ? creator.stance : ""
       });
     });

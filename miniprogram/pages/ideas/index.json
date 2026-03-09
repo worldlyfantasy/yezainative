@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "故事",
+  "navigationBarTitleText": "",
   "usingComponents": {
     "idea-card": "/components/yezai/idea-card/index"
   }

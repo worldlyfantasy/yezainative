@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "订单列表",
+  "navigationBarTitleText": "",
   "navigationBarBackgroundColor": "#f5efe3",
   "usingComponents": {
     "order-card": "/components/yezai/order-card/index"

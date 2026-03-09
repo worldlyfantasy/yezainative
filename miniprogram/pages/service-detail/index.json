@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "服务详情",
+  "navigationBarTitleText": "",
   "usingComponents": {
     "section-tabs": "/components/yezai/section-tabs/index",
     "itinerary-block": "/components/yezai/itinerary-block/index",

@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "我的收藏",
+  "navigationBarTitleText": "",
   "usingComponents": {
     "destination-card": "/components/yezai/destination-card/index",
     "creator-card": "/components/yezai/creator-card/index",

@@ -1,5 +1,6 @@
 {
   "pages": [
+    "pages/splash/index",
     "pages/home/home",
     "pages/creators/index",
     "pages/creator-detail/index",
@@ -33,7 +34,7 @@
     "backgroundColor": "#f5efe3",
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#f5efe3",
-    "navigationBarTitleText": "野哉",
+    "navigationBarTitleText": "",
     "navigationBarTextStyle": "black"
   },
   "sitemapLocation": "sitemap.json",

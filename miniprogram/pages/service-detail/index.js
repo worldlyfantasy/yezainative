@@ -107,6 +107,13 @@ Page({
     activeMediaTabIndex: 0,
     mediaSheetVisible: false,
     mediaSheetAnimating: false,
+    consultSheetVisible: false,
+    consultSheetAnimating: false,
+    consultWeChatQr: "https://picsum.photos/seed/yezai-wechat-qr/420/420",
+    consultGroupQr: "https://picsum.photos/seed/yezai-group-qr/420/420",
+    suitableSheetVisible: false,
+    suitableSheetAnimating: false,
+    suitableSheetContent: "",
     groupPeriods: [],
     selectedPeriodId: null,
     periodSheetVisible: false,
@@ -141,12 +148,36 @@ Page({
     }
 
     const groupPeriods = Array.isArray(payload.groupPeriods) ? payload.groupPeriods : [];
+    const originalService = payload.service || {};
+    const originalTags = Array.isArray(originalService.tags) ? originalService.tags : [];
+    const meetingPoint = originalTags.find((t) => t && t.key === "meetingPoint");
+    const minGroupSize = originalTags.find((t) => t && t.key === "minGroupSize");
+    const suitableList = Array.isArray(originalService.suitable) ? originalService.suitable : [];
+    const rawSummary = suitableList.length > 0 ? suitableList[0] : "想慢慢感受高原";
+    const suitableSummary =
+      rawSummary.endsWith("的人") ? rawSummary : rawSummary + "的人";
+    const suitableTag = {
+      key: "suitable",
+      label: "适合谁",
+      value: suitableSummary,
+      clickable: true
+    };
+    const consultationTag = {
+      key: "consultation",
+      label: "报名咨询",
+      value: "加入意向群",
+      clickable: true
+    };
+    const mappedTags = [meetingPoint, minGroupSize, suitableTag, consultationTag].filter(Boolean);
+    const serviceWithTags = Object.assign({}, originalService, {
+      tags: mappedTags
+    });
     const detailState = buildTravelDetailState(payload.travelDetail);
 
     this.setData(
       Object.assign(
         {
-          service: payload.service,
+          service: serviceWithTags,
           creator: payload.creator,
           relatedDestinations: payload.relatedDestinations || [],
           heroCover: payload.heroCover || "",
@@ -379,7 +410,83 @@ Page({
     const key = event.currentTarget.dataset.key;
     if (key === "suggestedAge") {
       wx.showToast({ title: "建议年龄说明", icon: "none" });
+      return;
     }
+    if (key === "consultation") {
+      this.openConsultSheet();
+      return;
+    }
+    if (key === "suitable") {
+      this.openSuitableSheet();
+    }
+  },
+
+  buildSuitableSheetContent(service) {
+    if (service && service.suitableDetail) {
+      return service.suitableDetail;
+    }
+    const list = Array.isArray(service && service.suitable) ? service.suitable : [];
+    const bulletLine =
+      list.length > 0 ? "· " + list.join("\n· ") + "\n\n" : "";
+    const mockParagraph1 =
+      "这条路线适合能适应海拔 3500 米以上、想学习地形记录、愿意分担公用装备的旅人。行程中有连续多日徒步与露营，适合体能中等偏上、喜欢用脚步和手帐感受高原层次的人。推荐给想慢慢感受高原、不追求打卡节奏的参与者。";
+    const mockParagraph2 =
+      "如果你愿意在牧场与寺院之间慢下来，用手绘地图串联所见，并接受天气与路况带来的弹性调整，会更容易融入本次行程的节奏。";
+    return bulletLine + mockParagraph1 + "\n\n" + mockParagraph2;
+  },
+
+  openSuitableSheet() {
+    if (this.data.suitableSheetVisible) return;
+    const content = this.buildSuitableSheetContent(this.data.service);
+    this.setData(
+      {
+        suitableSheetVisible: true,
+        suitableSheetAnimating: false,
+        suitableSheetContent: content
+      },
+      () => {
+        setTimeout(() => {
+          this.setData({ suitableSheetAnimating: true });
+        }, 20);
+      }
+    );
+  },
+
+  closeSuitableSheet() {
+    if (!this.data.suitableSheetVisible) return;
+    this.setData({ suitableSheetAnimating: false });
+    setTimeout(() => {
+      this.setData({ suitableSheetVisible: false });
+    }, 260);
+  },
+
+  openConsultSheet() {
+    if (this.data.consultSheetVisible) return;
+    this.setData(
+      {
+        consultSheetVisible: true,
+        consultSheetAnimating: false
+      },
+      () => {
+        setTimeout(() => {
+          this.setData({
+            consultSheetAnimating: true
+          });
+        }, 20);
+      }
+    );
+  },
+
+  closeConsultSheet() {
+    if (!this.data.consultSheetVisible) return;
+    this.setData({
+      consultSheetAnimating: false
+    });
+    setTimeout(() => {
+      this.setData({
+        consultSheetVisible: false
+      });
+    }, 260);
   },
 
   onViewMorePeriods() {

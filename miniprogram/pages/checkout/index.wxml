@@ -61,20 +61,41 @@
     <checkbox-group class="checkout-agreement-list" bindchange="onAgreementChange">
       <label class="checkout-agreement__label">
         <checkbox value="service" checked="{{agreedService}}" color="#6b5344" />
-        <text>《服务协议》</text>
+        <view class="checkout-agreement__link-wrap" catchtap="onAgreementLinkTap" data-key="service">
+          <text class="checkout-agreement__link">《服务协议》</text>
+        </view>
       </label>
       <label class="checkout-agreement__label">
         <checkbox value="risk" checked="{{agreedRisk}}" color="#6b5344" />
-        <text>《风险告知书》</text>
+        <view class="checkout-agreement__link-wrap" catchtap="onAgreementLinkTap" data-key="risk">
+          <text class="checkout-agreement__link">《风险告知书》</text>
+        </view>
       </label>
       <label class="checkout-agreement__label">
         <checkbox value="refund" checked="{{agreedRefund}}" color="#6b5344" />
-        <text>《退订规则》</text>
+        <view class="checkout-agreement__link-wrap" catchtap="onAgreementLinkTap" data-key="refund">
+          <text class="checkout-agreement__link">《退订规则》</text>
+        </view>
       </label>
     </checkbox-group>
   </view>
 
   <bottom-action-bar price-text="{{payableText}}" button-text="提交订单并支付" bind:actiontap="submitOrder" class="checkout-bottom-bar"></bottom-action-bar>
+</view>
+
+<!-- 协议正文弹层（mock，后续可改为后台数据） -->
+<view wx:if="{{agreementSheetVisible}}" class="agreement-sheet">
+  <view class="agreement-sheet__backdrop" bindtap="closeAgreementSheet"></view>
+  <view class="agreement-sheet__panel {{agreementSheetAnimating ? 'agreement-sheet__panel--active' : ''}}">
+    <view class="agreement-sheet__handle"></view>
+    <view class="agreement-sheet__header">
+      <text class="agreement-sheet__title">{{agreementSheetTitle}}</text>
+      <view class="agreement-sheet__close" bindtap="closeAgreementSheet">×</view>
+    </view>
+    <scroll-view class="agreement-sheet__body" scroll-y="true">
+      <text class="agreement-sheet__content">{{agreementSheetContent}}</text>
+    </scroll-view>
+  </view>
 </view>
 
 <app-tab-bar></app-tab-bar>

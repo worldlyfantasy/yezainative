@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "创作者详情",
+  "navigationBarTitleText": "",
   "usingComponents": {
     "service-card": "/components/yezai/service-card/index"
   }

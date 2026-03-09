@@ -46,8 +46,11 @@
               <view class="creator-card__title-row">
                 <text class="creator-card__name">{{creator.name}}</text>
                 <view class="creator-card__tags">
-                  <text class="creator-card__tag">创作者</text>
-                  <text class="creator-card__tag">带领者</text>
+                  <text
+                    wx:for="{{service.creatorRoles}}"
+                    wx:key="*this"
+                    class="creator-card__tag"
+                  >{{item}}</text>
                 </view>
               </view>
               <text class="creator-card__stance">"{{service.creatorQuote || service.summary}}"</text>
@@ -332,6 +335,42 @@
             mode="aspectFill"
           ></image>
         </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <view wx:if="{{consultSheetVisible}}" class="consult-sheet">
+    <view class="consult-sheet__backdrop" bindtap="closeConsultSheet"></view>
+    <view class="consult-sheet__panel {{consultSheetAnimating ? 'consult-sheet__panel--active' : ''}}">
+      <view class="consult-sheet__handle"></view>
+      <view class="consult-sheet__header">
+        <text class="consult-sheet__title">报名咨询</text>
+      </view>
+      <view class="consult-sheet__cards">
+        <view class="consult-card">
+          <image class="consult-card__qr" src="{{consultWeChatQr}}" mode="aspectFit"></image>
+          <text class="consult-card__label">客服微信</text>
+          <text class="consult-card__desc">添加微信，咨询行程细节</text>
+        </view>
+        <view class="consult-card">
+          <image class="consult-card__qr" src="{{consultGroupQr}}" mode="aspectFit"></image>
+          <text class="consult-card__label">意向群</text>
+          <text class="consult-card__desc">扫码加入意向群，获取最新团期</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{suitableSheetVisible}}" class="suitable-sheet">
+    <view class="suitable-sheet__backdrop" bindtap="closeSuitableSheet"></view>
+    <view class="suitable-sheet__panel {{suitableSheetAnimating ? 'suitable-sheet__panel--active' : ''}}">
+      <view class="suitable-sheet__handle"></view>
+      <view class="suitable-sheet__header">
+        <text class="suitable-sheet__title">适合谁</text>
+        <view class="suitable-sheet__close" bindtap="closeSuitableSheet">×</view>
+      </view>
+      <scroll-view class="suitable-sheet__body" scroll-y="true">
+        <text class="suitable-sheet__content">{{suitableSheetContent}}</text>
       </scroll-view>
     </view>
   </view>
