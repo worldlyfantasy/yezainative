@@ -1,5 +1,5 @@
 // 入场页停留时间（毫秒），到点后自动跳转首页
-const SPLASH_HOLD_MS = 2000;
+const SPLASH_HOLD_MS = 1000;
 const SPLASH_FADE_MS = 200;
 const HOME_PATH = "/pages/home/home";
 // 优先使用本地 Logo，与文字同时显示无延迟；不存在则用云存储地址（需联网）

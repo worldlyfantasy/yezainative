@@ -18,6 +18,24 @@
     </view>
   </view>
 
+  <view class="section-block">
+    <text class="section-title destination-journeys__title">在彼途中</text>
+    <view wx:if="{{services.length}}" class="card-stack">
+      <service-card wx:for="{{services}}" wx:key="id" service="{{item}}" creator-name="{{item.creatorName}}" bind:cardtap="onServiceTap"></service-card>
+    </view>
+    <view wx:else class="empty-state">暂无符合筛选的服务。</view>
+  </view>
+
+  <view class="section-block">
+    <view class="section-head">
+      <text class="section-title">驻足之人</text>
+      <text class="section-link" bindtap="goCreatorList">查看全部 →</text>
+    </view>
+    <view wx:if="{{relatedCreators.length}}" class="card-stack">
+      <creator-card wx:for="{{relatedCreators}}" wx:key="id" creator="{{item}}" bind:cardtap="onCreatorTap"></creator-card>
+    </view>
+  </view>
+
   <view wx:if="{{relatedIdeas.length}}" class="section-block destination-stories">
     <text class="section-title destination-stories__title">此地故事</text>
     <view class="destination-story-list">
@@ -36,24 +54,6 @@
         <text class="destination-story-item__arrow">→</text>
       </view>
     </view>
-  </view>
-
-  <view class="section-block">
-    <view class="section-head">
-      <text class="section-title">驻足之人</text>
-      <text class="section-link" bindtap="goCreatorList">查看全部 →</text>
-    </view>
-    <view wx:if="{{relatedCreators.length}}" class="card-stack">
-      <creator-card wx:for="{{relatedCreators}}" wx:key="id" creator="{{item}}" bind:cardtap="onCreatorTap"></creator-card>
-    </view>
-  </view>
-
-  <view class="section-block">
-    <text class="section-title destination-journeys__title">在彼途中</text>
-    <view wx:if="{{services.length}}" class="card-stack">
-      <service-card wx:for="{{services}}" wx:key="id" service="{{item}}" creator-name="{{item.creatorName}}" bind:cardtap="onServiceTap"></service-card>
-    </view>
-    <view wx:else class="empty-state">暂无符合筛选的服务。</view>
   </view>
 </view>
 
