@@ -4,7 +4,7 @@
   <view class="section-block creator-opening">
     <view class="creator-top">
       <view class="creator-top__body">
-        <text class="eyebrow">创作者</text>
+        <text class="page-eyebrow">创作者</text>
         <view class="creator-top__title-row">
           <text class="page-title creator-top__name">{{creator.name}}</text>
           <favorite-star
@@ -47,6 +47,28 @@
     </view>
   </view>
 
+  <view wx:if="{{displayIdeas.length}}" class="section-block creator-stories">
+    <text class="section-title creator-stories__title">TA 的故事</text>
+    <view class="creator-story-list">
+      <view
+        wx:for="{{displayIdeas}}"
+        wx:key="id"
+        class="creator-story-item"
+        data-slug="{{item.slug}}"
+        bindtap="onStoryTap"
+      >
+        <view class="creator-story-item__main">
+          <text class="creator-story-item__title">{{item.title}}</text>
+          <text class="creator-story-item__summary">{{item.summary}}</text>
+        </view>
+        <text class="creator-story-item__arrow">→</text>
+      </view>
+    </view>
+    <view wx:if="{{hasMoreIdeas}}" class="creator-stories__more" bindtap="goCreatorStories">
+      <text class="creator-stories__link">查看 TA 的全部故事 →</text>
+    </view>
+  </view>
+
   <view class="section-block">
     <text class="section-title">同行的旅程</text>
     <view class="card-stack creator-detail__list">
@@ -61,7 +83,7 @@
   </view>
 
   <view class="section-block creator-feedback">
-    <text class="eyebrow creator-feedback__eyebrow">队员反馈</text>
+    <text class="section-eyebrow creator-feedback__eyebrow">队员反馈</text>
     <text class="section-title">旅人回声</text>
     <view class="review-list">
       <view wx:for="{{creator.reviews}}" wx:key="content" class="review-item">

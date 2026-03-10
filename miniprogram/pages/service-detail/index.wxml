@@ -29,7 +29,7 @@
   <view class="section-block paper-block">
     <view class="service-hero">
       <view class="service-hero__content">
-        <text class="eyebrow">{{service.type}}</text>
+        <text class="page-eyebrow">{{service.type}}</text>
         <view class="service-hero__title-row">
           <text class="page-title service-hero__title">{{service.name}}</text>
           <favorite-star

@@ -1,6 +1,6 @@
 <view wx:if="{{order}}" class="page-shell order-detail-page">
   <view class="paper-block">
-    <text class="eyebrow">订单状态</text>
+    <text class="page-eyebrow">订单状态</text>
     <text class="page-title order-detail__status">{{order.statusText}}</text>
     <text class="page-subtitle">订单号：#{{order.shortId}} · 创建时间：{{order.createdAt}}</text>
   </view>

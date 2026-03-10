@@ -1,9 +1,8 @@
 <view class="page-shell">
-  <text class="eyebrow">真实在场 · 在地经验</text>
-  <text class="page-title">旅行故事</text>
-  <text class="page-subtitle">这些文章来自创作者与旅人共同写下的现场笔记，远离空洞宣传语。</text>
+  <text class="page-eyebrow">真实在场 · 在地经验</text>
+  <text class="page-subtitle" wx:if="{{!creatorSlug}}">这些文章来自创作者与旅人共同写下的现场笔记，远离空洞宣传语。</text>
 
-  <scroll-view class="section-block theme-scroll" scroll-x="true" show-scrollbar="false">
+  <scroll-view wx:if="{{!creatorSlug && themes.length}}" class="section-block theme-scroll" scroll-x="true" show-scrollbar="false">
     <view class="theme-row">
       <view
         wx:for="{{themes}}"
@@ -17,9 +16,21 @@
     </view>
   </scroll-view>
 
-  <view class="section-block">
-    <view wx:if="{{ideas.length}}" class="card-stack">
-      <idea-card wx:for="{{ideas}}" wx:key="id" idea="{{item}}" author-name="{{item.authorName}}" bind:cardtap="onIdeaTap"></idea-card>
+  <view class="section-block idea-list-block">
+    <view wx:if="{{ideas.length}}" class="idea-list">
+      <view
+        wx:for="{{ideas}}"
+        wx:key="id"
+        class="idea-list-item"
+        data-slug="{{item.slug}}"
+        bindtap="onIdeaTap"
+      >
+        <view class="idea-list-item__main">
+          <text class="idea-list-item__title">{{item.title}}</text>
+          <text class="idea-list-item__summary">{{item.summary}}</text>
+        </view>
+        <text class="idea-list-item__arrow">→</text>
+      </view>
     </view>
     <view wx:else class="empty-state">暂无相关文章。</view>
   </view>

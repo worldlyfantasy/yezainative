@@ -17,10 +17,6 @@ Component({
         text: "土地"
       },
       {
-        pagePath: TOP_LEVEL_ROUTES.ideas,
-        text: "故事"
-      },
-      {
         pagePath: TOP_LEVEL_ROUTES.profile,
         text: "我的"
       }

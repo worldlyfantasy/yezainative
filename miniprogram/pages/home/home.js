@@ -66,7 +66,9 @@ Page({
   },
 
   goIdeas() {
-    goTopLevel(TOP_LEVEL_ROUTES.ideas);
+    wx.navigateTo({
+      url: "/pages/ideas/index"
+    });
   },
 
   onHeroTap(event) {

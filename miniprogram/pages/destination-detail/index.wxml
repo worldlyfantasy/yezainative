@@ -4,7 +4,7 @@
   <view class="section-block destination-hero">
     <image class="destination-hero__cover" src="{{destination.cover}}" mode="aspectFill"></image>
     <view class="destination-hero__body">
-      <text class="eyebrow">目的地</text>
+      <text class="page-eyebrow">目的地</text>
       <view class="destination-hero__title-row">
         <text class="page-title destination-hero__title">{{destination.name}}</text>
         <favorite-star

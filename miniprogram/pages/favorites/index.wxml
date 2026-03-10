@@ -1,17 +1,18 @@
 <view class="page-shell favorites-page">
   <text class="back-link" bindtap="goBack">← 返回我的</text>
-  <text class="eyebrow">真实在场 · 收藏盒</text>
-  <text class="page-title">我的收藏</text>
+  <text class="page-eyebrow">收藏盒</text>
 
   <view wx:if="{{!loggedIn}}" class="section-block paper-block">
-    <text class="section-title">登录后查看收藏</text>
+    <text class="favorites-section__title">登录后查看收藏</text>
     <text class="page-subtitle favorites-empty__text">当前原型使用本地模拟登录，先到“我的”完成登录，再回来管理收藏。</text>
   </view>
 
   <block wx:elif="{{hasFavorites}}">
     <view wx:if="{{favoriteDestinations.length}}" class="section-block">
       <view class="section-head favorites-section__head">
-        <text class="section-title">收藏土地</text>
+        <view>
+          <text class="section-eyebrow">土地</text>
+        </view>
         <text class="favorites-section__meta">{{favoriteDestinations.length}} 个</text>
       </view>
       <view class="card-stack">
@@ -26,7 +27,9 @@
 
     <view wx:if="{{favoriteCreators.length}}" class="section-block">
       <view class="section-head favorites-section__head">
-        <text class="section-title">收藏人物</text>
+        <view>
+          <text class="section-eyebrow">创作者</text>
+        </view>
         <text class="favorites-section__meta">{{favoriteCreators.length}} 位</text>
       </view>
       <view class="card-stack">
@@ -41,7 +44,9 @@
 
     <view wx:if="{{favoriteServices.length}}" class="section-block">
       <view class="section-head favorites-section__head">
-        <text class="section-title">收藏行程</text>
+        <view>
+          <text class="section-eyebrow">行程</text>
+        </view>
         <text class="favorites-section__meta">{{favoriteServices.length}} 段</text>
       </view>
       <view class="card-stack">
@@ -57,7 +62,9 @@
 
     <view wx:if="{{favoriteIdeas.length}}" class="section-block">
       <view class="section-head favorites-section__head">
-        <text class="section-title">收藏故事</text>
+        <view>
+          <text class="section-eyebrow">故事</text>
+        </view>
         <text class="favorites-section__meta">{{favoriteIdeas.length}} 篇</text>
       </view>
       <view class="favorites-idea-list">
@@ -68,7 +75,7 @@
           data-slug="{{item.slug}}"
           bindtap="onIdeaTap"
         >
-          <text class="eyebrow">主题：{{item.theme}}</text>
+          <text class="section-eyebrow">主题：{{item.theme}}</text>
           <text class="favorites-idea-card__title">{{item.title}}</text>
           <text class="favorites-idea-card__summary">{{item.summary}}</text>
           <text wx:if="{{item.authorName}}" class="favorites-idea-card__meta">作者：{{item.authorName}}</text>
@@ -78,8 +85,8 @@
   </block>
 
   <view wx:else class="section-block paper-block">
-    <text class="section-title">还没有收藏内容</text>
-    <text class="page-subtitle favorites-empty__text">去目的地、人物、行程或故事详情页点一下收藏，卡片就会出现在这里。</text>
+    <text class="favorites-section__title">还没有收藏内容</text>
+    <text class="page-subtitle favorites-empty__text">去目的地、人物、行程或故事详情页，点一下标题右侧的收藏图标，卡片就会出现在这里。</text>
   </view>
 </view>
 

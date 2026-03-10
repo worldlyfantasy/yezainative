@@ -38,7 +38,7 @@ function resolveTopLevelRoute(route) {
   }
 
   if (normalized.indexOf("pages/idea-detail/") === 0 || normalized.indexOf("pages/ideas/") === 0) {
-    return TOP_LEVEL_ROUTES.ideas;
+    return TOP_LEVEL_ROUTES.creators;
   }
 
   if (

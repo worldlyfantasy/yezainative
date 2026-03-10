@@ -1,5 +1,4 @@
 const { getIdeaDetailData } = require("../../services/content");
-const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
 const { toggleFavorite } = require("../../services/favorites");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
 
@@ -20,7 +19,7 @@ Page({
       });
 
       setTimeout(() => {
-        goTopLevel(TOP_LEVEL_ROUTES.ideas);
+        wx.navigateTo({ url: "/pages/ideas/index" });
       }, 300);
       return;
     }
@@ -32,7 +31,12 @@ Page({
   },
 
   goBack() {
-    goTopLevel(TOP_LEVEL_ROUTES.ideas);
+    const pages = getCurrentPages();
+    if (pages.length > 1) {
+      wx.navigateBack();
+    } else {
+      wx.navigateTo({ url: "/pages/ideas/index" });
+    }
   },
 
   goCreatorDetail() {

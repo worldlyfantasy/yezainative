@@ -25,7 +25,12 @@ Page({
       }, 300);
       return;
     }
-    this.setData(payload);
+    const creatorIdeas = payload.creatorIdeas || [];
+    this.setData({
+      ...payload,
+      displayIdeas: creatorIdeas.slice(0, 2),
+      hasMoreIdeas: creatorIdeas.length > 2
+    });
   },
 
   onUnload() {
@@ -46,6 +51,22 @@ Page({
     const slug = event.currentTarget.dataset.slug;
     wx.navigateTo({
       url: `/pages/destination-detail/index?slug=${slug}`
+    });
+  },
+
+  onStoryTap(event) {
+    const slug = event.currentTarget.dataset.slug;
+    if (!slug) return;
+    wx.navigateTo({
+      url: `/pages/idea-detail/index?slug=${slug}`
+    });
+  },
+
+  goCreatorStories() {
+    const slug = this.data.creator && this.data.creator.slug;
+    if (!slug) return;
+    wx.navigateTo({
+      url: `/pages/ideas/index?creatorSlug=${slug}`
     });
   },
 

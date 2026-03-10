@@ -95,6 +95,7 @@ function getCreatorDetailData(slug) {
     .filter((service) => creator.serviceIds.includes(service.id))
     .map((service) => Object.assign({}, service, { creatorName: creator.name }));
   const groupServices = relatedServices.filter((service) => creator.groupIds.includes(service.id));
+  const creatorIdeas = (ideas || []).filter((idea) => idea.authorId === creator.id);
 
   return {
     creator: Object.assign({}, creator, {
@@ -102,7 +103,8 @@ function getCreatorDetailData(slug) {
     }),
     creatorDestinations,
     relatedServices,
-    groupServices
+    groupServices,
+    creatorIdeas
   };
 }
 
@@ -163,15 +165,28 @@ function getDestinationDetailData(slug, filters) {
   };
 }
 
-function getIdeasPageData(theme) {
+function getIdeasPageData(theme, creatorSlug) {
+  let sourceIdeas = ideas || [];
+  let pageTitle = "旅行故事";
+  if (creatorSlug) {
+    const creator = creators.find((c) => c.slug === creatorSlug);
+    if (creator) {
+      sourceIdeas = sourceIdeas.filter((idea) => idea.authorId === creator.id);
+      pageTitle = `${creator.name}的故事`;
+    }
+  }
+  const filteredByTheme = filterIdeasByTheme(theme);
+  const filteredIdeas = creatorSlug
+    ? sourceIdeas.filter((idea) => !theme || idea.theme === theme)
+    : filteredByTheme;
+  const themes = creatorSlug
+    ? Array.from(new Set(sourceIdeas.map((i) => i.theme).filter(Boolean)))
+    : getUniqueIdeaThemes();
+
   return {
-    themes: getUniqueIdeaThemes(),
-    ideas: filterIdeasByTheme(theme).map((idea) => {
-      const author = creators.find((creator) => creator.id === idea.authorId);
-      return Object.assign({}, idea, {
-        authorName: author ? author.name : ""
-      });
-    })
+    themes,
+    pageTitle,
+    ideas: filteredIdeas
   };
 }
 

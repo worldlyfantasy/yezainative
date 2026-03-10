@@ -3,7 +3,16 @@
 }
 
 .favorites-section__head {
-  margin-bottom: 20rpx;
+  margin-bottom: 28rpx;
+}
+
+.favorites-section__title {
+  display: block;
+  font-size: 26rpx;
+  line-height: 1.5;
+  font-weight: 400;
+  letter-spacing: 2rpx;
+  color: #6a5a4b;
 }
 
 .favorites-section__meta {

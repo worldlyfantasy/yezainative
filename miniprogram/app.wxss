@@ -64,10 +64,21 @@ button::after {
   line-height: 1.95;
 }
 
-.eyebrow {
+/* 首页卡片、区块内的小标题（如精选创作者、精选目的地） */
+.section-eyebrow {
   display: block;
   margin-bottom: 20rpx;
-  font-size: 36rpx;
+  font-size: 32rpx;
+  letter-spacing: 4rpx;
+  color: #993921;
+  opacity: 0.84;
+}
+
+/* 人物/土地等页面的主标题（如创作者档案、土地的故事） */
+.page-eyebrow {
+  display: block;
+  margin-bottom: 20rpx;
+  font-size: 40rpx;
   letter-spacing: 4rpx;
   color: #993921;
   opacity: 0.84;
