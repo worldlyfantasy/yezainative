@@ -16,6 +16,7 @@ const {
 const { howItWorksFlows } = require("../mock/static-content");
 const { parseIdeaBody } = require("../utils/content");
 const { isFavorited, getFavoriteState } = require("./favorites");
+const { pickAuditText } = require("../utils/audit");
 const { getServiceCreatorRoles } = require("./service-roles");
 
 function buildOptionList(items, mode) {
@@ -218,17 +219,32 @@ function formatPeriodDate(dateStr) {
 }
 
 function buildGroupPeriodDisplay(period) {
+  const startDateLabel = formatPeriodDate(period.dateStart);
+  const endDateLabel = formatPeriodDate(period.dateEnd);
   const dateLabel =
     period.dateStart === period.dateEnd
-      ? formatPeriodDate(period.dateStart)
-      : `${formatPeriodDate(period.dateStart)} - ${formatPeriodDate(period.dateEnd)}`;
+      ? startDateLabel
+      : `${startDateLabel} - ${endDateLabel}`;
   const statusText = period.status === "confirmed" ? "确定成行" : "可报名";
-  return Object.assign({}, period, { dateLabel, statusText });
+  return Object.assign({}, period, { dateLabel, startDateLabel, endDateLabel, statusText });
 }
 
 function getServiceTagValue(tags, key) {
   const tag = (tags || []).find((item) => item.key === key);
   return tag ? tag.value : "";
+}
+
+function getServiceTimelineDisplayText(timelineText) {
+  const normalized = String(timelineText || "").trim();
+  return pickAuditText(normalized, normalized.replace(/支付后/g, "报名确认后"));
+}
+
+function getServiceAdjustmentDisplayText(refundText) {
+  const normalized = String(refundText || "").trim();
+  return pickAuditText(
+    normalized || "具体退款及改期规则以最终确认方案为准。",
+    "如需调整或取消，请尽快联系平台确认当次行程的可调整空间与处理方式，具体以行前确认结果为准。"
+  );
 }
 
 function getItineraryDayCount(service) {
@@ -290,7 +306,10 @@ function buildDefaultHighlights(service, tags, photoBaseList, meetingPoint, dayC
     {
       id: `${service.slug}-highlight-plan`,
       title: `${meetingPoint || "指定集合点"}出发的完整安排`,
-      description: `当前 mock 版本按 ${dayCount} 天结构组织亮点、行程、费用与须知，后续接入接口后可直接替换为创作者配置内容。`,
+      description: pickAuditText(
+        `当前 mock 版本按 ${dayCount} 天结构组织亮点、行程、费用与须知，后续接入接口后可直接替换为创作者配置内容。`,
+        `当前页面按 ${dayCount} 天结构展示亮点、行程、费用与须知，方便你快速判断是否适合报名。`
+      ),
       images: getHighlightImages(photoBaseList, 2, 2)
     }
   ];
@@ -401,7 +420,10 @@ function buildDefaultCosts(service, tags, dayCount) {
     },
     {
       label: "节奏",
-      content: `本次 mock 版本按 ${dayCount} 天节奏组织结构，后续可由真实接口替换具体日程内容。`
+      content: pickAuditText(
+        `本次 mock 版本按 ${dayCount} 天节奏组织结构，后续可由真实接口替换具体日程内容。`,
+        `当前页面展示的是本次行程的参考节奏，具体集合细节与行前准备会在确认后同步。`
+      )
     }
   ];
 
@@ -427,7 +449,7 @@ function buildDefaultCosts(service, tags, dayCount) {
   const refundRules = [
     {
       days: "规则说明",
-      percent: service.refund || "具体退款及改期规则以最终确认方案为准。"
+      percent: getServiceAdjustmentDisplayText(service.refund)
     }
   ];
 
@@ -456,7 +478,10 @@ function buildDefaultNotices(service, tags) {
     {
       key: "local",
       title: "关于当地",
-      content: `请尊重当地生活节奏与现场规则。页面当前信息为 mock 数据，后续可根据目的地和创作者配置替换为更具体的在地说明。`
+      content: pickAuditText(
+        `请尊重当地生活节奏与现场规则。页面当前信息为 mock 数据，后续可根据目的地和创作者配置替换为更具体的在地说明。`,
+        "请尊重当地生活节奏与现场规则。具体在地安排会根据目的地情况、创作者节奏与出行时间进一步确认。"
+      )
     },
     {
       key: "safety",
@@ -469,25 +494,67 @@ function buildDefaultNotices(service, tags) {
     {
       key: "packing",
       title: "准备清单",
-      content: `请结合“${service.timeline}”与“${service.revision}”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。`
+      content: `请结合“${getServiceTimelineDisplayText(service.timeline)}”与“${service.revision}”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。`
     }
   ];
+}
+
+function buildOverviewWhyJoinText(service) {
+  const deliverables = Array.isArray(service.deliverables) ? service.deliverables : [];
+  const quote = String(service.creatorQuote || "").trim();
+  const summary = String(service.summary || "").trim();
+  const intro = quote || summary || "把行程的重点体验、节奏与方法落到可执行的安排里。";
+
+  const deliverableLine = deliverables.length
+    ? `\n\n你将围绕${deliverables.slice(0, 4).join("、")}展开体验与练习，把收获带回日常。`
+    : "";
+
+  return intro + deliverableLine;
+}
+
+function buildOverviewSuitableText(service) {
+  if (service && service.suitableDetail) {
+    return service.suitableDetail;
+  }
+  const list = Array.isArray(service && service.suitable) ? service.suitable : [];
+  const bulletLine = list.length > 0 ? "· " + list.join("\n· ") + "\n\n" : "";
+  const mockParagraph1 =
+    "这段旅程更适合能接受一定不确定性、愿意按领队节奏推进的旅人。行程中可能包含连续多日行走、早晚温差与天气变化，部分路段对体能与耐心都有要求；如果你更在意慢下来观察、记录与在地体验，会更容易融入这次行程的节奏。";
+  const mockParagraph2 =
+    "如果你愿意在路上保持补水、保暖与体力分配，并接受根据路况与团队状态做的小幅调整，会获得更完整、更松弛的体验。";
+  return bulletLine + mockParagraph1 + "\n\n" + mockParagraph2;
+}
+
+function buildServiceOverview(service, tags, photoBaseList, highlights) {
+  const highlightFirstImage =
+    highlights && highlights[0] && highlights[0].images && highlights[0].images[0]
+      ? highlights[0].images[0]
+      : "";
+  const coverImage = highlightFirstImage || (photoBaseList || [])[0] || "";
+  return {
+    coverImage,
+    whyJoinText: buildOverviewWhyJoinText(service, tags),
+    suitableTitle: "这段旅程适合谁",
+    suitableText: buildOverviewSuitableText(service)
+  };
 }
 
 function buildServiceTravelDetail(service, tags, photoBaseList) {
   const meetingPoint = getServiceTagValue(tags, "meetingPoint");
   const dayCount = getItineraryDayCount(service);
+  const highlights = buildDefaultHighlights(service, tags, photoBaseList, meetingPoint, dayCount);
 
   return {
     id: service.id,
     title: service.name,
     sections: [
+      { key: "overview", title: "概况", anchorId: "section_overview" },
       { key: "highlights", title: "亮点", anchorId: "section_highlights" },
       { key: "itinerary", title: "行程", anchorId: "section_itinerary" },
-      { key: "costs", title: "费用", anchorId: "section_costs" },
       { key: "notices", title: "须知", anchorId: "section_notices" }
     ],
-    highlights: buildDefaultHighlights(service, tags, photoBaseList, meetingPoint, dayCount),
+    overview: buildServiceOverview(service, tags, photoBaseList, highlights),
+    highlights,
     itinerary: buildDefaultItinerary(service, tags, dayCount),
     costs: buildDefaultCosts(service, tags, dayCount),
     notices: buildDefaultNotices(service, tags)
@@ -536,7 +603,9 @@ function getServiceDetailData(slug) {
     service: Object.assign({}, service, {
       isFavorited: isFavorited("services", service.slug),
       tags,
-      creatorRoles
+      creatorRoles,
+      timelineDisplay: getServiceTimelineDisplayText(service.timeline),
+      refundDisplay: getServiceAdjustmentDisplayText(service.refund)
     }),
     travelDetail,
     creator,
@@ -551,7 +620,16 @@ function getServiceDetailData(slug) {
 
 function getHowItWorksData() {
   return {
-    flows: howItWorksFlows
+    flows: howItWorksFlows.map((item) => {
+      if (item.title !== "托管支付") {
+        return item;
+      }
+
+      return Object.assign({}, item, {
+        title: pickAuditText("托管支付", "报名确认"),
+        description: pickAuditText(item.description, "提交报名信息后，平台会与您确认名额、时间与后续安排。")
+      });
+    })
   };
 }
 

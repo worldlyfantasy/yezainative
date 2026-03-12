@@ -107,6 +107,7 @@
   display: block;
   width: 100%;
   height: auto;
+  border-radius: 36rpx;
 }
 
 /* 中间整体位置：改 top 可上下移动，如 58% 更靠下、45% 更靠上 */
@@ -478,6 +479,7 @@
   display: block;
   width: 100%;
   height: 200rpx;
+  border-radius: 0 24rpx 0 0;
 }
 
 .active-trip-card-wrap .active-trip-card__body {

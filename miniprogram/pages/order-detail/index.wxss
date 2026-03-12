@@ -17,7 +17,7 @@
   width: 160rpx;
   height: 160rpx;
   flex-shrink: 0;
-  border-radius: 20rpx;
+  border-radius: 24rpx;
 }
 
 .order-product__name {

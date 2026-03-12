@@ -14,10 +14,21 @@ Component({
     rows: {
       type: Array,
       value: []
+    },
+    defaultExpanded: {
+      type: Boolean,
+      value: false
     }
   },
   data: {
     expanded: false
+  },
+  lifetimes: {
+    attached() {
+      this.setData({
+        expanded: !!this.data.defaultExpanded
+      });
+    }
   },
   methods: {
     onToggle() {

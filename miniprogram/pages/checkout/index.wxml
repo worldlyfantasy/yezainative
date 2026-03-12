@@ -1,7 +1,7 @@
 <view wx:if="{{service}}" class="page-shell checkout-page">
   <!-- 订单摘要模块 -->
   <view class="checkout-summary paper-block">
-    <text class="section-title">订单摘要</text>
+    <text class="section-title">{{summaryTitleText}}</text>
     <view class="checkout-summary__row">
       <text class="checkout-summary__label">行程名称</text>
       <text class="checkout-summary__value">{{service.name}}</text>
@@ -74,13 +74,13 @@
       <label class="checkout-agreement__label">
         <checkbox value="refund" checked="{{agreedRefund}}" color="#6b5344" />
         <view class="checkout-agreement__link-wrap" catchtap="onAgreementLinkTap" data-key="refund">
-          <text class="checkout-agreement__link">《退订规则》</text>
+          <text class="checkout-agreement__link">《{{refundAgreementTitle}}》</text>
         </view>
       </label>
     </checkbox-group>
   </view>
 
-  <bottom-action-bar price-text="{{payableText}}" button-text="提交订单并支付" bind:actiontap="submitOrder" class="checkout-bottom-bar"></bottom-action-bar>
+  <bottom-action-bar label-text="{{amountLabelText}}" price-text="{{payableText}}" button-text="{{submitButtonText}}" bind:actiontap="submitOrder" class="checkout-bottom-bar"></bottom-action-bar>
 </view>
 
 <!-- 协议正文弹层（mock，后续可改为后台数据） -->

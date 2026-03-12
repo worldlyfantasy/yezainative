@@ -4,7 +4,7 @@
 
   <view wx:if="{{!loggedIn}}" class="section-block paper-block">
     <text class="favorites-section__title">登录后查看收藏</text>
-    <text class="page-subtitle favorites-empty__text">当前原型使用本地模拟登录，先到“我的”完成登录，再回来管理收藏。</text>
+    <text class="page-subtitle favorites-empty__text">{{loginHint}}</text>
   </view>
 
   <block wx:elif="{{hasFavorites}}">

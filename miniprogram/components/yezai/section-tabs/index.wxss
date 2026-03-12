@@ -23,6 +23,7 @@
   line-height: 1.4;
   font-weight: 500;
   color: #6a5a4b;
+  transition: color 0.28s ease-out;
 }
 
 .section-tabs__indicator {
@@ -30,14 +31,15 @@
   height: 6rpx;
   border-radius: 999rpx;
   background: transparent;
-  transition: background 0.2s ease;
+  transition: background 0.28s ease-out;
 }
 
+/* 与「查看更多」一致：品牌赭红 #993921 */
 .section-tabs__item--active .section-tabs__label {
-  color: #2b241d;
+  color: #993921;
   font-weight: 600;
 }
 
 .section-tabs__item--active .section-tabs__indicator {
-  background: #d15e14;
+  background: #993921;
 }

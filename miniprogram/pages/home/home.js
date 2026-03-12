@@ -1,4 +1,4 @@
-const { getHomePageData } = require("../../services/content");
+const { getHomePageData } = require("../../repositories/content-repository");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
 
 Page({
@@ -9,8 +9,8 @@ Page({
     featuredIdeas: []
   },
 
-  onLoad() {
-    const homePageData = getHomePageData();
+  async onLoad() {
+    const homePageData = await getHomePageData();
     this.setData(homePageData);
     this.resolveHeroSlides(homePageData.heroSlides);
   },

@@ -1,4 +1,4 @@
-const { getIdeasPageData } = require("../../services/content");
+const { getIdeasPageData } = require("../../repositories/content-repository");
 
 Page({
   data: {
@@ -9,9 +9,9 @@ Page({
     ideas: []
   },
 
-  onLoad(options) {
+  async onLoad(options) {
     const creatorSlug = (options && options.creatorSlug) || "";
-    const payload = getIdeasPageData("", creatorSlug);
+    const payload = await getIdeasPageData("", creatorSlug);
     this.setData(
       {
         creatorSlug,
@@ -33,9 +33,9 @@ Page({
     );
   },
 
-  applyFilter() {
+  async applyFilter() {
     const { currentTheme, creatorSlug } = this.data;
-    const payload = getIdeasPageData(currentTheme, creatorSlug);
+    const payload = await getIdeasPageData(currentTheme, creatorSlug);
     this.setData({
       ideas: payload.ideas
     });

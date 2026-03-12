@@ -17,10 +17,18 @@ function buildTravelDetailMock(slug) {
   return {
     id: `travel-detail-${slug}`,
     title: "高原谷地徒步手帐",
+    overview: {
+      coverImage: buildServiceMockImage(`yezai-${slug}-highlight-1a`, 1200, 760),
+      whyJoinText:
+        "把徒步从“走完”变成“看见”。这段行程会带你在牧场、寺院与峡谷的连续抬升中，用手绘地图与固定记录节奏把观察落到纸面，最终形成可复用的徒步手帐方法。",
+      suitableTitle: "这段旅程适合谁",
+      suitableText:
+        "· 能适应海拔 3500 米以上\n· 想学习地形记录\n· 愿意分担公用装备\n\n这段旅程更适合愿意按团队节奏推进、能接受天气与路况带来弹性调整的旅人。行程中会有连续多日徒步与露营，早晚温差明显，部分路段对体能与耐心都有要求；如果你更在意慢下来观察、记录与在地体验，而不是追求打卡速度，会更容易融入这次行程的节奏。"
+    },
     sections: [
+      { key: "overview", title: "概况", anchorId: "section_overview" },
       { key: "highlights", title: "亮点", anchorId: "section_highlights" },
       { key: "itinerary", title: "行程", anchorId: "section_itinerary" },
-      { key: "costs", title: "费用", anchorId: "section_costs" },
       { key: "notices", title: "须知", anchorId: "section_notices" }
     ],
     highlights: [

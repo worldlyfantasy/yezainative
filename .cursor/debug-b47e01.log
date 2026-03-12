@@ -1,0 +1,10 @@
+{"sessionId":"b47e01","location":"splash/splash.js:onLoad","message":"splash onLoad","data":{"quoteColumnsLen":2,"logoSrc":"/images/splash-logo.png"},"timestamp":1773114141755,"hypothesisId":"H1"}
+{"sessionId":"b47e01","location":"splash/splash.js:startAutoTransition","message":"holdTimer set","data":{"SPLASH_HOLD_MS":1000},"timestamp":1773114141760,"hypothesisId":"H3"}
+{"sessionId":"b47e01","location":"splash/splash.js:onReady","message":"splash onReady","data":{},"timestamp":1773114141784,"hypothesisId":"H1"}
+{"sessionId":"b47e01","location":"splash/splash.js:beginLeave","message":"beginLeave called","data":{"leaving":false},"timestamp":1773114142761,"hypothesisId":"H3"}
+{"sessionId":"b47e01","location":"splash/splash.js:beginLeave","message":"setData isFading true","data":{},"timestamp":1773114142769,"hypothesisId":"H5"}
+{"sessionId":"b47e01","location":"splash/splash.js:onLoad","message":"splash onLoad","data":{"quoteColumnsLen":2,"logoSrc":"/images/splash-logo.png"},"timestamp":1773114157013,"hypothesisId":"H1"}
+{"sessionId":"b47e01","location":"splash/splash.js:startAutoTransition","message":"holdTimer set","data":{"SPLASH_HOLD_MS":1000},"timestamp":1773114157017,"hypothesisId":"H3"}
+{"sessionId":"b47e01","location":"splash/splash.js:onReady","message":"splash onReady","data":{},"timestamp":1773114157059,"hypothesisId":"H1"}
+{"sessionId":"b47e01","location":"splash/splash.js:beginLeave","message":"beginLeave called","data":{"leaving":false},"timestamp":1773114158018,"hypothesisId":"H3"}
+{"sessionId":"b47e01","location":"splash/splash.js:beginLeave","message":"setData isFading true","data":{},"timestamp":1773114158027,"hypothesisId":"H5"}

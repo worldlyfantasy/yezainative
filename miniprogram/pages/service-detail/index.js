@@ -1,18 +1,47 @@
-const { getServiceDetailData } = require("../../services/content");
+const { getServiceDetailData } = require("../../repositories/content-repository");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
 const { toggleFavorite } = require("../../services/favorites");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
+const { isAuditMode, pickAuditText } = require("../../utils/audit");
 
 const SECTION_SCROLL_DURATION = 320;
+
+function calcDurationLabelFromDates(dateStart, dateEnd) {
+  if (!dateStart || !dateEnd) return "";
+  const start = new Date(dateStart);
+  const end = new Date(dateEnd);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "";
+  const diff = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  if (!Number.isFinite(diff) || diff <= 0) return "";
+  const days = diff;
+  const nights = Math.max(days - 1, 0);
+  return nights > 0 ? `${days}天${nights}晚` : `${days}天`;
+}
+
+function calcDurationLabel(payload, travelDetail) {
+  const durationTag = String((payload && payload.service && payload.service.durationTag) || "").trim();
+  if (durationTag) return durationTag;
+
+  const firstPeriod = (payload && payload.groupPeriods && payload.groupPeriods[0]) || null;
+  if (firstPeriod) {
+    const fromPeriod = calcDurationLabelFromDates(firstPeriod.dateStart, firstPeriod.dateEnd);
+    if (fromPeriod) return fromPeriod;
+  }
+
+  const itineraryDays = travelDetail && travelDetail.itinerary && Array.isArray(travelDetail.itinerary.days)
+    ? travelDetail.itinerary.days.length
+    : 0;
+  if (itineraryDays > 0) {
+    const nights = Math.max(itineraryDays - 1, 0);
+    return nights > 0 ? `${itineraryDays}天${nights}晚` : `${itineraryDays}天`;
+  }
+
+  return "行程待确认";
+}
 
 function getMonthLabel(dateStr) {
   const m = new Date(dateStr).getMonth() + 1;
   return `${m}月`;
-}
-
-function getUniqueVersions(periods) {
-  const set = new Set((periods || []).map((p) => p.versionName));
-  return Array.from(set);
 }
 
 function getMonthsFromPeriods(periods) {
@@ -24,11 +53,10 @@ function getMonthsFromPeriods(periods) {
   });
 }
 
-function filterPeriodsByVersionAndMonth(periods, version, monthLabel) {
-  if (!periods || !version || !monthLabel) return [];
+function filterPeriodsByMonth(periods, monthLabel) {
+  if (!periods || !monthLabel) return [];
   const monthNum = parseInt(monthLabel, 10);
   return periods.filter((p) => {
-    if (p.versionName !== version) return false;
     const m = new Date(p.dateStart).getMonth() + 1;
     return m === monthNum;
   });
@@ -55,7 +83,7 @@ function buildCostTableGroups(costs) {
     },
     {
       key: "refundRules",
-      title: "退订规则",
+      title: pickAuditText("退订规则", "变更说明"),
       rows: (costs.refundRules || []).map((item) => ({
         label: item.days,
         content: item.percent
@@ -88,6 +116,7 @@ function buildTravelDetailState(travelDetail) {
 
 Page({
   data: {
+    auditMode: isAuditMode(),
     service: null,
     travelDetail: null,
     costTableGroups: [],
@@ -111,6 +140,10 @@ Page({
     consultSheetAnimating: false,
     consultWeChatQr: "https://picsum.photos/seed/yezai-wechat-qr/420/420",
     consultGroupQr: "https://picsum.photos/seed/yezai-group-qr/420/420",
+    consultSheetTitle: "微信意向群",
+    consultCardLabel: "",
+    consultCardDesc: "扫码入群，咨询更多行程信息",
+    consultFollowupNote: "报名确认后，将为您同步带领者信息与行前准备",
     suitableSheetVisible: false,
     suitableSheetAnimating: false,
     suitableSheetContent: "",
@@ -118,23 +151,24 @@ Page({
     selectedPeriodId: null,
     periodSheetVisible: false,
     periodSheetAnimating: false,
-    periodSheetVersions: [],
-    periodSheetSelectedVersion: "",
     periodSheetMonths: [],
     periodSheetActiveMonth: "",
     periodSheetDates: [],
     periodSheetSelectedDateId: null,
     periodSheetPeople: 1,
-    periodSheetGroupHint: "",
     periodSheetTotalPrice: 0,
-    periodSheetDepartureLabel: "",
-    periodSheetDateRange: "",
-    periodSheetStatusText: ""
+    timelineTitleText: pickAuditText("交付周期", "确认节奏"),
+    refundTitleText: pickAuditText("退款规则", "变更说明"),
+    serviceNoticeTitle: pickAuditText("离线提醒", "报名说明"),
+    serviceNoticeBody: pickAuditText(
+      "当前阶段仅保留服务说明，不接支付、合同与分账。",
+      "当前页面展示行程信息与报名入口，提交后将由平台进一步确认。"
+    )
   },
 
-  onLoad(options) {
+  async onLoad(options) {
     this.pageScrollTop = 0;
-    const payload = getServiceDetailData(options.slug);
+    const payload = await getServiceDetailData(options.slug);
     if (!payload) {
       wx.showToast({
         title: "未找到服务",
@@ -150,29 +184,24 @@ Page({
     const groupPeriods = Array.isArray(payload.groupPeriods) ? payload.groupPeriods : [];
     const originalService = payload.service || {};
     const originalTags = Array.isArray(originalService.tags) ? originalService.tags : [];
-    const meetingPoint = originalTags.find((t) => t && t.key === "meetingPoint");
-    const minGroupSize = originalTags.find((t) => t && t.key === "minGroupSize");
-    const suitableList = Array.isArray(originalService.suitable) ? originalService.suitable : [];
-    const rawSummary = suitableList.length > 0 ? suitableList[0] : "想慢慢感受高原";
-    const suitableSummary =
-      rawSummary.endsWith("的人") ? rawSummary : rawSummary + "的人";
-    const suitableTag = {
-      key: "suitable",
-      label: "适合谁",
-      value: suitableSummary,
-      clickable: true
+    const detailState = buildTravelDetailState(payload.travelDetail);
+
+    const durationTag = {
+      key: "duration",
+      label: "行程时间",
+      value: calcDurationLabel(payload, detailState.travelDetail),
+      clickable: false
     };
     const consultationTag = {
       key: "consultation",
       label: "报名咨询",
-      value: "加入意向群",
+      value: "统一咨询入口",
       clickable: true
     };
-    const mappedTags = [meetingPoint, minGroupSize, suitableTag, consultationTag].filter(Boolean);
+    const mappedTags = [durationTag, consultationTag].filter(Boolean);
     const serviceWithTags = Object.assign({}, originalService, {
       tags: mappedTags
     });
-    const detailState = buildTravelDetailState(payload.travelDetail);
 
     this.setData(
       Object.assign(
@@ -416,9 +445,6 @@ Page({
       this.openConsultSheet();
       return;
     }
-    if (key === "suitable") {
-      this.openSuitableSheet();
-    }
   },
 
   buildSuitableSheetContent(service) {
@@ -501,33 +527,19 @@ Page({
 
   openPeriodSheetWith(period) {
     if (!period) return;
-    const versions = getUniqueVersions(this.data.groupPeriods);
     const months = getMonthsFromPeriods(this.data.groupPeriods);
-    const version = period.versionName;
     const monthLabel = getMonthLabel(period.dateStart);
-    const dates = filterPeriodsByVersionAndMonth(this.data.groupPeriods, version, monthLabel);
-    const meetingTag = (this.data.service.tags || []).find((t) => t.key === "meetingPoint");
-    const departureLabel = meetingTag ? `${meetingTag.value}出发` : "集合酒店出发";
-    const hint =
-      period.minGroup && period.remainingSeats != null
-        ? `${period.minGroup}人成行/当期余位${period.remainingSeats}人`
-        : "";
+    const dates = filterPeriodsByMonth(this.data.groupPeriods, monthLabel);
     this.setData({
       selectedPeriodId: period.id,
       periodSheetVisible: true,
       periodSheetAnimating: false,
-      periodSheetVersions: versions,
-      periodSheetSelectedVersion: version,
       periodSheetMonths: months,
       periodSheetActiveMonth: monthLabel,
       periodSheetDates: dates,
       periodSheetSelectedDateId: period.id,
       periodSheetPeople: 1,
-      periodSheetGroupHint: hint,
-      periodSheetTotalPrice: period.price * 1,
-      periodSheetDepartureLabel: departureLabel,
-      periodSheetDateRange: `${period.dateStart} ~ ${period.dateEnd}`,
-      periodSheetStatusText: period.statusText
+      periodSheetTotalPrice: period.price * 1
     });
     setTimeout(() => {
       this.setData({ periodSheetAnimating: true });
@@ -547,41 +559,15 @@ Page({
     }, 260);
   },
 
-  onSelectVersion(event) {
-    const version = event.currentTarget.dataset.version;
-    const month = this.data.periodSheetActiveMonth;
-    const dates = filterPeriodsByVersionAndMonth(this.data.groupPeriods, version, month);
-    const first = dates[0];
-    this.setData({
-      periodSheetSelectedVersion: version,
-      periodSheetDates: dates,
-      periodSheetSelectedDateId: first ? first.id : null,
-      periodSheetGroupHint:
-        first && first.minGroup && first.remainingSeats != null
-          ? `${first.minGroup}人成行/当期余位${first.remainingSeats}人`
-          : "",
-      periodSheetTotalPrice: first ? first.price * this.data.periodSheetPeople : 0,
-      periodSheetDateRange: first ? `${first.dateStart} ~ ${first.dateEnd}` : "",
-      periodSheetStatusText: first ? first.statusText : ""
-    });
-  },
-
   onSelectMonth(event) {
     const month = event.currentTarget.dataset.month;
-    const version = this.data.periodSheetSelectedVersion;
-    const dates = filterPeriodsByVersionAndMonth(this.data.groupPeriods, version, month);
+    const dates = filterPeriodsByMonth(this.data.groupPeriods, month);
     const first = dates[0];
     this.setData({
       periodSheetActiveMonth: month,
       periodSheetDates: dates,
       periodSheetSelectedDateId: first ? first.id : null,
-      periodSheetGroupHint:
-        first && first.minGroup && first.remainingSeats != null
-          ? `${first.minGroup}人成行/当期余位${first.remainingSeats}人`
-          : "",
-      periodSheetTotalPrice: first ? first.price * this.data.periodSheetPeople : 0,
-      periodSheetDateRange: first ? `${first.dateStart} ~ ${first.dateEnd}` : "",
-      periodSheetStatusText: first ? first.statusText : ""
+      periodSheetTotalPrice: first ? first.price * this.data.periodSheetPeople : 0
     });
   },
 
@@ -590,13 +576,7 @@ Page({
     if (!period) return;
     this.setData({
       periodSheetSelectedDateId: period.id,
-      periodSheetGroupHint:
-        period.minGroup && period.remainingSeats != null
-          ? `${period.minGroup}人成行/当期余位${period.remainingSeats}人`
-          : "",
-      periodSheetTotalPrice: period.price * this.data.periodSheetPeople,
-      periodSheetDateRange: `${period.dateStart} ~ ${period.dateEnd}`,
-      periodSheetStatusText: period.statusText
+      periodSheetTotalPrice: period.price * this.data.periodSheetPeople
     });
   },
 

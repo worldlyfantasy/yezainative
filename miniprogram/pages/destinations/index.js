@@ -1,4 +1,4 @@
-const { getDestinationsPageData } = require("../../services/content");
+const { getDestinationsPageData } = require("../../repositories/content-repository");
 
 Page({
   data: {
@@ -6,8 +6,8 @@ Page({
     destinations: []
   },
 
-  onLoad() {
-    this.applySearch("");
+  async onLoad() {
+    await this.applySearch("");
   },
 
   onSearchInput(event) {
@@ -18,13 +18,14 @@ Page({
     this.applySearch(this.data.searchValue);
   },
 
-  applySearch(value) {
+  async applySearch(value) {
+    const payload = await getDestinationsPageData(value);
     this.setData(
       Object.assign(
         {
           searchValue: value
         },
-        getDestinationsPageData(value)
+        payload
       )
     );
   },

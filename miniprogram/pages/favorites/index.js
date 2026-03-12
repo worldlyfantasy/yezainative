@@ -1,9 +1,15 @@
-const { getFavoritesPageData } = require("../../services/content");
+const { getFavoritesPageData } = require("../../repositories/content-repository");
 const { getStoredUser } = require("../../services/user");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
+const { isAuditMode, pickAuditText } = require("../../utils/audit");
 
 Page({
   data: {
+    auditMode: isAuditMode(),
+    loginHint: pickAuditText(
+      "当前原型使用本地模拟登录，先到“我的”完成登录，再回来管理收藏。",
+      "登录后可查看和管理你收藏的目的地、人物、行程与故事。"
+    ),
     loggedIn: false,
     favoriteDestinations: [],
     favoriteCreators: [],
@@ -16,7 +22,7 @@ Page({
     this.refresh();
   },
 
-  refresh() {
+  async refresh() {
     const loggedIn = Boolean(getStoredUser());
 
     if (!loggedIn) {
@@ -31,7 +37,7 @@ Page({
       return;
     }
 
-    const payload = getFavoritesPageData();
+    const payload = await getFavoritesPageData();
     const hasFavorites = Boolean(
       payload.favoriteDestinations.length ||
         payload.favoriteCreators.length ||

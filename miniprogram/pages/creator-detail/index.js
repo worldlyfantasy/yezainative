@@ -1,4 +1,4 @@
-const { getCreatorDetailData } = require("../../services/content");
+const { getCreatorDetailData } = require("../../repositories/content-repository");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
 const { toggleFavorite } = require("../../services/favorites");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
@@ -12,8 +12,8 @@ Page({
     groupServices: []
   },
 
-  onLoad(options) {
-    const payload = getCreatorDetailData(options.slug);
+  async onLoad(options) {
+    const payload = await getCreatorDetailData(options.slug);
     if (!payload) {
       wx.showToast({
         title: "未找到创作者",

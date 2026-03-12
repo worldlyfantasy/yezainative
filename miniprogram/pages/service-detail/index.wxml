@@ -111,6 +111,30 @@
     </view>
 
     <block wx:for="{{travelDetail.sections}}" wx:key="key" wx:for-item="sectionItem">
+      <view wx:if="{{sectionItem.key === 'overview'}}" id="{{sectionItem.anchorId}}" class="travel-section">
+        <view class="travel-section__head">
+          <text class="section-title travel-section__title">{{sectionItem.title}}</text>
+        </view>
+        <view class="travel-overview">
+          <image
+            wx:if="{{travelDetail.overview && travelDetail.overview.coverImage}}"
+            class="travel-overview__image"
+            src="{{travelDetail.overview.coverImage}}"
+            mode="aspectFill"
+            bindload="onTravelDetailMediaLoad"
+          ></image>
+          <text wx:if="{{travelDetail.overview && travelDetail.overview.whyJoinText}}" class="travel-overview__body">
+            {{travelDetail.overview.whyJoinText}}
+          </text>
+          <text class="travel-overview__subtitle">
+            {{(travelDetail.overview && travelDetail.overview.suitableTitle) || '这段旅程适合谁'}}
+          </text>
+          <text wx:if="{{travelDetail.overview && travelDetail.overview.suitableText}}" class="travel-overview__body travel-overview__body--suitable">
+            {{travelDetail.overview.suitableText}}
+          </text>
+        </view>
+      </view>
+
       <view wx:if="{{sectionItem.key === 'highlights'}}" id="{{sectionItem.anchorId}}" class="travel-section">
         <view class="travel-section__head">
           <text class="section-title travel-section__title">{{sectionItem.title}}</text>
@@ -154,30 +178,49 @@
         <itinerary-block itinerary="{{travelDetail.itinerary}}"></itinerary-block>
       </view>
 
-      <view wx:if="{{sectionItem.key === 'costs'}}" id="{{sectionItem.anchorId}}" class="travel-section">
-        <view class="travel-section__head">
-          <text class="section-title travel-section__title">{{sectionItem.title}}</text>
-        </view>
-        <view class="travel-cost-stack">
-          <cost-table
-            wx:for="{{costTableGroups}}"
-            wx:key="key"
-            title="{{item.title}}"
-            rows="{{item.rows}}"
-          ></cost-table>
-        </view>
-      </view>
-
       <view wx:if="{{sectionItem.key === 'notices'}}" id="{{sectionItem.anchorId}}" class="travel-section">
         <view class="travel-section__head">
           <text class="section-title travel-section__title">{{sectionItem.title}}</text>
         </view>
         <view class="travel-cost-stack">
+          <!-- 抵达交通 -->
+          <block wx:for="{{travelDetail.notices}}" wx:key="key">
+            <cost-table
+              wx:if="{{item.key === 'traffic'}}"
+              default-expanded="{{true}}"
+              title="抵达交通"
+              content="{{item.content}}"
+            ></cost-table>
+          </block>
+
+          <!-- 费用包含 -->
           <cost-table
-            wx:for="{{travelDetail.notices}}"
+            wx:for="{{costTableGroups}}"
             wx:key="key"
+            wx:if="{{item.key === 'include'}}"
+            default-expanded="{{true}}"
             title="{{item.title}}"
-            content="{{item.content}}"
+            rows="{{item.rows}}"
+          ></cost-table>
+
+          <!-- 费用不含 -->
+          <cost-table
+            wx:for="{{costTableGroups}}"
+            wx:key="key"
+            wx:if="{{item.key === 'exclude'}}"
+            default-expanded="{{true}}"
+            title="{{item.title}}"
+            rows="{{item.rows}}"
+          ></cost-table>
+
+          <!-- 变更说明 -->
+          <cost-table
+            wx:for="{{costTableGroups}}"
+            wx:key="key"
+            wx:if="{{item.key === 'refundRules'}}"
+            default-expanded="{{true}}"
+            title="{{item.title}}"
+            rows="{{item.rows}}"
           ></cost-table>
         </view>
       </view>
@@ -216,22 +259,22 @@
 
     <view class="section-block detail-grid">
       <view class="paper-block">
-        <text class="section-title service-info__title">交付周期</text>
-        <text class="service-info__body">{{service.timeline}}</text>
+        <text class="section-title service-info__title">{{timelineTitleText}}</text>
+        <text class="service-info__body">{{service.timelineDisplay || service.timeline}}</text>
       </view>
       <view class="paper-block">
         <text class="section-title service-info__title">修改规则</text>
         <text class="service-info__body">{{service.revision}}</text>
       </view>
       <view class="paper-block">
-        <text class="section-title service-info__title">离线提醒</text>
-        <text class="service-info__body">当前阶段仅保留服务说明，不接支付、合同与分账。</text>
+        <text class="section-title service-info__title">{{serviceNoticeTitle}}</text>
+        <text class="service-info__body">{{serviceNoticeBody}}</text>
       </view>
     </view>
 
     <view class="section-block paper-block">
-      <text class="section-title detail-card__title">退款规则</text>
-      <text class="service-info__body service-info__body--top">{{service.refund}}</text>
+      <text class="section-title detail-card__title">{{refundTitleText}}</text>
+      <text class="service-info__body service-info__body--top">{{service.refundDisplay || service.refund}}</text>
     </view>
   </block>
 
@@ -240,25 +283,10 @@
     <view class="period-sheet__panel {{periodSheetAnimating ? 'period-sheet__panel--active' : ''}}">
       <view class="period-sheet__handle"></view>
       <view class="period-sheet__header">
-        <text class="period-sheet__title">版本/日期/人数</text>
+        <text class="period-sheet__title">日期/人数</text>
         <view class="period-sheet__close" bindtap="closePeriodSheet">×</view>
       </view>
       <scroll-view class="period-sheet__body" scroll-y="true">
-        <view class="period-sheet__section">
-          <text class="period-sheet__label">版本</text>
-          <view class="period-sheet__versions">
-            <view
-              wx:for="{{periodSheetVersions}}"
-              wx:key="*this"
-              class="period-version {{periodSheetSelectedVersion === item ? 'period-version--selected' : ''}}"
-              data-version="{{item}}"
-              bindtap="onSelectVersion"
-            >
-              {{item}}
-              <text wx:if="{{periodSheetSelectedVersion === item}}" class="period-version__check">✓</text>
-            </view>
-          </view>
-        </view>
         <view class="period-sheet__section">
           <text class="period-sheet__label">出发日期</text>
           <view class="period-sheet__months">
@@ -279,24 +307,23 @@
                 data-date="{{item}}"
                 bindtap="onSelectSheetDate"
               >
-                <text class="period-date__range">{{item.dateLabel}}</text>
-                <text class="period-date__price">¥{{item.price}}</text>
-                <text class="period-date__status">{{item.statusText}}</text>
+                <text class="period-date__start">{{item.startDateLabel}} -</text>
+                <text class="period-date__end">{{item.endDateLabel}}</text>
+                <view class="period-date__meta">
+                  <text class="period-date__price">¥{{item.price}}</text>
+                  <text class="period-date__status">{{item.statusText}}</text>
+                </view>
                 <view wx:if="{{periodSheetSelectedDateId === item.id}}" class="period-date__check">✓</view>
               </view>
             </view>
           </scroll-view>
-          <text class="period-sheet__hint">{{periodSheetGroupHint}}</text>
         </view>
         <view class="period-sheet__section">
           <text class="period-sheet__label">出行人数</text>
-          <view class="period-sheet__stepper">
-            <text class="period-sheet__price">¥ {{periodSheetTotalPrice}}</text>
-            <view class="stepper">
-              <button class="stepper__button" bindtap="decreaseSheetPeople">-</button>
-              <text class="stepper__value">{{periodSheetPeople}}</text>
-              <button class="stepper__button" bindtap="increaseSheetPeople">+</button>
-            </view>
+          <view class="period-sheet__people-control">
+            <button class="stepper__button" bindtap="decreaseSheetPeople">-</button>
+            <text class="stepper__value">{{periodSheetPeople}}</text>
+            <button class="stepper__button" bindtap="increaseSheetPeople">+</button>
           </view>
         </view>
       </scroll-view>
@@ -314,16 +341,19 @@
     <view class="media-sheet__backdrop" bindtap="closeMediaSheet"></view>
     <view class="media-sheet__panel {{mediaSheetAnimating ? 'media-sheet__panel--active' : ''}}">
       <view class="media-sheet__handle"></view>
-      <view class="media-sheet__tabs">
-        <view
-          wx:for="{{mediaTabs}}"
-          wx:key="key"
-          class="media-sheet__tab {{index === activeMediaTabIndex ? 'media-sheet__tab--active' : ''}}"
-          data-index="{{index}}"
-          bindtap="onMediaTabChange"
-        >
-          {{item.label}}
+      <view class="media-sheet__header">
+        <view class="media-sheet__tabs">
+          <view
+            wx:for="{{mediaTabs}}"
+            wx:key="key"
+            class="media-sheet__tab {{index === activeMediaTabIndex ? 'media-sheet__tab--active' : ''}}"
+            data-index="{{index}}"
+            bindtap="onMediaTabChange"
+          >
+            {{item.label}}
+          </view>
         </view>
+        <view class="media-sheet__close" bindtap="closeMediaSheet">×</view>
       </view>
       <scroll-view class="media-sheet__body" scroll-y="true">
         <view class="media-sheet__images">
@@ -344,18 +374,15 @@
     <view class="consult-sheet__panel {{consultSheetAnimating ? 'consult-sheet__panel--active' : ''}}">
       <view class="consult-sheet__handle"></view>
       <view class="consult-sheet__header">
-        <text class="consult-sheet__title">报名咨询</text>
+        <text class="consult-sheet__title">{{consultSheetTitle}}</text>
+        <view class="consult-sheet__close" bindtap="closeConsultSheet">×</view>
       </view>
       <view class="consult-sheet__cards">
         <view class="consult-card">
-          <image class="consult-card__qr" src="{{consultWeChatQr}}" mode="aspectFit"></image>
-          <text class="consult-card__label">客服微信</text>
-          <text class="consult-card__desc">添加微信，咨询行程细节</text>
-        </view>
-        <view class="consult-card">
           <image class="consult-card__qr" src="{{consultGroupQr}}" mode="aspectFit"></image>
-          <text class="consult-card__label">意向群</text>
-          <text class="consult-card__desc">扫码加入意向群，获取最新团期</text>
+          <text wx:if="{{consultCardLabel}}" class="consult-card__label">{{consultCardLabel}}</text>
+          <text class="consult-card__desc">{{consultCardDesc}}</text>
+          <text class="consult-card__desc">{{consultFollowupNote}}</text>
         </view>
       </view>
     </view>

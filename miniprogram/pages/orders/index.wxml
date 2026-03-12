@@ -18,7 +18,7 @@
     <view wx:if="{{orders.length}}" class="card-stack">
       <order-card wx:for="{{orders}}" wx:key="id" order="{{item}}" bind:cardtap="onOrderTap" bind:paytap="onOrderPay"></order-card>
     </view>
-    <view wx:else class="empty-state">当前筛选下暂无订单。</view>
+    <view wx:else class="empty-state">当前筛选下暂无记录。</view>
   </view>
 </view>
 

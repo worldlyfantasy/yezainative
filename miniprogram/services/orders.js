@@ -1,27 +1,53 @@
 const { services, destinations } = require("../mock/index");
+const { isAuditMode } = require("../utils/audit");
 
 const ORDERS_KEY = "yezai_orders";
 
-const STATUS_META = {
-  all: { key: "all", label: "全部" },
-  pending: { key: "pending", label: "待支付" },
-  paid: { key: "paid", label: "已付款" },
-  traveling: { key: "traveling", label: "进行中" },
-  completed: { key: "completed", label: "已完成" },
-  canceled: { key: "canceled", label: "已退订" }
-};
+function getStatusMeta() {
+  if (isAuditMode()) {
+    return {
+      all: { key: "all", label: "全部" },
+      pending: { key: "pending", label: "待确认" },
+      paid: { key: "paid", label: "已确认" },
+      traveling: { key: "traveling", label: "进行中" },
+      completed: { key: "completed", label: "已完成" },
+      canceled: { key: "canceled", label: "已取消" }
+    };
+  }
 
-/** 订单列表页使用的 5 个 Tab：全部、待支付、未出行、已退订、待反馈 */
-const ORDER_TABS = [
-  { key: "all", label: "全部" },
-  { key: "pending", label: "待支付" },
-  { key: "not_departed", label: "未出行" },
-  { key: "canceled", label: "已退订" },
-  { key: "to_review", label: "待反馈" }
-];
+  return {
+    all: { key: "all", label: "全部" },
+    pending: { key: "pending", label: "待支付" },
+    paid: { key: "paid", label: "已付款" },
+    traveling: { key: "traveling", label: "进行中" },
+    completed: { key: "completed", label: "已完成" },
+    canceled: { key: "canceled", label: "已退订" }
+  };
+}
+
+function getOrderTabsMeta() {
+  if (isAuditMode()) {
+    return [
+      { key: "all", label: "全部" },
+      { key: "pending", label: "待确认" },
+      { key: "not_departed", label: "未出行" },
+      { key: "canceled", label: "已取消" },
+      { key: "to_review", label: "待反馈" }
+    ];
+  }
+
+  return [
+    { key: "all", label: "全部" },
+    { key: "pending", label: "待支付" },
+    { key: "not_departed", label: "未出行" },
+    { key: "canceled", label: "已退订" },
+    { key: "to_review", label: "待反馈" }
+  ];
+}
 
 function createDefaultOrders() {
   const sampleService = services[0];
+  const statusMeta = getStatusMeta();
   return [
     {
       id: "yz20260301001",
@@ -36,7 +62,7 @@ function createDefaultOrders() {
       discount: 0,
       payable: 8560,
       status: "paid",
-      statusText: STATUS_META.paid.label,
+      statusText: statusMeta.paid.label,
       traveler: {
         name: "林旅人",
         idCard: "440101199012120000",
@@ -67,15 +93,19 @@ function saveOrders(orders) {
 }
 
 function buildOrderCard(order) {
+  const statusMeta = getStatusMeta();
   return Object.assign({}, order, {
+    idPrefixText: isAuditMode() ? "报名" : "订单",
+    statusText: statusMeta[order.status] ? statusMeta[order.status].label : order.statusText,
     amountText: `¥${order.amount}`,
     payableText: `¥${order.payable}`,
-    canContinuePay: order.status === "pending"
+    canContinuePay: order.status === "pending",
+    primaryActionText: isAuditMode() ? "确认报名" : "继续支付"
   });
 }
 
 function getOrderStatusTabs() {
-  return ORDER_TABS;
+  return getOrderTabsMeta();
 }
 
 function getOrders(statusKey) {
@@ -110,6 +140,7 @@ function createOrder(payload) {
   const orders = ensureOrders();
   const timestamp = Date.now();
   const id = `yz${timestamp}`;
+  const statusMeta = getStatusMeta();
   const order = {
     id,
     shortId: String(id).slice(-4),
@@ -123,7 +154,7 @@ function createOrder(payload) {
     discount: 0,
     payable: payload.amount,
     status: "pending",
-    statusText: STATUS_META.pending.label,
+    statusText: statusMeta.pending.label,
     traveler: payload.traveler,
     travelers: payload.travelers || (payload.traveler ? [payload.traveler] : []),
     note: payload.note || "",
@@ -138,12 +169,13 @@ function createOrder(payload) {
 function updateOrderStatus(orderId, status) {
   const orders = ensureOrders();
   const target = orders.find((item) => item.id === orderId);
-  if (!target || !STATUS_META[status]) {
+  const statusMeta = getStatusMeta();
+  if (!target || !statusMeta[status]) {
     return null;
   }
 
   target.status = status;
-  target.statusText = STATUS_META[status].label;
+  target.statusText = statusMeta[status].label;
   saveOrders(orders);
   return buildOrderCard(target);
 }

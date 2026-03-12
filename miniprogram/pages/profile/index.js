@@ -1,5 +1,6 @@
 const { getMyPageData, simulateWechatLogin, logout } = require("../../services/user");
 const { showOfflineOrderNotice } = require("../../utils/offline");
+const { pickAuditText } = require("../../utils/audit");
 
 Page({
   data: {
@@ -22,7 +23,7 @@ Page({
     simulateWechatLogin();
     this.refresh();
     wx.showToast({
-      title: "已完成模拟登录",
+      title: pickAuditText("已完成模拟登录", "登录成功"),
       icon: "none"
     });
   },

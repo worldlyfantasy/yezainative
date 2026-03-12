@@ -7,6 +7,18 @@ const LOGO_LOCAL_PATH = "/images/splash-logo.png";
 const LOGO_CLOUD_ID =
   "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/野哉（纯白底）.png";
 
+function debugLog(location, message, data, hypothesisId) {
+  const payload = { sessionId: "b47e01", location, message, data: data || {}, timestamp: Date.now(), hypothesisId };
+  console.warn("[splash debug]", JSON.stringify(payload));
+  wx.request({
+    url: "http://127.0.0.1:7534/ingest/4b528870-c39d-43e2-8b98-da57e3c13434",
+    method: "POST",
+    header: { "Content-Type": "application/json", "X-Debug-Session-Id": "b47e01" },
+    data: payload,
+    fail: function() {}
+  });
+}
+
 Page({
   data: {
     isFading: false,
@@ -19,7 +31,16 @@ Page({
   },
 
   onLoad() {
+    // #region agent log
+    debugLog("splash/splash.js:onLoad", "splash onLoad", { quoteColumnsLen: this.data.quoteColumns.length, logoSrc: this.data.logoSrc }, "H1");
+    // #endregion
     this.startAutoTransition();
+  },
+
+  onReady() {
+    // #region agent log
+    debugLog("splash/splash.js:onReady", "splash onReady", {}, "H1");
+    // #endregion
   },
 
   onLogoError() {
@@ -38,9 +59,15 @@ Page({
     this.holdTimer = setTimeout(() => {
       this.beginLeave();
     }, SPLASH_HOLD_MS);
+    // #region agent log
+    debugLog("splash/splash.js:startAutoTransition", "holdTimer set", { SPLASH_HOLD_MS }, "H3");
+    // #endregion
   },
 
   beginLeave() {
+    // #region agent log
+    debugLog("splash/splash.js:beginLeave", "beginLeave called", { leaving: !!this.leaving }, "H3");
+    // #endregion
     if (this.leaving) {
       return;
     }
@@ -50,6 +77,9 @@ Page({
     this.setData({
       isFading: true
     });
+    // #region agent log
+    debugLog("splash/splash.js:beginLeave", "setData isFading true", {}, "H5");
+    // #endregion
 
     this.redirectTimer = setTimeout(() => {
       wx.redirectTo({

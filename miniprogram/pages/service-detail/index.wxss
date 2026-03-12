@@ -12,7 +12,7 @@
   display: block;
   width: 100%;
   height: 520rpx;
-  border-radius: 18rpx;
+  border-radius: 24rpx;
 }
 
 .service-gallery__counter {
@@ -43,7 +43,7 @@
   flex: 0 0 auto;
   width: 220rpx;
   height: 168rpx;
-  border-radius: 12rpx;
+  border-radius: 24rpx;
 }
 
 .service-hero {
@@ -356,10 +356,15 @@
 .period-sheet__close {
   width: 56rpx;
   height: 56rpx;
-  font-size: 40rpx;
-  line-height: 56rpx;
+  flex: 0 0 56rpx;
+  font-size: 34rpx;
+  line-height: 52rpx;
   text-align: center;
   color: #6a5a4b;
+  background: rgba(43, 36, 29, 0.06);
+  border: 1rpx solid rgba(43, 36, 29, 0.08);
+  border-radius: 999rpx;
+  box-sizing: border-box;
 }
 
 .period-sheet__body {
@@ -378,33 +383,6 @@
   color: #2b241d;
   display: block;
   margin-bottom: 16rpx;
-}
-
-.period-sheet__versions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-}
-
-.period-version {
-  position: relative;
-  padding: 16rpx 28rpx;
-  border: 2rpx solid rgba(0, 0, 0, 0.1);
-  border-radius: 999rpx;
-  font-size: 26rpx;
-  color: #2b241d;
-  background: #fff;
-}
-
-.period-version--selected {
-  border-color: #993921;
-  background: rgba(153, 57, 33, 0.08);
-  color: #993921;
-}
-
-.period-version__check {
-  margin-left: 8rpx;
-  font-weight: 600;
 }
 
 .period-sheet__months {
@@ -456,22 +434,35 @@
   background: rgba(153, 57, 33, 0.06);
 }
 
-.period-date__range {
+.period-date__start,
+.period-date__end {
   display: block;
   font-size: 24rpx;
   line-height: 1.4;
   color: #2b241d;
-  margin-bottom: 8rpx;
   white-space: normal;
   word-wrap: break-word;
   overflow-wrap: break-word;
+}
+
+.period-date__start {
+  margin-bottom: 2rpx;
+}
+
+.period-date__end {
+  margin-bottom: 12rpx;
+}
+
+.period-date__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
 }
 
 .period-date__price {
   font-size: 28rpx;
   font-weight: 600;
   color: #993921;
-  margin-right: 8rpx;
 }
 
 .period-date__status {
@@ -488,21 +479,11 @@
   color: #993921;
 }
 
-.period-sheet__hint {
-  font-size: 24rpx;
-  color: #6a5a4b;
-}
-
-.period-sheet__stepper {
-  display: flex;
+.period-sheet__people-control {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-}
-
-.period-sheet__stepper .period-sheet__price {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #993921;
+  gap: 18rpx;
+  padding: 10rpx 0 4rpx;
 }
 
 .period-sheet__footer {
@@ -534,25 +515,20 @@
 }
 
 .period-sheet__next {
-  flex: 0 0 auto;
-  padding: 24rpx 48rpx;
-  font-size: 30rpx;
+  flex: 0 0 228rpx;
+  width: 228rpx;
+  margin-left: auto;
+  padding: 22rpx 0;
+  font-size: 28rpx;
   font-weight: 500;
   color: #fff;
-  background: #2b241d;
+  background: #74614f;
   border-radius: 999rpx;
   border: none;
 }
 
 .period-sheet__next::after {
   border: none;
-}
-
-/* 步进器（面板内：小号、尺寸一致） */
-.period-sheet__section .stepper {
-  display: inline-flex;
-  align-items: center;
-  gap: 16rpx;
 }
 
 .period-sheet__section .stepper__button {
@@ -636,6 +612,40 @@
   gap: 32rpx;
 }
 
+.travel-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.travel-overview__image {
+  width: 100%;
+  height: 420rpx;
+  border-radius: 24rpx;
+  display: block;
+}
+
+.travel-overview__subtitle {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 34rpx;
+  line-height: 1.45;
+  font-weight: 600;
+  color: #2b241d;
+}
+
+.travel-overview__body {
+  display: block;
+  font-size: 26rpx;
+  line-height: 1.9;
+  color: #6a5a4b;
+  white-space: pre-line;
+}
+
+.travel-overview__body--suitable {
+  color: #6a5a4b;
+}
+
 .travel-highlight-card {
   padding: 0 0 28rpx;
   border-bottom: 1rpx solid rgba(153, 57, 33, 0.1);
@@ -673,7 +683,7 @@
 .travel-highlight-card__image {
   width: 500rpx;
   height: 312rpx;
-  border-radius: 18rpx;
+  border-radius: 24rpx;
   flex: 0 0 auto;
 }
 
@@ -681,6 +691,49 @@
   display: flex;
   flex-direction: column;
   gap: 44rpx;
+}
+
+.travel-subsection {
+  margin-top: 32rpx;
+}
+
+.travel-subsection:first-of-type {
+  margin-top: 0;
+}
+
+.travel-subsection__title {
+  display: block;
+  margin-bottom: 16rpx;
+  font-size: 30rpx;
+  line-height: 1.6;
+  font-weight: 600;
+  color: #2b241d;
+}
+
+.travel-notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.travel-notice {
+  padding-top: 4rpx;
+}
+
+.travel-notice__title {
+  display: block;
+  font-size: 28rpx;
+  line-height: 1.6;
+  font-weight: 500;
+  color: #2b241d;
+  margin-bottom: 8rpx;
+}
+
+.travel-notice__body {
+  display: block;
+  font-size: 26rpx;
+  line-height: 1.9;
+  color: #6a5a4b;
 }
 
 .service-info__title {
@@ -740,10 +793,18 @@
   margin: 20rpx auto 12rpx;
 }
 
+.media-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 0 32rpx 16rpx;
+}
+
 .media-sheet__tabs {
   display: flex;
-  padding: 0 32rpx 16rpx;
   gap: 16rpx;
+  flex: 1;
 }
 
 .media-sheet__tab {
@@ -760,6 +821,21 @@
   font-weight: 500;
 }
 
+.media-sheet__close,
+.consult-sheet__close {
+  width: 56rpx;
+  height: 56rpx;
+  flex: 0 0 56rpx;
+  font-size: 34rpx;
+  line-height: 52rpx;
+  text-align: center;
+  color: #6a5a4b;
+  background: rgba(43, 36, 29, 0.06);
+  border: 1rpx solid rgba(43, 36, 29, 0.08);
+  border-radius: 999rpx;
+  box-sizing: border-box;
+}
+
 .media-sheet__body {
   flex: 1;
   padding: 0 32rpx 40rpx;
@@ -774,7 +850,7 @@
 .media-sheet__image {
   width: 100%;
   height: 420rpx;
-  border-radius: 18rpx;
+  border-radius: 24rpx;
 }
 
 .consult-sheet {
@@ -817,7 +893,8 @@
 .consult-sheet__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  position: relative;
   margin-bottom: 16rpx;
 }
 
@@ -825,41 +902,42 @@
   font-size: 32rpx;
   font-weight: 500;
   color: #2b241d;
+  text-align: center;
 }
 
 .consult-sheet__cards {
   display: flex;
-  gap: 20rpx;
+  justify-content: center;
 }
 
 .consult-card {
-  flex: 1;
-  padding: 18rpx 18rpx 22rpx;
-  border-radius: 20rpx;
-  background: #ffffff;
-  box-shadow: 0 10rpx 24rpx rgba(43, 36, 29, 0.08);
+  width: 100%;
+  padding: 8rpx 0 0;
   text-align: center;
 }
 
 .consult-card__qr {
-  width: 100%;
-  height: 260rpx;
-  border-radius: 14rpx;
-  margin-bottom: 12rpx;
+  width: 300rpx;
+  height: 300rpx;
+  margin: 0 auto 20rpx;
+  border-radius: 24rpx;
 }
 
 .consult-card__label {
   display: block;
   font-size: 26rpx;
+  font-weight: 500;
   color: #2b241d;
+  text-align: center;
 }
 
 .consult-card__desc {
   display: block;
-  margin-top: 6rpx;
+  margin-top: 10rpx;
   font-size: 22rpx;
   line-height: 1.7;
   color: #6a5a4b;
+  text-align: center;
 }
 
 /* 适合谁 底部面板 */
@@ -918,10 +996,15 @@
 .suitable-sheet__close {
   width: 56rpx;
   height: 56rpx;
-  font-size: 40rpx;
-  line-height: 56rpx;
+  flex: 0 0 56rpx;
+  font-size: 34rpx;
+  line-height: 52rpx;
   text-align: center;
   color: #6a5a4b;
+  background: rgba(43, 36, 29, 0.06);
+  border: 1rpx solid rgba(43, 36, 29, 0.08);
+  border-radius: 999rpx;
+  box-sizing: border-box;
 }
 
 .suitable-sheet__body {

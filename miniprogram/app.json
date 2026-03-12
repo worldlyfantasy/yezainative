@@ -1,6 +1,6 @@
 {
   "pages": [
-    "pages/splash/index",
+    "pages/splash/splash",
     "pages/home/home",
     "pages/creators/index",
     "pages/creator-detail/index",

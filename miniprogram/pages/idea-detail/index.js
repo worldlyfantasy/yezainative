@@ -1,4 +1,4 @@
-const { getIdeaDetailData } = require("../../services/content");
+const { getIdeaDetailData } = require("../../repositories/content-repository");
 const { toggleFavorite } = require("../../services/favorites");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
 
@@ -10,8 +10,8 @@ Page({
     author: null
   },
 
-  onLoad(options) {
-    const payload = getIdeaDetailData(options.slug);
+  async onLoad(options) {
+    const payload = await getIdeaDetailData(options.slug);
     if (!payload) {
       wx.showToast({
         title: "未找到文章",

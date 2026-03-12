@@ -1,7 +1,7 @@
 <view class="page-shell">
   <view class="paper-block">
     <text class="page-eyebrow">信任机制</text>
-    <text class="page-subtitle">野哉以托管支付与分账机制保障双方。当前 PHASE 1 只迁移页面与离线数据，不接支付、合同与云端履约。</text>
+    <text class="page-subtitle">{{introText}}</text>
 
     <view class="flow-list">
       <view wx:for="{{flows}}" wx:key="title" class="flow-item">
@@ -12,9 +12,9 @@
 
     <view class="flow-cta">
       <text class="page-eyebrow">准备好了？</text>
-      <text class="section-title">后续阶段再接入下单链路</text>
-      <text class="page-subtitle">当前小程序用于离线浏览与结构迁移验收。</text>
-      <button class="primary-button flow-cta__button" bindtap="handleOfflineOrder">离线模式说明</button>
+      <text class="section-title">{{ctaTitle}}</text>
+      <text class="page-subtitle">{{ctaDesc}}</text>
+      <button class="primary-button flow-cta__button" bindtap="handleOfflineOrder">{{ctaButtonText}}</button>
     </view>
   </view>
 </view>

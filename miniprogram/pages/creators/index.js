@@ -1,4 +1,4 @@
-const { getCreatorsPageData } = require("../../services/content");
+const { getCreatorsPageData } = require("../../repositories/content-repository");
 const { consumePendingCreatorFilter } = require("../../services/navigation");
 
 Page({
@@ -12,17 +12,17 @@ Page({
     creators: []
   },
 
-  onLoad(options) {
-    const payload = getCreatorsPageData();
+  async onLoad(options) {
+    const payload = await getCreatorsPageData();
     const destinationIndex = this.findIndexByValue(payload.destinationOptions, options.destination);
     const styleIndex = this.findIndexByValue(payload.styleOptions, options.style);
     this.setData(
       Object.assign({}, payload, {
         destinationIndex,
         styleIndex
-      })
+      }),
+      () => this.applyFilters()
     );
-    this.applyFilters();
   },
 
   onShow() {
@@ -49,10 +49,10 @@ Page({
     return index === -1 ? 0 : index;
   },
 
-  applyFilters() {
+  async applyFilters() {
     const destination = this.data.destinationOptions[this.data.destinationIndex] ? this.data.destinationOptions[this.data.destinationIndex].value : "";
     const style = this.data.styleOptions[this.data.styleIndex] ? this.data.styleOptions[this.data.styleIndex].value : "";
-    const payload = getCreatorsPageData({
+    const payload = await getCreatorsPageData({
       destination,
       style
     });

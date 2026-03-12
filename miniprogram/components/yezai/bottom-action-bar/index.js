@@ -3,6 +3,10 @@ Component({
     addGlobalClass: true
   },
   properties: {
+    labelText: {
+      type: String,
+      value: "应付金额"
+    },
     priceText: {
       type: String,
       value: ""
