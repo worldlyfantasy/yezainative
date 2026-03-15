@@ -12,7 +12,13 @@ function callContentGateway(action, payload) {
         payload: payload || {}
       },
       success: (result) => {
-        resolve(result && result.result ? result.result : null);
+        const gatewayResult = result && result.result ? result.result : null;
+        if (!gatewayResult || gatewayResult.ok !== true) {
+          reject(new Error(gatewayResult && gatewayResult.error ? gatewayResult.error : "Content gateway failed"));
+          return;
+        }
+
+        resolve(gatewayResult.data || null);
       },
       fail: reject
     });
@@ -54,14 +60,6 @@ function getServiceDetailData(slug) {
   return callContentGateway("getServiceDetailData", { slug });
 }
 
-function getHowItWorksData() {
-  return callContentGateway("getHowItWorksData");
-}
-
-function getFavoritesPageData() {
-  return callContentGateway("getFavoritesPageData");
-}
-
 module.exports = {
   getHomePageData,
   getCreatorsPageData,
@@ -70,7 +68,5 @@ module.exports = {
   getDestinationDetailData,
   getIdeasPageData,
   getIdeaDetailData,
-  getServiceDetailData,
-  getHowItWorksData,
-  getFavoritesPageData
+  getServiceDetailData
 };

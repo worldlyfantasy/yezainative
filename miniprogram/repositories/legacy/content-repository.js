@@ -36,14 +36,6 @@ function getServiceDetailData(slug) {
   return callLegacy("getServiceDetailData", [slug]);
 }
 
-function getHowItWorksData() {
-  return callLegacy("getHowItWorksData");
-}
-
-function getFavoritesPageData() {
-  return callLegacy("getFavoritesPageData");
-}
-
 module.exports = {
   getHomePageData,
   getCreatorsPageData,
@@ -52,7 +44,5 @@ module.exports = {
   getDestinationDetailData,
   getIdeasPageData,
   getIdeaDetailData,
-  getServiceDetailData,
-  getHowItWorksData,
-  getFavoritesPageData
+  getServiceDetailData
 };

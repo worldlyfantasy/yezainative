@@ -9,9 +9,7 @@ const {
   mapDestinationDetailData,
   mapIdeasPageData,
   mapIdeaDetailData,
-  mapServiceDetailData,
-  mapHowItWorksData,
-  mapFavoritesPageData
+  mapServiceDetailData
 } = require("../mappers/content");
 
 function getRepository() {
@@ -67,14 +65,6 @@ function getServiceDetailData(slug) {
   return invoke("getServiceDetailData", mapServiceDetailData, [slug]);
 }
 
-function getHowItWorksData() {
-  return invoke("getHowItWorksData", mapHowItWorksData);
-}
-
-function getFavoritesPageData() {
-  return invoke("getFavoritesPageData", mapFavoritesPageData);
-}
-
 module.exports = {
   getHomePageData,
   getCreatorsPageData,
@@ -83,7 +73,5 @@ module.exports = {
   getDestinationDetailData,
   getIdeasPageData,
   getIdeaDetailData,
-  getServiceDetailData,
-  getHowItWorksData,
-  getFavoritesPageData
+  getServiceDetailData
 };

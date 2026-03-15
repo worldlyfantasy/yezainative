@@ -1,28 +1,8 @@
-const { getRecentOrders } = require("./orders");
+const { getCurrentUser, login, logout } = require("../repositories/user-repository");
+const { getRecentOrders } = require("../repositories/transaction-repository");
 const { getServiceCreatorRoles, getServiceCreatorRoleText } = require("./service-roles");
 const { services = [] } = require("../mock/services");
 const { creators = [] } = require("../mock/creators");
-
-const USER_KEY = "yezai_user_profile";
-
-function getStoredUser() {
-  return wx.getStorageSync(USER_KEY) || null;
-}
-
-function simulateWechatLogin() {
-  const profile = {
-    avatarUrl: "https://picsum.photos/seed/yezai-user-avatar/240/240",
-    nickname: "旅人",
-    memberLabel: "野哉会员"
-  };
-
-  wx.setStorageSync(USER_KEY, profile);
-  return profile;
-}
-
-function logout() {
-  wx.removeStorageSync(USER_KEY);
-}
 
 function getServiceBySlug(slug) {
   return services.find((item) => item.slug === slug) || null;
@@ -53,11 +33,11 @@ function buildActiveTrips(orders) {
     });
 }
 
-function getMyPageData() {
-  const user = getStoredUser();
+async function getMyPageData() {
+  const user = await getCurrentUser();
   const loggedIn = Boolean(user);
-  const recentOrders = loggedIn ? getRecentOrders(2) : [];
-  const activeTripCandidates = loggedIn ? getRecentOrders(8) : [];
+  const recentOrders = loggedIn ? await getRecentOrders(2) : [];
+  const activeTripCandidates = loggedIn ? await getRecentOrders(8) : [];
 
   return {
     loggedIn,
@@ -88,8 +68,8 @@ function getMyPageData() {
 }
 
 module.exports = {
-  getStoredUser,
-  simulateWechatLogin,
+  getCurrentUser,
+  login,
   logout,
   getMyPageData
 };

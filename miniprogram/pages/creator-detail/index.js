@@ -1,6 +1,6 @@
 const { getCreatorDetailData } = require("../../repositories/content-repository");
+const { isFavorited, toggleFavorite } = require("../../repositories/transaction-repository");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
-const { toggleFavorite } = require("../../services/favorites");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
 
 Page({
@@ -28,6 +28,7 @@ Page({
     const creatorIdeas = payload.creatorIdeas || [];
     this.setData({
       ...payload,
+      "creator.isFavorited": await isFavorited("creators", payload.creator.slug),
       displayIdeas: creatorIdeas.slice(0, 2),
       hasMoreIdeas: creatorIdeas.length > 2
     });
@@ -70,8 +71,8 @@ Page({
     });
   },
 
-  toggleFavorite() {
-    const favorited = toggleFavorite("creators", this.data.creator.slug);
+  async toggleFavorite() {
+    const favorited = await toggleFavorite("creators", this.data.creator.slug);
     this.setData({
       "creator.isFavorited": favorited
     });

@@ -1,0 +1,156 @@
+const cloud = require("wx-server-sdk");
+
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+
+const db = cloud.database();
+const CONFIG_COLLECTION = "app_configs";
+
+const defaultConfigs = {
+  howItWorksPage: {
+    flows: [
+      { title: "发现", description: "浏览创作者与目的地，阅读他们的田野背景与边界说明。" },
+      { title: "选择服务", description: "根据适合/不适合、交付物与价格判断是否加入现有小团或开启定制。" },
+      { title: "报名确认", description: "提交报名信息后，平台会与您确认名额、时间与后续安排。" },
+      { title: "履约评价", description: "旅程结束后的资料沉淀与公开反馈，会在业务逻辑阶段实现。" }
+    ],
+    introText: "野哉会在报名确认、行前沟通与旅程履约之间提供清晰的信息同步与协作安排。",
+    ctaTitle: "下一步如何确认报名",
+    ctaDesc: "提交报名信息后，平台会统一跟进名额、时间与行前沟通安排，服务时间为工作日 10:00-18:00。",
+    ctaButtonText: "查看咨询说明"
+  },
+  checkoutPage: {
+    summaryTitleText: "报名摘要",
+    refundAgreementTitle: "变更说明",
+    amountLabelText: "参考金额",
+    submitButtonText: "提交报名信息",
+    agreements: {
+      service: {
+        title: "服务协议",
+        content:
+          "一、服务内容与确认\n\n野哉（以下简称「平台」）为用户提供旅行相关服务信息展示、报名预约与订单管理。您在提交报名信息后，即表示愿意与平台及具体服务提供方进入行前确认流程，双方将按页面说明与后续沟通推进。\n\n二、费用与确认\n\n页面展示金额为当前行程参考价格，具体名额、出发时间与后续安排将在平台确认后进一步同步。如需开票或补充说明，可在报名后与平台沟通。\n\n三、双方义务\n\n平台负责协调行程安排、联络带领者与目的地资源；您需如实提供出行人信息、遵守行程须知与当地规定。因您提供信息不实或自身行为导致的损失，平台不承担责任。\n\n四、其他\n\n本协议未尽事宜以平台公示的补充说明为准。如有争议，双方应友好协商；协商不成的，可向平台运营主体所在地有管辖权的人民法院提起诉讼。"
+      },
+      risk: {
+        title: "风险告知书",
+        content:
+          "一、户外与旅行风险\n\n您所参与的行程可能涉及徒步、露营、高海拔、野外环境或长途交通等，存在一定人身与财产风险。请根据自身健康状况、体能及经验谨慎选择，并遵守带领者与当地的安全指引。\n\n二、健康与保险\n\n部分行程对年龄、体质或既往病史有要求，请如实告知并自行评估是否适宜参加。平台建议您自行购买与行程相匹配的意外及医疗等保险，以降低不可预见风险带来的损失。\n\n三、免责说明\n\n在您充分知晓并自愿承担上述风险的前提下报名，即视为接受行程固有风险。因不可抗力、第三方原因或您自身原因导致的人身伤害、财产损失或行程变更，平台将依服务协议与退订规则尽力协助，但除法律明确规定外不承担额外赔偿责任。"
+      },
+      refund: {
+        title: "变更说明",
+        content:
+          "一、报名变更与取消\n\n报名信息提交后，如您因个人原因需要取消或调整，请尽快联系平台确认当次行程的可调整空间与处理方式。\n\n二、不可抗力与行程变更\n\n因天气、政策、目的地临时关闭等不可抗力导致行程无法成行或重大变更的，平台将与您协商改期、替换线路或其他合理处理方式。\n\n三、名额转让\n\n在符合服务方要求的前提下，您可将名额转让给他人，转让事宜需提前联系客服确认并配合完成信息变更。具体以当次行程说明为准。"
+      }
+    }
+  },
+  serviceDetailPage: {
+    consultWeChatQr: "https://picsum.photos/seed/yezai-wechat-qr/420/420",
+    consultGroupQr: "https://picsum.photos/seed/yezai-group-qr/420/420",
+    consultSheetTitle: "微信意向群",
+    consultCardLabel: "",
+    consultCardDesc: "扫码入群，咨询更多行程信息",
+    consultFollowupNote: "报名确认后，将为您同步带领者信息与行前准备",
+    timelineTitleText: "确认节奏",
+    refundTitleText: "变更说明",
+    serviceNoticeTitle: "报名说明",
+    serviceNoticeBody: "当前页面展示行程信息与报名入口，提交后将由平台进一步确认。"
+  },
+  paymentResultPage: {
+    titleText: "报名提交成功",
+    subtitleText: "我们已收到你的报名信息，接下来会继续确认名额、时间与出行安排。",
+    detailButtonText: "查看报名详情",
+    listButtonText: "返回报名列表"
+  },
+  orderDetailPage: {
+    creatorContactText: "行前沟通：报名确认后同步创作者或带领者信息",
+    serviceContactText: "咨询入口：平台统一跟进，服务时间为工作日 10:00-18:00",
+    statusTitleText: "报名状态",
+    orderIdLabelText: "报名编号",
+    priceTitleText: "费用说明",
+    payableLabelText: "参考金额",
+    pendingPrimaryText: "确认报名",
+    pendingSecondaryText: "取消报名",
+    completedPrimaryText: "再次报名"
+  },
+  favoritesPage: {
+    loginHint: "登录后可查看和管理你收藏的目的地、人物、行程与故事。"
+  }
+};
+
+function isPlainObject(value) {
+  return Boolean(value) && Object.prototype.toString.call(value) === "[object Object]";
+}
+
+function deepMerge(base, override) {
+  if (Array.isArray(base)) {
+    return Array.isArray(override) ? override : base;
+  }
+
+  if (!isPlainObject(base)) {
+    return override == null ? base : override;
+  }
+
+  const result = Object.assign({}, base);
+  Object.keys(override || {}).forEach((key) => {
+    const nextValue = override[key];
+    const prevValue = result[key];
+    if (isPlainObject(prevValue) && isPlainObject(nextValue)) {
+      result[key] = deepMerge(prevValue, nextValue);
+    } else {
+      result[key] = nextValue;
+    }
+  });
+  return result;
+}
+
+async function getStoredConfig(key) {
+  try {
+    const result = await db.collection(CONFIG_COLLECTION).where({ key }).limit(1).get();
+    if (!result.data || !result.data.length) {
+      return null;
+    }
+
+    const doc = result.data[0];
+    return doc.value && isPlainObject(doc.value) ? doc.value : doc;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function readConfig(key) {
+  const defaults = defaultConfigs[key];
+  const stored = await getStoredConfig(key);
+  return deepMerge(defaults || {}, stored || {});
+}
+
+const handlers = {
+  getHowItWorksPageConfig: () => readConfig("howItWorksPage"),
+  getCheckoutPageConfig: () => readConfig("checkoutPage"),
+  getServiceDetailPageConfig: () => readConfig("serviceDetailPage"),
+  getPaymentResultPageConfig: () => readConfig("paymentResultPage"),
+  getOrderDetailPageConfig: () => readConfig("orderDetailPage"),
+  getFavoritesPageConfig: () => readConfig("favoritesPage")
+};
+
+exports.main = async (event) => {
+  const action = event && event.action;
+  const handler = handlers[action];
+
+  if (!handler) {
+    return {
+      ok: false,
+      error: `Unsupported action: ${action || ""}`
+    };
+  }
+
+  try {
+    const data = await handler();
+    return {
+      ok: true,
+      data
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error && error.message ? error.message : "Config gateway error"
+    };
+  }
+};

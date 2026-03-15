@@ -1,6 +1,6 @@
 const { getDestinationDetailData } = require("../../repositories/content-repository");
+const { isFavorited, toggleFavorite } = require("../../repositories/transaction-repository");
 const { setPendingCreatorFilter, goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
-const { toggleFavorite } = require("../../services/favorites");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
 
 Page({
@@ -25,7 +25,9 @@ Page({
       }, 300);
       return;
     }
-    this.setData(payload);
+    this.setData(Object.assign({}, payload, {
+      "destination.isFavorited": await isFavorited("destinations", payload.destination.slug)
+    }));
   },
 
   onUnload() {
@@ -64,8 +66,8 @@ Page({
     goTopLevel(TOP_LEVEL_ROUTES.creators);
   },
 
-  toggleFavorite() {
-    const favorited = toggleFavorite("destinations", this.data.destination.slug);
+  async toggleFavorite() {
+    const favorited = await toggleFavorite("destinations", this.data.destination.slug);
     this.setData({
       "destination.isFavorited": favorited
     });

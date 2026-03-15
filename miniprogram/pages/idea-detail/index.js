@@ -1,5 +1,5 @@
 const { getIdeaDetailData } = require("../../repositories/content-repository");
-const { toggleFavorite } = require("../../services/favorites");
+const { isFavorited, toggleFavorite } = require("../../repositories/transaction-repository");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
 
 Page({
@@ -23,7 +23,9 @@ Page({
       }, 300);
       return;
     }
-    this.setData(payload);
+    this.setData(Object.assign({}, payload, {
+      "idea.isFavorited": await isFavorited("ideas", payload.idea.slug)
+    }));
   },
 
   onUnload() {
@@ -49,8 +51,8 @@ Page({
     });
   },
 
-  toggleFavorite() {
-    const favorited = toggleFavorite("ideas", this.data.idea.slug);
+  async toggleFavorite() {
+    const favorited = await toggleFavorite("ideas", this.data.idea.slug);
     this.setData({
       "idea.isFavorited": favorited
     });

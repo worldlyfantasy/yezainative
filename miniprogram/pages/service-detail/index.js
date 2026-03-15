@@ -1,6 +1,7 @@
 const { getServiceDetailData } = require("../../repositories/content-repository");
+const { getServiceDetailPageConfig } = require("../../repositories/config-repository");
+const { isFavorited, toggleFavorite } = require("../../repositories/transaction-repository");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
-const { toggleFavorite } = require("../../services/favorites");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
 const { isAuditMode, pickAuditText } = require("../../utils/audit");
 
@@ -138,12 +139,12 @@ Page({
     mediaSheetAnimating: false,
     consultSheetVisible: false,
     consultSheetAnimating: false,
-    consultWeChatQr: "https://picsum.photos/seed/yezai-wechat-qr/420/420",
-    consultGroupQr: "https://picsum.photos/seed/yezai-group-qr/420/420",
-    consultSheetTitle: "微信意向群",
+    consultWeChatQr: "",
+    consultGroupQr: "",
+    consultSheetTitle: "",
     consultCardLabel: "",
-    consultCardDesc: "扫码入群，咨询更多行程信息",
-    consultFollowupNote: "报名确认后，将为您同步带领者信息与行前准备",
+    consultCardDesc: "",
+    consultFollowupNote: "",
     suitableSheetVisible: false,
     suitableSheetAnimating: false,
     suitableSheetContent: "",
@@ -157,18 +158,18 @@ Page({
     periodSheetSelectedDateId: null,
     periodSheetPeople: 1,
     periodSheetTotalPrice: 0,
-    timelineTitleText: pickAuditText("交付周期", "确认节奏"),
-    refundTitleText: pickAuditText("退款规则", "变更说明"),
-    serviceNoticeTitle: pickAuditText("离线提醒", "报名说明"),
-    serviceNoticeBody: pickAuditText(
-      "当前阶段仅保留服务说明，不接支付、合同与分账。",
-      "当前页面展示行程信息与报名入口，提交后将由平台进一步确认。"
-    )
+    timelineTitleText: "",
+    refundTitleText: "",
+    serviceNoticeTitle: "",
+    serviceNoticeBody: ""
   },
 
   async onLoad(options) {
     this.pageScrollTop = 0;
-    const payload = await getServiceDetailData(options.slug);
+    const [payload, pageConfig] = await Promise.all([
+      getServiceDetailData(options.slug),
+      getServiceDetailPageConfig()
+    ]);
     if (!payload) {
       wx.showToast({
         title: "未找到服务",
@@ -200,6 +201,7 @@ Page({
     };
     const mappedTags = [durationTag, consultationTag].filter(Boolean);
     const serviceWithTags = Object.assign({}, originalService, {
+      isFavorited: await isFavorited("services", originalService.slug),
       tags: mappedTags
     });
 
@@ -214,6 +216,16 @@ Page({
           photoTotal: payload.photoTotal || 0,
           mediaTabs: payload.mediaTabs || [],
           groupPeriods,
+          consultWeChatQr: pageConfig.consultWeChatQr,
+          consultGroupQr: pageConfig.consultGroupQr,
+          consultSheetTitle: pageConfig.consultSheetTitle,
+          consultCardLabel: pageConfig.consultCardLabel,
+          consultCardDesc: pageConfig.consultCardDesc,
+          consultFollowupNote: pageConfig.consultFollowupNote,
+          timelineTitleText: pageConfig.timelineTitleText,
+          refundTitleText: pageConfig.refundTitleText,
+          serviceNoticeTitle: pageConfig.serviceNoticeTitle,
+          serviceNoticeBody: pageConfig.serviceNoticeBody,
           sectionOffsets: [],
           sectionNavHeight: 0,
           sectionNavTop: 0,
@@ -635,8 +647,8 @@ Page({
     });
   },
 
-  toggleFavorite() {
-    const favorited = toggleFavorite("services", this.data.service.slug);
+  async toggleFavorite() {
+    const favorited = await toggleFavorite("services", this.data.service.slug);
     this.setData({
       "service.isFavorited": favorited
     });

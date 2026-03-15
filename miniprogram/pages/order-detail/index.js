@@ -1,34 +1,36 @@
-const { getOrderById, cancelOrder, payOrder } = require("../../services/orders");
+const { getOrderById, cancelOrder, payOrder } = require("../../repositories/transaction-repository");
+const { getOrderDetailPageConfig } = require("../../repositories/config-repository");
 const { showOfflineOrderNotice } = require("../../utils/offline");
-const { isAuditMode, pickAuditText } = require("../../utils/audit");
+const { isAuditMode } = require("../../utils/audit");
 
 Page({
   data: {
     auditMode: isAuditMode(),
     order: null,
-    creatorContactText: pickAuditText("联系创作者：离线原型阶段暂不接入", "行前沟通：报名确认后同步创作者或带领者信息"),
-    serviceContactText: pickAuditText("联系客服：离线原型阶段暂不接入", "咨询入口：平台统一跟进，服务时间为工作日 10:00-18:00"),
-    statusTitleText: pickAuditText("订单状态", "报名状态"),
-    orderIdLabelText: pickAuditText("订单号", "报名编号"),
-    priceTitleText: pickAuditText("价格明细", "费用说明"),
-    payableLabelText: pickAuditText("已付", "参考金额"),
-    pendingPrimaryText: pickAuditText("立即支付", "确认报名"),
-    pendingSecondaryText: pickAuditText("取消订单", "取消报名"),
-    completedPrimaryText: pickAuditText("再次购买", "再次报名")
+    creatorContactText: "",
+    serviceContactText: "",
+    statusTitleText: "",
+    orderIdLabelText: "",
+    priceTitleText: "",
+    payableLabelText: "",
+    pendingPrimaryText: "",
+    pendingSecondaryText: "",
+    completedPrimaryText: ""
   },
 
-  onLoad(options) {
-    this.loadOrder(options.id);
+  async onLoad(options) {
+    this.setData(await getOrderDetailPageConfig());
+    await this.loadOrder(options.id);
   },
 
-  onShow() {
+  async onShow() {
     if (this.data.order) {
-      this.loadOrder(this.data.order.id);
+      await this.loadOrder(this.data.order.id);
     }
   },
 
-  loadOrder(orderId) {
-    const order = getOrderById(orderId);
+  async loadOrder(orderId) {
+    const order = await getOrderById(orderId);
     if (!order) {
       wx.showToast({
         title: "未找到订单",
@@ -42,14 +44,14 @@ Page({
     });
   },
 
-  handlePrimary() {
+  async handlePrimary() {
     const { order } = this.data;
     if (!order) {
       return;
     }
 
     if (order.status === "pending") {
-      payOrder(order.id);
+      await payOrder(order.id);
       wx.navigateTo({
         url: `/pages/payment-result/index?id=${order.id}`
       });
@@ -68,15 +70,15 @@ Page({
     }
   },
 
-  handleSecondary() {
+  async handleSecondary() {
     const { order } = this.data;
     if (!order) {
       return;
     }
 
     if (order.status === "pending") {
-      cancelOrder(order.id);
-      this.loadOrder(order.id);
+      await cancelOrder(order.id);
+      await this.loadOrder(order.id);
       return;
     }
 

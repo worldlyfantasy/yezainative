@@ -62,13 +62,13 @@
       <label class="checkout-agreement__label">
         <checkbox value="service" checked="{{agreedService}}" color="#6b5344" />
         <view class="checkout-agreement__link-wrap" catchtap="onAgreementLinkTap" data-key="service">
-          <text class="checkout-agreement__link">《服务协议》</text>
+          <text class="checkout-agreement__link">《{{serviceAgreementTitle}}》</text>
         </view>
       </label>
       <label class="checkout-agreement__label">
         <checkbox value="risk" checked="{{agreedRisk}}" color="#6b5344" />
         <view class="checkout-agreement__link-wrap" catchtap="onAgreementLinkTap" data-key="risk">
-          <text class="checkout-agreement__link">《风险告知书》</text>
+          <text class="checkout-agreement__link">《{{riskAgreementTitle}}》</text>
         </view>
       </label>
       <label class="checkout-agreement__label">
@@ -83,7 +83,7 @@
   <bottom-action-bar label-text="{{amountLabelText}}" price-text="{{payableText}}" button-text="{{submitButtonText}}" bind:actiontap="submitOrder" class="checkout-bottom-bar"></bottom-action-bar>
 </view>
 
-<!-- 协议正文弹层（mock，后续可改为后台数据） -->
+<!-- 协议正文弹层 -->
 <view wx:if="{{agreementSheetVisible}}" class="agreement-sheet">
   <view class="agreement-sheet__backdrop" bindtap="closeAgreementSheet"></view>
   <view class="agreement-sheet__panel {{agreementSheetAnimating ? 'agreement-sheet__panel--active' : ''}}">

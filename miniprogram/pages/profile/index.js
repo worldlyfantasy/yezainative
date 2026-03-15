@@ -1,4 +1,4 @@
-const { getMyPageData, simulateWechatLogin, logout } = require("../../services/user");
+const { getMyPageData, login, logout } = require("../../services/user");
 const { showOfflineOrderNotice } = require("../../utils/offline");
 const { pickAuditText } = require("../../utils/audit");
 
@@ -15,22 +15,22 @@ Page({
     this.refresh();
   },
 
-  refresh() {
-    this.setData(getMyPageData());
+  async refresh() {
+    this.setData(await getMyPageData());
   },
 
-  handleLogin() {
-    simulateWechatLogin();
-    this.refresh();
+  async handleLogin() {
+    await login();
+    await this.refresh();
     wx.showToast({
-      title: pickAuditText("已完成模拟登录", "登录成功"),
+      title: pickAuditText("登录成功", "登录成功"),
       icon: "none"
     });
   },
 
-  handleLogout() {
-    logout();
-    this.refresh();
+  async handleLogout() {
+    await logout();
+    await this.refresh();
   },
 
   onShortcutTap(event) {

@@ -1,4 +1,4 @@
-const { getOrderStatusTabs, getOrders, payOrder } = require("../../services/orders");
+const { getOrderStatusTabs, getOrders, payOrder } = require("../../repositories/transaction-repository");
 
 Page({
   data: {
@@ -7,16 +7,16 @@ Page({
     orders: []
   },
 
-  onShow() {
+  async onShow() {
     this.setData({
       tabs: getOrderStatusTabs()
     });
-    this.refreshOrders();
+    await this.refreshOrders();
   },
 
-  refreshOrders() {
+  async refreshOrders() {
     this.setData({
-      orders: getOrders(this.data.currentStatus)
+      orders: await getOrders(this.data.currentStatus)
     });
   },
 
@@ -35,8 +35,8 @@ Page({
     });
   },
 
-  onOrderPay(event) {
-    payOrder(event.detail.id);
+  async onOrderPay(event) {
+    await payOrder(event.detail.id);
     wx.navigateTo({
       url: `/pages/payment-result/index?id=${event.detail.id}`
     });

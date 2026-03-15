@@ -108,23 +108,6 @@ function mapServiceDetailData(payload) {
   };
 }
 
-function mapHowItWorksData(payload) {
-  const source = ensureObject(payload);
-  return {
-    flows: ensureArray(source.flows)
-  };
-}
-
-function mapFavoritesPageData(payload) {
-  const source = ensureObject(payload);
-  return {
-    favoriteDestinations: ensureArray(source.favoriteDestinations),
-    favoriteCreators: ensureArray(source.favoriteCreators),
-    favoriteServices: ensureArray(source.favoriteServices),
-    favoriteIdeas: ensureArray(source.favoriteIdeas)
-  };
-}
-
 module.exports = {
   mapHomePageData,
   mapCreatorsPageData,
@@ -133,7 +116,5 @@ module.exports = {
   mapDestinationDetailData,
   mapIdeasPageData,
   mapIdeaDetailData,
-  mapServiceDetailData,
-  mapHowItWorksData,
-  mapFavoritesPageData
+  mapServiceDetailData
 };

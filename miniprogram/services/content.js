@@ -15,7 +15,7 @@ const {
 } = require("../mock/helpers");
 const { howItWorksFlows } = require("../mock/static-content");
 const { parseIdeaBody } = require("../utils/content");
-const { isFavorited, getFavoriteState } = require("./favorites");
+const { isFavorited } = require("./favorites");
 const { pickAuditText } = require("../utils/audit");
 const { getServiceCreatorRoles } = require("./service-roles");
 
@@ -633,33 +633,6 @@ function getHowItWorksData() {
   };
 }
 
-function getFavoritesPageData() {
-  const favoriteState = getFavoriteState();
-
-  return {
-    favoriteDestinations: destinations.filter((destination) => favoriteState.destinations[destination.slug]),
-    favoriteCreators: creators.filter((creator) => favoriteState.creators[creator.slug]),
-    favoriteServices: services
-      .filter((service) => favoriteState.services[service.slug])
-      .map((service) => {
-        const creator = creators.find((item) => item.id === service.creatorId);
-
-        return Object.assign({}, service, {
-          creatorName: creator ? creator.name : ""
-        });
-      }),
-    favoriteIdeas: ideas
-      .filter((idea) => favoriteState.ideas[idea.slug])
-      .map((idea) => {
-        const author = creators.find((creator) => creator.id === idea.authorId);
-
-        return Object.assign({}, idea, {
-          authorName: author ? author.name : ""
-        });
-      })
-  };
-}
-
 module.exports = {
   getHomePageData,
   getCreatorsPageData,
@@ -669,6 +642,5 @@ module.exports = {
   getIdeasPageData,
   getIdeaDetailData,
   getServiceDetailData,
-  getHowItWorksData,
-  getFavoritesPageData
+  getHowItWorksData
 };
