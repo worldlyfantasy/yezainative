@@ -1,6 +1,7 @@
 const { getServiceDetailData } = require("../../repositories/content-repository");
 const { getCheckoutPageConfig } = require("../../repositories/config-repository");
 const { createOrder } = require("../../repositories/transaction-repository");
+const { ensureLoggedIn } = require("../../services/user");
 const { isAuditMode } = require("../../utils/audit");
 
 function getBasePrice(service, unitPriceFromQuery) {
@@ -186,6 +187,13 @@ Page({
 
   async submitOrder() {
     const { travelPersons, contactName, contactPhone, agreedService, agreedRisk, agreedRefund } = this.data;
+    const user = await ensureLoggedIn({
+      toastTitle: "登录后才可提交报名"
+    });
+    if (!user) {
+      return;
+    }
+
     if (!agreedService || !agreedRisk || !agreedRefund) {
       wx.showToast({
         title: "请先阅读并同意全部协议",

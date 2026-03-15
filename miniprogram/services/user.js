@@ -1,8 +1,30 @@
-const { getCurrentUser, login, logout } = require("../repositories/user-repository");
+const { getCurrentUser, getSessionSnapshot, login, logout } = require("../repositories/user-repository");
 const { getRecentOrders } = require("../repositories/transaction-repository");
 const { getServiceCreatorRoles, getServiceCreatorRoleText } = require("./service-roles");
+const { goTopLevel, TOP_LEVEL_ROUTES } = require("./navigation");
 const { services = [] } = require("../mock/services");
 const { creators = [] } = require("../mock/creators");
+
+const PROFILE_SHORTCUTS = [
+  {
+    key: "orders",
+    label: "我的订单",
+    cardClassName: "profile-entry-card--strong",
+    eyebrow: "旅程归档",
+    desc: "查看全部订单",
+    glyphSrc:
+      "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/野（扣底圆体）.png"
+  },
+  {
+    key: "favorites",
+    label: "我的收藏",
+    cardClassName: "",
+    eyebrow: "心意收藏",
+    desc: "回看喜欢的故事",
+    glyphSrc:
+      "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/哉（扣底圆体）.png"
+  }
+];
 
 function getServiceBySlug(slug) {
   return services.find((item) => item.slug === slug) || null;
@@ -42,34 +64,59 @@ async function getMyPageData() {
   return {
     loggedIn,
     user,
-    shortcuts: [
-      {
-        key: "orders",
-        label: "我的订单",
-        cardClassName: "profile-entry-card--strong",
-        eyebrow: "旅程归档",
-        desc: "查看全部订单",
-        glyphSrc:
-          "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/野（扣底圆体）.png"
-      },
-      {
-        key: "favorites",
-        label: "我的收藏",
-        cardClassName: "",
-        eyebrow: "心意收藏",
-        desc: "回看喜欢的故事",
-        glyphSrc:
-          "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/哉（扣底圆体）.png"
-      }
-    ],
+    shortcuts: PROFILE_SHORTCUTS,
     recentOrders,
     activeTrips: loggedIn ? buildActiveTrips(activeTripCandidates) : []
   };
 }
 
+function getMyPageInitialState() {
+  const snapshot = getSessionSnapshot();
+
+  return {
+    loggedIn: snapshot.loggedIn,
+    user: snapshot.user,
+    shortcuts: PROFILE_SHORTCUTS,
+    recentOrders: [],
+    activeTrips: []
+  };
+}
+
+async function ensureLoggedIn(options) {
+  const config = Object.assign(
+    {
+      toastTitle: "请先登录",
+      redirectToProfile: true
+    },
+    options || {}
+  );
+  const user = await getCurrentUser();
+
+  if (user) {
+    return user;
+  }
+
+  if (config.toastTitle) {
+    wx.showToast({
+      title: config.toastTitle,
+      icon: "none"
+    });
+  }
+
+  if (config.redirectToProfile) {
+    setTimeout(() => {
+      goTopLevel(TOP_LEVEL_ROUTES.profile);
+    }, 120);
+  }
+
+  return null;
+}
+
 module.exports = {
   getCurrentUser,
+  getMyPageInitialState,
   login,
   logout,
-  getMyPageData
+  getMyPageData,
+  ensureLoggedIn
 };

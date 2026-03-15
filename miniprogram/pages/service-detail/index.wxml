@@ -35,8 +35,11 @@
           <favorite-star
             favorited="{{service.isFavorited}}"
             notice-state="{{favoriteNoticeState}}"
+            notice-label="{{favoriteNoticeLabel}}"
+            notice-action-label="{{favoriteNoticeActionLabel}}"
+            notice-mode="{{favoriteNoticeMode}}"
             bind:toggle="toggleFavorite"
-            bind:navigatefavorites="goFavorites"
+            bind:noticeaction="handleFavoriteNoticeAction"
           ></favorite-star>
         </view>
         <view wx:if="{{creator}}" class="creator-quote creator-card creator-quote--tappable" bindtap="goCreatorDetail">
@@ -284,7 +287,7 @@
       <view class="period-sheet__handle"></view>
       <view class="period-sheet__header">
         <text class="period-sheet__title">日期/人数</text>
-        <view class="period-sheet__close" bindtap="closePeriodSheet">×</view>
+        <view class="sheet-close period-sheet__close" bindtap="closePeriodSheet">⌄</view>
       </view>
       <scroll-view class="period-sheet__body" scroll-y="true">
         <view class="period-sheet__section">
@@ -353,7 +356,7 @@
             {{item.label}}
           </view>
         </view>
-        <view class="media-sheet__close" bindtap="closeMediaSheet">×</view>
+        <view class="sheet-close media-sheet__close" bindtap="closeMediaSheet">⌄</view>
       </view>
       <scroll-view class="media-sheet__body" scroll-y="true">
         <view class="media-sheet__images">
@@ -375,7 +378,7 @@
       <view class="consult-sheet__handle"></view>
       <view class="consult-sheet__header">
         <text class="consult-sheet__title">{{consultSheetTitle}}</text>
-        <view class="consult-sheet__close" bindtap="closeConsultSheet">×</view>
+        <view class="sheet-close consult-sheet__close" bindtap="closeConsultSheet">⌄</view>
       </view>
       <view class="consult-sheet__cards">
         <view class="consult-card">
@@ -394,13 +397,23 @@
       <view class="suitable-sheet__handle"></view>
       <view class="suitable-sheet__header">
         <text class="suitable-sheet__title">适合谁</text>
-        <view class="suitable-sheet__close" bindtap="closeSuitableSheet">×</view>
+        <view class="sheet-close suitable-sheet__close" bindtap="closeSuitableSheet">⌄</view>
       </view>
       <scroll-view class="suitable-sheet__body" scroll-y="true">
         <text class="suitable-sheet__content">{{suitableSheetContent}}</text>
       </scroll-view>
     </view>
   </view>
+
+  <favorite-star
+    show-button="{{false}}"
+    notice-state="{{checkoutNoticeState}}"
+    notice-label="{{checkoutNoticeLabel}}"
+    notice-action-label="{{checkoutNoticeActionLabel}}"
+    notice-mode="{{checkoutNoticeMode}}"
+    notice-elevated="{{true}}"
+    bind:noticeaction="handleCheckoutNoticeAction"
+  ></favorite-star>
 </view>
 
 <app-tab-bar></app-tab-bar>

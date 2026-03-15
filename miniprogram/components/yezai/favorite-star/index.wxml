@@ -1,5 +1,6 @@
 <view class="favorite-star">
   <view
+    wx:if="{{showButton}}"
     class="favorite-star__button {{favorited ? 'favorite-star__button--active' : ''}}"
     bindtap="handleToggle"
   >
@@ -11,16 +12,16 @@
 
   <view
     wx:if="{{noticeState}}"
-    class="favorite-star__notice favorite-star__notice--{{noticeState}}"
+    class="favorite-star__notice favorite-star__notice--{{noticeState}} favorite-star__notice--{{noticeMode}} {{noticeElevated ? 'favorite-star__notice--elevated' : ''}}"
   >
     <view class="favorite-star__notice-main">
-      <view class="favorite-star__notice-check">
-        <text class="favorite-star__notice-check-icon">✓</text>
+      <view class="favorite-star__notice-check favorite-star__notice-check--{{noticeMode}}">
+        <text class="favorite-star__notice-check-icon">{{noticeMode === 'warning' ? '!' : '✓'}}</text>
       </view>
-      <text class="favorite-star__notice-label">收藏成功</text>
+      <text class="favorite-star__notice-label">{{noticeLabel}}</text>
     </view>
     <view class="favorite-star__notice-action" catchtap="handleNavigateFavorites">
-      <text class="favorite-star__notice-link">进入我的收藏</text>
+      <text class="favorite-star__notice-link">{{noticeActionLabel}}</text>
       <text class="favorite-star__notice-arrow">›</text>
     </view>
   </view>

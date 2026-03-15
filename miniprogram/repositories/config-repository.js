@@ -1,4 +1,4 @@
-const { DATA_SOURCE_TYPES, getConfigDataSource } = require("../constants/data-source");
+const { DATA_SOURCE_TYPES, getConfigDataSource, isCloudFallbackEnabled } = require("../constants/data-source");
 const cloudConfigApi = require("../api/cloud/config");
 const legacyConfigRepository = require("./legacy/config-repository");
 const {
@@ -21,7 +21,7 @@ async function invoke(methodName, mapper) {
   try {
     payload = await repository[methodName].apply(repository);
   } catch (error) {
-    if (repository !== legacyConfigRepository) {
+    if (repository !== legacyConfigRepository && isCloudFallbackEnabled()) {
       payload = await legacyConfigRepository[methodName].apply(legacyConfigRepository);
     } else {
       throw error;

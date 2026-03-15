@@ -10,9 +10,11 @@ function normalizeUser(doc) {
     return null;
   }
 
+  const nickname = String(doc.nickname || "").trim();
+
   return {
     id: doc._id || "",
-    nickname: doc.nickname || "旅人",
+    nickname: nickname && nickname !== "微信用户" ? nickname : "旅人",
     avatarUrl: doc.avatarUrl || doc.avatar || "",
     memberLabel: doc.memberLabel || "野哉会员",
     role: doc.role || "user"
@@ -34,11 +36,13 @@ async function login(profile) {
   const { OPENID } = cloud.getWXContext();
   const normalizedProfile = profile || {};
   const existing = await findUserByOpenId(OPENID);
+  const nickname = String(normalizedProfile.nickName || "").trim();
+  const avatarUrl = String(normalizedProfile.avatarUrl || "").trim();
   const nextData = {
     openid: OPENID,
     role: existing && existing.role ? existing.role : "user",
-    nickname: normalizedProfile.nickName || (existing && existing.nickname) || "旅人",
-    avatarUrl: normalizedProfile.avatarUrl || (existing && (existing.avatarUrl || existing.avatar)) || "",
+    nickname: nickname && nickname !== "微信用户" ? nickname : (existing && existing.nickname) || "旅人",
+    avatarUrl: avatarUrl || (existing && (existing.avatarUrl || existing.avatar)) || "",
     memberLabel: existing && existing.memberLabel ? existing.memberLabel : "野哉会员",
     updatedAt: Date.now()
   };

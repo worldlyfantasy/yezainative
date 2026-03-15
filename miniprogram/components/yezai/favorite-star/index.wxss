@@ -75,6 +75,14 @@
   z-index: 50;
 }
 
+.favorite-star__notice--elevated {
+  z-index: 1200;
+}
+
+.favorite-star__notice--warning {
+  background: rgba(94, 55, 32, 0.94);
+}
+
 .favorite-star__notice--visible {
   animation: favorite-notice-in 0.24s ease-out forwards;
 }
@@ -109,10 +117,19 @@
   background: rgba(255, 248, 241, 0.96);
 }
 
+.favorite-star__notice-check--warning {
+  background: rgba(255, 240, 231, 0.96);
+}
+
 .favorite-star__notice-check-icon {
   font-size: 28rpx;
   line-height: 1;
   color: rgba(43, 36, 29, 0.82);
+}
+
+.favorite-star__notice-check--warning .favorite-star__notice-check-icon {
+  font-size: 32rpx;
+  color: #9b4d1f;
 }
 
 .favorite-star__notice-label,

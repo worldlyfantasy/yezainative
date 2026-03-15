@@ -1,11 +1,17 @@
 const { getIdeaDetailData } = require("../../repositories/content-repository");
 const { isFavorited, toggleFavorite } = require("../../repositories/transaction-repository");
+const { getCurrentUser } = require("../../services/user");
+const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
 
 Page({
   data: {
     idea: null,
     favoriteNoticeState: "",
+    favoriteNoticeLabel: "收藏成功",
+    favoriteNoticeActionLabel: "进入我的收藏",
+    favoriteNoticeMode: "success",
+    favoriteNoticeActionType: "favorites",
     blocks: [],
     author: null
   },
@@ -52,6 +58,17 @@ Page({
   },
 
   async toggleFavorite() {
+    const user = await getCurrentUser();
+    if (!user) {
+      showFavoriteNotice(this, {
+        label: "您还没有登录，请登录后再收藏",
+        actionLabel: "去登录",
+        mode: "warning",
+        actionType: "login"
+      });
+      return;
+    }
+
     const favorited = await toggleFavorite("ideas", this.data.idea.slug);
     this.setData({
       "idea.isFavorited": favorited
@@ -68,5 +85,16 @@ Page({
     wx.navigateTo({
       url: "/pages/favorites/index"
     });
+  },
+
+  handleFavoriteNoticeAction() {
+    const actionType = this.data.favoriteNoticeActionType;
+    clearFavoriteNotice(this);
+    if (actionType === "login") {
+      goTopLevel(TOP_LEVEL_ROUTES.profile);
+      return;
+    }
+
+    this.goFavorites();
   }
 });

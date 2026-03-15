@@ -343,28 +343,15 @@
 .period-sheet__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 32rpx 24rpx;
+  justify-content: flex-start;
+  position: relative;
+  padding: 0 92rpx 24rpx 32rpx;
 }
 
 .period-sheet__title {
   font-size: 36rpx;
   font-weight: 600;
   color: #2b241d;
-}
-
-.period-sheet__close {
-  width: 56rpx;
-  height: 56rpx;
-  flex: 0 0 56rpx;
-  font-size: 34rpx;
-  line-height: 52rpx;
-  text-align: center;
-  color: #6a5a4b;
-  background: rgba(43, 36, 29, 0.06);
-  border: 1rpx solid rgba(43, 36, 29, 0.08);
-  border-radius: 999rpx;
-  box-sizing: border-box;
 }
 
 .period-sheet__body {
@@ -796,9 +783,10 @@
 .media-sheet__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 20rpx;
-  padding: 0 32rpx 16rpx;
+  position: relative;
+  padding: 0 92rpx 16rpx 32rpx;
 }
 
 .media-sheet__tabs {
@@ -819,21 +807,6 @@
   background: #ffffff;
   color: #2b241d;
   font-weight: 500;
-}
-
-.media-sheet__close,
-.consult-sheet__close {
-  width: 56rpx;
-  height: 56rpx;
-  flex: 0 0 56rpx;
-  font-size: 34rpx;
-  line-height: 52rpx;
-  text-align: center;
-  color: #6a5a4b;
-  background: rgba(43, 36, 29, 0.06);
-  border: 1rpx solid rgba(43, 36, 29, 0.08);
-  border-radius: 999rpx;
-  box-sizing: border-box;
 }
 
 .media-sheet__body {
@@ -896,6 +869,7 @@
   justify-content: center;
   position: relative;
   margin-bottom: 16rpx;
+  padding: 0 92rpx;
 }
 
 .consult-sheet__title {
@@ -903,6 +877,23 @@
   font-weight: 500;
   color: #2b241d;
   text-align: center;
+}
+
+.sheet-close {
+  position: absolute;
+  top: 50%;
+  right: 28rpx;
+  transform: translateY(-50%);
+  min-width: 44rpx;
+  height: 44rpx;
+  padding: 0 8rpx;
+  font-size: 44rpx;
+  line-height: 34rpx;
+  text-align: center;
+  color: rgba(106, 90, 75, 0.92);
+  background: transparent;
+  border: none;
+  box-sizing: border-box;
 }
 
 .consult-sheet__cards {
@@ -983,28 +974,15 @@
 .suitable-sheet__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 32rpx 16rpx;
+  justify-content: flex-start;
+  position: relative;
+  padding: 0 92rpx 16rpx 32rpx;
 }
 
 .suitable-sheet__title {
   font-size: 32rpx;
   font-weight: 500;
   color: #2b241d;
-}
-
-.suitable-sheet__close {
-  width: 56rpx;
-  height: 56rpx;
-  flex: 0 0 56rpx;
-  font-size: 34rpx;
-  line-height: 52rpx;
-  text-align: center;
-  color: #6a5a4b;
-  background: rgba(43, 36, 29, 0.06);
-  border: 1rpx solid rgba(43, 36, 29, 0.08);
-  border-radius: 999rpx;
-  box-sizing: border-box;
 }
 
 .suitable-sheet__body {

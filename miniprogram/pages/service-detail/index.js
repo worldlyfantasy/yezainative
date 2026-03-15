@@ -1,6 +1,7 @@
 const { getServiceDetailData } = require("../../repositories/content-repository");
 const { getServiceDetailPageConfig } = require("../../repositories/config-repository");
 const { isFavorited, toggleFavorite } = require("../../repositories/transaction-repository");
+const { getCurrentUser } = require("../../services/user");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../../utils/favorite-notice");
 const { isAuditMode, pickAuditText } = require("../../utils/audit");
@@ -128,6 +129,15 @@ Page({
     isSectionTabsSticky: false,
     isAutoScrolling: false,
     favoriteNoticeState: "",
+    favoriteNoticeLabel: "收藏成功",
+    favoriteNoticeActionLabel: "进入我的收藏",
+    favoriteNoticeMode: "success",
+    favoriteNoticeActionType: "favorites",
+    checkoutNoticeState: "",
+    checkoutNoticeLabel: "您还没有登录，请登录后再下单",
+    checkoutNoticeActionLabel: "去登录",
+    checkoutNoticeMode: "warning",
+    checkoutNoticeActionType: "login",
     creator: null,
     relatedDestinations: [],
     heroCover: "",
@@ -191,7 +201,7 @@ Page({
       key: "duration",
       label: "行程时间",
       value: calcDurationLabel(payload, detailState.travelDetail),
-      clickable: false
+      clickable: true
     };
     const consultationTag = {
       key: "consultation",
@@ -272,6 +282,7 @@ Page({
       clearTimeout(this.sectionMeasureTimer);
     }
     clearFavoriteNotice(this, "favoriteNoticeState", true);
+    clearFavoriteNotice(this, "checkoutNoticeState", true);
   },
 
   getActiveSectionKey(scrollTop, sectionOffsets, navHeight) {
@@ -453,6 +464,14 @@ Page({
       wx.showToast({ title: "建议年龄说明", icon: "none" });
       return;
     }
+    if (key === "duration") {
+      this.onSectionTabTap({
+        detail: {
+          key: "itinerary"
+        }
+      });
+      return;
+    }
     if (key === "consultation") {
       this.openConsultSheet();
       return;
@@ -613,12 +632,28 @@ Page({
     });
   },
 
-  goToCheckout() {
+  async goToCheckout() {
     const selected = this.data.periodSheetDates.find((d) => d.id === this.data.periodSheetSelectedDateId);
     if (!selected) {
       wx.showToast({ title: "请选择出发日期", icon: "none" });
       return;
     }
+    const user = await getCurrentUser();
+    if (!user) {
+      showFavoriteNotice(this, {
+        stateKey: "checkoutNoticeState",
+        labelKey: "checkoutNoticeLabel",
+        actionLabelKey: "checkoutNoticeActionLabel",
+        modeKey: "checkoutNoticeMode",
+        actionTypeKey: "checkoutNoticeActionType",
+        label: "您还没有登录，请登录后再下单",
+        actionLabel: "去登录",
+        mode: "warning",
+        actionType: "login"
+      });
+      return;
+    }
+
     this.closePeriodSheet();
     const slug = this.data.service.slug;
     const travelDate = selected.dateStart;
@@ -648,6 +683,17 @@ Page({
   },
 
   async toggleFavorite() {
+    const user = await getCurrentUser();
+    if (!user) {
+      showFavoriteNotice(this, {
+        label: "您还没有登录，请登录后再收藏",
+        actionLabel: "去登录",
+        mode: "warning",
+        actionType: "login"
+      });
+      return;
+    }
+
     const favorited = await toggleFavorite("services", this.data.service.slug);
     this.setData({
       "service.isFavorited": favorited
@@ -664,6 +710,22 @@ Page({
     wx.navigateTo({
       url: "/pages/favorites/index"
     });
+  },
+
+  handleFavoriteNoticeAction() {
+    const actionType = this.data.favoriteNoticeActionType;
+    clearFavoriteNotice(this, "favoriteNoticeState");
+    if (actionType === "login") {
+      goTopLevel(TOP_LEVEL_ROUTES.profile);
+      return;
+    }
+
+    this.goFavorites();
+  },
+
+  handleCheckoutNoticeAction() {
+    clearFavoriteNotice(this, "checkoutNoticeState");
+    goTopLevel(TOP_LEVEL_ROUTES.profile);
   },
 
   openMediaSheet() {

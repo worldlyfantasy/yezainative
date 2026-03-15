@@ -5,8 +5,8 @@ const { creators } = require("../miniprogram/mock/creators");
 const { destinations } = require("../miniprogram/mock/destinations");
 const { services } = require("../miniprogram/mock/services");
 const { ideas } = require("../miniprogram/mock/ideas");
-const staticConfig = require("../miniprogram/config/static-config");
 const { getHomePageData } = require("../miniprogram/services/content");
+const { defaultConfigs } = require("../cloudfunctions/configGateway/config-definitions");
 
 const outputDir = path.join(__dirname, "..", "docs", "cloud-seed");
 
@@ -25,6 +25,7 @@ function writeJson(filename, data) {
 
 function buildAppConfigs() {
   const homePageData = getHomePageData();
+  const pageConfigKeys = Object.keys(defaultConfigs).filter((key) => key !== "homePage");
   return [
     {
       key: "homePage",
@@ -35,30 +36,10 @@ function buildAppConfigs() {
         featuredIdeaSlugs: (homePageData.featuredIdeas || []).map((item) => item.slug)
       }
     },
-    {
-      key: "howItWorksPage",
-      value: staticConfig.getHowItWorksPageConfig()
-    },
-    {
-      key: "checkoutPage",
-      value: staticConfig.getCheckoutPageConfig()
-    },
-    {
-      key: "serviceDetailPage",
-      value: staticConfig.getServiceDetailPageConfig()
-    },
-    {
-      key: "paymentResultPage",
-      value: staticConfig.getPaymentResultPageConfig()
-    },
-    {
-      key: "orderDetailPage",
-      value: staticConfig.getOrderDetailPageConfig()
-    },
-    {
-      key: "favoritesPage",
-      value: staticConfig.getFavoritesPageConfig()
-    }
+    ...pageConfigKeys.map((key) => ({
+      key,
+      value: defaultConfigs[key]
+    }))
   ];
 }
 

@@ -10,8 +10,11 @@
         <favorite-star
           favorited="{{destination.isFavorited}}"
           notice-state="{{favoriteNoticeState}}"
+          notice-label="{{favoriteNoticeLabel}}"
+          notice-action-label="{{favoriteNoticeActionLabel}}"
+          notice-mode="{{favoriteNoticeMode}}"
           bind:toggle="toggleFavorite"
-          bind:navigatefavorites="goFavorites"
+          bind:noticeaction="handleFavoriteNoticeAction"
         ></favorite-star>
       </view>
       <text class="page-subtitle">{{destination.descriptionDetail || destination.description}}</text>

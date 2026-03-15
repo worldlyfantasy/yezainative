@@ -1,4 +1,4 @@
-const { DATA_SOURCE_TYPES, getContentDataSource } = require("../constants/data-source");
+const { DATA_SOURCE_TYPES, getContentDataSource, isCloudFallbackEnabled } = require("../constants/data-source");
 const cloudContentApi = require("../api/cloud/content");
 const legacyContentRepository = require("./legacy/content-repository");
 const {
@@ -23,7 +23,7 @@ async function invoke(methodName, mapper, args) {
   try {
     payload = await repository[methodName].apply(repository, args || []);
   } catch (error) {
-    if (repository !== legacyContentRepository) {
+    if (repository !== legacyContentRepository && isCloudFallbackEnabled()) {
       payload = await legacyContentRepository[methodName].apply(legacyContentRepository, args || []);
     } else {
       throw error;

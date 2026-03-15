@@ -348,6 +348,278 @@ function buildTravelDetailMock(slug) {
   };
 }
 
+function getServiceTagValue(tags, key) {
+  const tag = (tags || []).find((item) => item.key === key);
+  return tag ? tag.value : "";
+}
+
+function getItineraryDayCount(service) {
+  const periods = service.groupPeriods || [];
+  const firstPeriod = periods[0];
+
+  if (firstPeriod && firstPeriod.dateStart && firstPeriod.dateEnd) {
+    const start = new Date(firstPeriod.dateStart);
+    const end = new Date(firstPeriod.dateEnd);
+    const diff = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+
+    if (Number.isFinite(diff) && diff > 0) {
+      return Math.min(Math.max(diff, 3), 8);
+    }
+  }
+
+  const matches = String(service.durationTag || "").match(/\d+/g);
+  if (matches && matches.length) {
+    const parsed = parseInt(matches[matches.length - 1], 10);
+    if (Number.isFinite(parsed)) {
+      return Math.min(Math.max(parsed, 3), 8);
+    }
+  }
+
+  return 5;
+}
+
+function getHighlightImages(slug, startIndex, count) {
+  const images = [];
+
+  for (let index = startIndex; index < startIndex + count; index += 1) {
+    const suffix = String.fromCharCode(97 + ((index - 1) % 4));
+    images.push(buildServiceMockImage(`yezai-${slug}-highlight-${index}${suffix}`, 1200, 760));
+  }
+
+  return images;
+}
+
+function buildGeneratedHighlights(service, dayCount) {
+  const deliverables = Array.isArray(service.deliverables) ? service.deliverables : [];
+  const styles = Array.isArray(service.styles) ? service.styles : [];
+  const meetingPoint = getServiceTagValue(service.tags, "meetingPoint");
+  const styleLabel = styles[0] || "在地体验";
+  const secondaryStyle = styles[1] || "路线推进";
+
+  return [
+    {
+      id: `${service.slug}-highlight-core`,
+      title: `${service.name}的核心体验`,
+      description: service.creatorQuote || service.summary || "围绕目的地与创作者方法展开本次体验。",
+      images: getHighlightImages(service.slug, 1, 2)
+    },
+    {
+      id: `${service.slug}-highlight-method`,
+      title: `围绕${styleLabel}建立可执行的行程节奏`,
+      description:
+        deliverables.length > 0
+          ? `本次内容会围绕${deliverables.slice(0, 4).join("、")}展开，让体验、记录与在地互动都能有明确承载。`
+          : `行程会围绕${styleLabel}与${secondaryStyle}组织节奏，确保每天都有明确的体验重点与留白。`,
+      images: getHighlightImages(service.slug, 2, 1)
+    },
+    {
+      id: `${service.slug}-highlight-place`,
+      title: `${meetingPoint || "集合点"}出发的完整在地安排`,
+      description: `当前页面已经补齐 ${dayCount} 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。`,
+      images: getHighlightImages(service.slug, 3, 2)
+    }
+  ];
+}
+
+function buildGeneratedOverview(service, highlights) {
+  const deliverables = Array.isArray(service.deliverables) ? service.deliverables : [];
+  const suitable = Array.isArray(service.suitable) ? service.suitable : [];
+  const coverImage = highlights[0] && highlights[0].images && highlights[0].images[0]
+    ? highlights[0].images[0]
+    : buildServiceMockImage(`yezai-${service.slug}-overview`, 1200, 760);
+
+  return {
+    coverImage,
+    whyJoinText:
+      (service.creatorQuote || service.summary || "这段旅程会围绕创作者的方法与目的地节奏展开。") +
+      (deliverables.length ? `\n\n你将围绕${deliverables.slice(0, 4).join("、")}展开体验与练习。` : ""),
+    suitableTitle: "这段旅程适合谁",
+    suitableText:
+      (suitable.length ? `· ${suitable.join("\n· ")}\n\n` : "") +
+      "这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
+  };
+}
+
+function buildGeneratedItinerary(service, dayCount) {
+  const meetingPoint = getServiceTagValue(service.tags, "meetingPoint") || "指定集合点";
+  const deliverables = Array.isArray(service.deliverables) ? service.deliverables : [];
+  const suitable = Array.isArray(service.suitable) ? service.suitable : [];
+  const styles = Array.isArray(service.styles) ? service.styles : [];
+  const days = [];
+
+  for (let day = 1; day <= dayCount; day += 1) {
+    const isFirstDay = day === 1;
+    const isLastDay = day === dayCount;
+    const isMiddleDay = day === Math.ceil(dayCount / 2);
+    const styleLabel = styles[(day - 1) % Math.max(styles.length, 1)] || "在地体验";
+    const deliverable = deliverables[(day - 1) % Math.max(deliverables.length, 1)] || "行程内容";
+
+    days.push({
+      key: `${service.slug}-day-${day}`,
+      day,
+      title: isFirstDay
+        ? `${meetingPoint}集合，确认本次安排`
+        : isLastDay
+          ? "回到城市收束，完成本次行程复盘"
+          : `${service.name} 第${day}日推进`,
+      modules: [
+        {
+          type: "schedule",
+          title: "当日行程",
+          content: isFirstDay
+            ? `在${meetingPoint}完成集合与签到，统一说明路线重点、节奏安排与本次体验方法，围绕“${service.summary}”进入状态。`
+            : isLastDay
+              ? "上午完成最后一段内容或收尾安排，随后返程或原地解散，整理记录与反馈，确认后续资料交付方式。"
+              : `围绕${styleLabel}推进当日节奏，结合${deliverable}安排步行、停留、观察或沟通时段，让体验和推进保持平衡。`
+        },
+        {
+          type: "transport",
+          title: "交通",
+          content: isFirstDay
+            ? `往返${meetingPoint}的大交通需自理，集合后按现场通知统一衔接后续安排。`
+            : isLastDay
+              ? "根据当日收尾节点统一返程或原地解散，具体以领队通知为准。"
+              : "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+        },
+        {
+          type: "meals",
+          title: "餐食",
+          content: "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+        },
+        {
+          type: "accommodation",
+          title: "住宿",
+          content:
+            service.type === "带团旅行"
+              ? "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              : "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+        }
+      ].concat(
+        isMiddleDay
+          ? [{
+              type: "tips",
+              title: "温馨提示",
+              content: suitable.length
+                ? `建议参与者具备“${suitable[0]}”的基础条件，并为当天留出体力与节奏缓冲。`
+                : "当天请重点关注补水、保暖与节奏控制，尽量避免体能透支。"
+            }]
+          : []
+      )
+    });
+  }
+
+  return { days };
+}
+
+function buildGeneratedCosts(service, dayCount) {
+  const deliverables = Array.isArray(service.deliverables) ? service.deliverables : [];
+  const exclusions = Array.isArray(service.exclusions) ? service.exclusions : [];
+  const meetingPoint = getServiceTagValue(service.tags, "meetingPoint");
+
+  const include = [
+    {
+      label: "服务",
+      content:
+        deliverables.length > 0
+          ? `包含${deliverables.slice(0, 3).join("、")}等当前页面所述的主要服务内容。`
+          : "包含页面当前展示的主要服务内容与基础安排。"
+    },
+    {
+      label: "带领",
+      content: "包含创作者/领队沟通、流程说明与必要的过程协作安排。"
+    },
+    {
+      label: "节奏",
+      content: `当前页面已按 ${dayCount} 天结构整理行程节奏，具体集合细节与准备事项会在确认后同步。`
+    }
+  ];
+
+  if (meetingPoint) {
+    include.unshift({
+      label: "集合",
+      content: `${meetingPoint}作为默认集合信息参考，最终以实际确认安排为准。`
+    });
+  }
+
+  const exclude = exclusions.length
+    ? exclusions.map((item, index) => ({
+        label: String(item).replace(/[、，,\s].*$/, "").slice(0, 4) || `不含${index + 1}`,
+        content: `${item}相关费用需根据实际情况自行承担。`
+      }))
+    : [{
+        label: "自理",
+        content: "未明确列入“费用包含”的个人消费及额外需求，默认需自行承担。"
+      }];
+
+  return {
+    include,
+    exclude,
+    refundRules: [
+      {
+        days: "规则说明",
+        percent: service.refund || "如需调整或取消，请尽快联系平台确认当次行程的可调整空间与处理方式。"
+      }
+    ]
+  };
+}
+
+function buildGeneratedNotices(service) {
+  const meetingPoint = getServiceTagValue(service.tags, "meetingPoint") || "指定集合点";
+  const suggestedAge = getServiceTagValue(service.tags, "suggestedAge");
+  const registrationDeadline = getServiceTagValue(service.tags, "registrationDeadline");
+  const suitable = Array.isArray(service.suitable) ? service.suitable : [];
+  const notSuitable = Array.isArray(service.notSuitable) ? service.notSuitable : [];
+
+  return [
+    {
+      key: "traffic",
+      title: "关于交通",
+      content: registrationDeadline
+        ? `建议围绕${meetingPoint}提前规划交通，并尽量在${registrationDeadline}前完成最终确认，预留必要的时间缓冲。`
+        : `建议提前规划前往${meetingPoint}的交通，并预留必要的时间缓冲，以免影响集合安排。`
+    },
+    {
+      key: "local",
+      title: "关于当地",
+      content: "请尊重当地生活节奏与现场规则。具体在地安排会根据目的地情况、创作者节奏与出行时间进一步确认。"
+    },
+    {
+      key: "safety",
+      title: "安全告知",
+      content:
+        suitable.length || notSuitable.length
+          ? `建议优先满足“${suitable[0] || "具备基本体力"}”等条件参与${suggestedAge ? `，建议年龄参考为${suggestedAge}` : ""}；若存在“${notSuitable[0] || "特殊限制"}”等情况，请在确认前先沟通。`
+          : `参与前请确认自身状态与行程强度匹配${suggestedAge ? `，建议年龄参考为${suggestedAge}` : ""}，必要时提前沟通特殊情况。`
+    },
+    {
+      key: "packing",
+      title: "准备清单",
+      content: `请结合“${service.timeline || "报名确认后同步节奏说明"}”与“${service.revision || "具体以最终确认方案为准"}”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。`
+    }
+  ];
+}
+
+function buildGeneratedTravelDetail(service) {
+  const dayCount = getItineraryDayCount(service);
+  const highlights = buildGeneratedHighlights(service, dayCount);
+
+  return {
+    id: `travel-detail-${service.slug}`,
+    title: service.name,
+    overview: buildGeneratedOverview(service, highlights),
+    sections: [
+      { key: "overview", title: "概况", anchorId: "section_overview" },
+      { key: "highlights", title: "亮点", anchorId: "section_highlights" },
+      { key: "itinerary", title: "行程", anchorId: "section_itinerary" },
+      { key: "notices", title: "须知", anchorId: "section_notices" }
+    ],
+    highlights,
+    itinerary: buildGeneratedItinerary(service, dayCount),
+    costs: buildGeneratedCosts(service, dayCount),
+    notices: buildGeneratedNotices(service)
+  };
+}
+
 const rawServices = [
   {
     id: "svc-ridge-journal",
@@ -717,7 +989,9 @@ const rawServices = [
 ];
 
 const services = rawServices.map((service) =>
-  Object.assign({}, service, buildServiceMedia(service.slug))
+  Object.assign({}, service, buildServiceMedia(service.slug), {
+    travelDetail: service.travelDetail || buildGeneratedTravelDetail(service)
+  })
 );
 
 module.exports = { services };

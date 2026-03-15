@@ -2,6 +2,15 @@ function ensureObject(value) {
   return value && typeof value === "object" ? value : {};
 }
 
+function normalizeNickname(value) {
+  const nickname = String(value || "").trim();
+  if (!nickname || nickname === "微信用户") {
+    return "旅人";
+  }
+
+  return nickname;
+}
+
 function mapUser(payload) {
   if (!payload) {
     return null;
@@ -10,7 +19,7 @@ function mapUser(payload) {
   const source = ensureObject(payload);
   return {
     id: source.id || "",
-    nickname: source.nickname || "旅人",
+    nickname: normalizeNickname(source.nickname),
     avatarUrl: source.avatarUrl || "",
     memberLabel: source.memberLabel || "野哉会员",
     role: source.role || "user"

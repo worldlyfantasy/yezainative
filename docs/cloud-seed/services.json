@@ -616,7 +616,323 @@
       "https://picsum.photos/seed/yezai-service-hexi-tracing-detail-1/1200/900",
       "https://picsum.photos/seed/yezai-service-hexi-tracing-detail-2/1200/900",
       "https://picsum.photos/seed/yezai-service-hexi-tracing-detail-3/1200/900"
-    ]
+    ],
+    "travelDetail": {
+      "id": "travel-detail-hexi-tracing",
+      "title": "河西走廊风声记录",
+      "overview": {
+        "coverImage": "https://picsum.photos/seed/yezai-hexi-tracing-highlight-1a/1200/760",
+        "whyJoinText": "河西这一段我跑过很多次，烽燧和河谷的声景特别适合用录音留下来，节奏可以按你们体力来调。\n\n你将围绕行程方案 + 声景提示、必备装备清单、路书展开体验与练习。",
+        "suitableTitle": "这段旅程适合谁",
+        "suitableText": "· 喜欢慢慢感受高原的人\n· 愿意在戈壁驻扎\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
+      },
+      "sections": [
+        {
+          "key": "overview",
+          "title": "概况",
+          "anchorId": "section_overview"
+        },
+        {
+          "key": "highlights",
+          "title": "亮点",
+          "anchorId": "section_highlights"
+        },
+        {
+          "key": "itinerary",
+          "title": "行程",
+          "anchorId": "section_itinerary"
+        },
+        {
+          "key": "notices",
+          "title": "须知",
+          "anchorId": "section_notices"
+        }
+      ],
+      "highlights": [
+        {
+          "id": "hexi-tracing-highlight-core",
+          "title": "河西走廊风声记录的核心体验",
+          "description": "河西这一段我跑过很多次，烽燧和河谷的声景特别适合用录音留下来，节奏可以按你们体力来调。",
+          "images": [
+            "https://picsum.photos/seed/yezai-hexi-tracing-highlight-1a/1200/760",
+            "https://picsum.photos/seed/yezai-hexi-tracing-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "hexi-tracing-highlight-method",
+          "title": "围绕公路旅行建立可执行的行程节奏",
+          "description": "本次内容会围绕行程方案 + 声景提示、必备装备清单、路书展开，让体验、记录与在地互动都能有明确承载。",
+          "images": [
+            "https://picsum.photos/seed/yezai-hexi-tracing-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "hexi-tracing-highlight-place",
+          "title": "敦煌市区指定酒店出发的完整在地安排",
+          "description": "当前页面已经补齐 7 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
+          "images": [
+            "https://picsum.photos/seed/yezai-hexi-tracing-highlight-3c/1200/760",
+            "https://picsum.photos/seed/yezai-hexi-tracing-highlight-4d/1200/760"
+          ]
+        }
+      ],
+      "itinerary": {
+        "days": [
+          {
+            "key": "hexi-tracing-day-1",
+            "day": 1,
+            "title": "敦煌市区指定酒店集合，确认本次安排",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "在敦煌市区指定酒店完成集合与签到，统一说明路线重点、节奏安排与本次体验方法，围绕“根据团队体力安排烽燧与河谷的声景采集，用录音构筑记忆。”进入状态。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "往返敦煌市区指定酒店的大交通需自理，集合后按现场通知统一衔接后续安排。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          },
+          {
+            "key": "hexi-tracing-day-2",
+            "day": 2,
+            "title": "河西走廊风声记录 第2日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕山地穿行推进当日节奏，结合必备装备清单安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          },
+          {
+            "key": "hexi-tracing-day-3",
+            "day": 3,
+            "title": "河西走廊风声记录 第3日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕公路旅行推进当日节奏，结合路书安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          },
+          {
+            "key": "hexi-tracing-day-4",
+            "day": 4,
+            "title": "河西走廊风声记录 第4日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕山地穿行推进当日节奏，结合行程方案 + 声景提示安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              },
+              {
+                "type": "tips",
+                "title": "温馨提示",
+                "content": "建议参与者具备“喜欢慢慢感受高原的人”的基础条件，并为当天留出体力与节奏缓冲。"
+              }
+            ]
+          },
+          {
+            "key": "hexi-tracing-day-5",
+            "day": 5,
+            "title": "河西走廊风声记录 第5日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕公路旅行推进当日节奏，结合必备装备清单安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          },
+          {
+            "key": "hexi-tracing-day-6",
+            "day": 6,
+            "title": "河西走廊风声记录 第6日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕山地穿行推进当日节奏，结合路书安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          },
+          {
+            "key": "hexi-tracing-day-7",
+            "day": 7,
+            "title": "回到城市收束，完成本次行程复盘",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "上午完成最后一段内容或收尾安排，随后返程或原地解散，整理记录与反馈，确认后续资料交付方式。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "根据当日收尾节点统一返程或原地解散，具体以领队通知为准。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          }
+        ]
+      },
+      "costs": {
+        "include": [
+          {
+            "label": "集合",
+            "content": "敦煌市区指定酒店作为默认集合信息参考，最终以实际确认安排为准。"
+          },
+          {
+            "label": "服务",
+            "content": "包含行程方案 + 声景提示、必备装备清单、路书等当前页面所述的主要服务内容。"
+          },
+          {
+            "label": "带领",
+            "content": "包含创作者/领队沟通、流程说明与必要的过程协作安排。"
+          },
+          {
+            "label": "节奏",
+            "content": "当前页面已按 7 天结构整理行程节奏，具体集合细节与准备事项会在确认后同步。"
+          }
+        ],
+        "exclude": [
+          {
+            "label": "现场陪同",
+            "content": "现场陪同相关费用需根据实际情况自行承担。"
+          },
+          {
+            "label": "设备租赁",
+            "content": "设备租赁相关费用需根据实际情况自行承担。"
+          }
+        ],
+        "refundRules": [
+          {
+            "days": "规则说明",
+            "percent": "方案确认前可全额退款，确认后扣除策划费用。"
+          }
+        ]
+      },
+      "notices": [
+        {
+          "key": "traffic",
+          "title": "关于交通",
+          "content": "建议围绕敦煌市区指定酒店提前规划交通，并尽量在出行前7日前完成最终确认，预留必要的时间缓冲。"
+        },
+        {
+          "key": "local",
+          "title": "关于当地",
+          "content": "请尊重当地生活节奏与现场规则。具体在地安排会根据目的地情况、创作者节奏与出行时间进一步确认。"
+        },
+        {
+          "key": "safety",
+          "title": "安全告知",
+          "content": "建议优先满足“喜欢慢慢感受高原的人”等条件参与，建议年龄参考为18-60周岁；若存在“行程只能周末”等情况，请在确认前先沟通。"
+        },
+        {
+          "key": "packing",
+          "title": "准备清单",
+          "content": "请结合“支付后 3 天提交草案”与“支持 2 次文档修订”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
+        }
+      ]
+    }
   },
   {
     "id": "svc-lancang-source",
@@ -710,7 +1026,323 @@
       "https://picsum.photos/seed/yezai-service-lancang-source-lab-detail-1/1200/900",
       "https://picsum.photos/seed/yezai-service-lancang-source-lab-detail-2/1200/900",
       "https://picsum.photos/seed/yezai-service-lancang-source-lab-detail-3/1200/900"
-    ]
+    ],
+    "travelDetail": {
+      "id": "travel-detail-lancang-source-lab",
+      "title": "澜沧江源水系小实验",
+      "overview": {
+        "coverImage": "https://picsum.photos/seed/yezai-lancang-source-lab-highlight-1a/1200/760",
+        "whyJoinText": "澜沧江源区的水文小实验我做了好几年，带大家用简单仪器测水温、含沙量，能真正理解一条河是怎么诞生的。\n\n你将围绕水系观测讲义、采样工具包、共创展板展开体验与练习。",
+        "suitableTitle": "这段旅程适合谁",
+        "suitableText": "· 能适应帐篷住宿\n· 乐于动手\n· 对水文议题好奇\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
+      },
+      "sections": [
+        {
+          "key": "overview",
+          "title": "概况",
+          "anchorId": "section_overview"
+        },
+        {
+          "key": "highlights",
+          "title": "亮点",
+          "anchorId": "section_highlights"
+        },
+        {
+          "key": "itinerary",
+          "title": "行程",
+          "anchorId": "section_itinerary"
+        },
+        {
+          "key": "notices",
+          "title": "须知",
+          "anchorId": "section_notices"
+        }
+      ],
+      "highlights": [
+        {
+          "id": "lancang-source-lab-highlight-core",
+          "title": "澜沧江源水系小实验的核心体验",
+          "description": "澜沧江源区的水文小实验我做了好几年，带大家用简单仪器测水温、含沙量，能真正理解一条河是怎么诞生的。",
+          "images": [
+            "https://picsum.photos/seed/yezai-lancang-source-lab-highlight-1a/1200/760",
+            "https://picsum.photos/seed/yezai-lancang-source-lab-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "lancang-source-lab-highlight-method",
+          "title": "围绕田野考察建立可执行的行程节奏",
+          "description": "本次内容会围绕水系观测讲义、采样工具包、共创展板展开，让体验、记录与在地互动都能有明确承载。",
+          "images": [
+            "https://picsum.photos/seed/yezai-lancang-source-lab-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "lancang-source-lab-highlight-place",
+          "title": "玉树市区集合出发的完整在地安排",
+          "description": "当前页面已经补齐 7 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
+          "images": [
+            "https://picsum.photos/seed/yezai-lancang-source-lab-highlight-3c/1200/760",
+            "https://picsum.photos/seed/yezai-lancang-source-lab-highlight-4d/1200/760"
+          ]
+        }
+      ],
+      "itinerary": {
+        "days": [
+          {
+            "key": "lancang-source-lab-day-1",
+            "day": 1,
+            "title": "玉树市区集合集合，确认本次安排",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "在玉树市区集合完成集合与签到，统一说明路线重点、节奏安排与本次体验方法，围绕“携带简单仪器在源区做水温、含沙量记录，理解一条河的诞生。”进入状态。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "往返玉树市区集合的大交通需自理，集合后按现场通知统一衔接后续安排。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "lancang-source-lab-day-2",
+            "day": 2,
+            "title": "澜沧江源水系小实验 第2日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕徒步自然推进当日节奏，结合采样工具包安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "lancang-source-lab-day-3",
+            "day": 3,
+            "title": "澜沧江源水系小实验 第3日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕田野考察推进当日节奏，结合共创展板安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "lancang-source-lab-day-4",
+            "day": 4,
+            "title": "澜沧江源水系小实验 第4日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕徒步自然推进当日节奏，结合水系观测讲义安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              },
+              {
+                "type": "tips",
+                "title": "温馨提示",
+                "content": "建议参与者具备“能适应帐篷住宿”的基础条件，并为当天留出体力与节奏缓冲。"
+              }
+            ]
+          },
+          {
+            "key": "lancang-source-lab-day-5",
+            "day": 5,
+            "title": "澜沧江源水系小实验 第5日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕田野考察推进当日节奏，结合采样工具包安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "lancang-source-lab-day-6",
+            "day": 6,
+            "title": "澜沧江源水系小实验 第6日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕徒步自然推进当日节奏，结合共创展板安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "lancang-source-lab-day-7",
+            "day": 7,
+            "title": "回到城市收束，完成本次行程复盘",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "上午完成最后一段内容或收尾安排，随后返程或原地解散，整理记录与反馈，确认后续资料交付方式。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "根据当日收尾节点统一返程或原地解散，具体以领队通知为准。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          }
+        ]
+      },
+      "costs": {
+        "include": [
+          {
+            "label": "集合",
+            "content": "玉树市区集合作为默认集合信息参考，最终以实际确认安排为准。"
+          },
+          {
+            "label": "服务",
+            "content": "包含水系观测讲义、采样工具包、共创展板等当前页面所述的主要服务内容。"
+          },
+          {
+            "label": "带领",
+            "content": "包含创作者/领队沟通、流程说明与必要的过程协作安排。"
+          },
+          {
+            "label": "节奏",
+            "content": "当前页面已按 7 天结构整理行程节奏，具体集合细节与准备事项会在确认后同步。"
+          }
+        ],
+        "exclude": [
+          {
+            "label": "个人保暖",
+            "content": "个人保暖装备相关费用需根据实际情况自行承担。"
+          },
+          {
+            "label": "往返交通",
+            "content": "往返交通相关费用需根据实际情况自行承担。"
+          }
+        ],
+        "refundRules": [
+          {
+            "days": "规则说明",
+            "percent": "出发前 15 天可退 70%，之后按照实际成本结算。"
+          }
+        ]
+      },
+      "notices": [
+        {
+          "key": "traffic",
+          "title": "关于交通",
+          "content": "建议围绕玉树市区集合提前规划交通，并尽量在出行前10日前完成最终确认，预留必要的时间缓冲。"
+        },
+        {
+          "key": "local",
+          "title": "关于当地",
+          "content": "请尊重当地生活节奏与现场规则。具体在地安排会根据目的地情况、创作者节奏与出行时间进一步确认。"
+        },
+        {
+          "key": "safety",
+          "title": "安全告知",
+          "content": "建议优先满足“能适应帐篷住宿”等条件参与，建议年龄参考为14-55周岁；若存在“不能长时间露天活动”等情况，请在确认前先沟通。"
+        },
+        {
+          "key": "packing",
+          "title": "准备清单",
+          "content": "请结合“支付后 7 天发送准备清单”与“不提供临时加人”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
+        }
+      ]
+    }
   },
   {
     "id": "svc-miao-night-walk",
@@ -804,7 +1436,242 @@
       "https://picsum.photos/seed/yezai-service-miao-night-walk-detail-1/1200/900",
       "https://picsum.photos/seed/yezai-service-miao-night-walk-detail-2/1200/900",
       "https://picsum.photos/seed/yezai-service-miao-night-walk-detail-3/1200/900"
-    ]
+    ],
+    "travelDetail": {
+      "id": "travel-detail-miao-night-walk",
+      "title": "山谷夜步与寨子谈话",
+      "overview": {
+        "coverImage": "https://picsum.photos/seed/yezai-miao-night-walk-highlight-1a/1200/760",
+        "whyJoinText": "侗寨的夜步我走了很多回，织娘和歌师愿意聊的话，会打开完全不同的世界。推荐给愿意慢下来听故事的人。\n\n你将围绕夜步线路、访谈提纲、访客礼物准备展开体验与练习。",
+        "suitableTitle": "这段旅程适合谁",
+        "suitableText": "· 乐于尊重寨子礼仪\n· 能步行 8 公里\n· 愿意共餐\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
+      },
+      "sections": [
+        {
+          "key": "overview",
+          "title": "概况",
+          "anchorId": "section_overview"
+        },
+        {
+          "key": "highlights",
+          "title": "亮点",
+          "anchorId": "section_highlights"
+        },
+        {
+          "key": "itinerary",
+          "title": "行程",
+          "anchorId": "section_itinerary"
+        },
+        {
+          "key": "notices",
+          "title": "须知",
+          "anchorId": "section_notices"
+        }
+      ],
+      "highlights": [
+        {
+          "id": "miao-night-walk-highlight-core",
+          "title": "山谷夜步与寨子谈话的核心体验",
+          "description": "侗寨的夜步我走了很多回，织娘和歌师愿意聊的话，会打开完全不同的世界。推荐给愿意慢下来听故事的人。",
+          "images": [
+            "https://picsum.photos/seed/yezai-miao-night-walk-highlight-1a/1200/760",
+            "https://picsum.photos/seed/yezai-miao-night-walk-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "miao-night-walk-highlight-method",
+          "title": "围绕慢旅行建立可执行的行程节奏",
+          "description": "本次内容会围绕夜步线路、访谈提纲、访客礼物准备展开，让体验、记录与在地互动都能有明确承载。",
+          "images": [
+            "https://picsum.photos/seed/yezai-miao-night-walk-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "miao-night-walk-highlight-place",
+          "title": "黔东南肇兴侗寨出发的完整在地安排",
+          "description": "当前页面已经补齐 4 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
+          "images": [
+            "https://picsum.photos/seed/yezai-miao-night-walk-highlight-3c/1200/760",
+            "https://picsum.photos/seed/yezai-miao-night-walk-highlight-4d/1200/760"
+          ]
+        }
+      ],
+      "itinerary": {
+        "days": [
+          {
+            "key": "miao-night-walk-day-1",
+            "day": 1,
+            "title": "黔东南肇兴侗寨集合，确认本次安排",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "在黔东南肇兴侗寨完成集合与签到，统一说明路线重点、节奏安排与本次体验方法，围绕“在侗寨夜色中行走，拜访织娘与歌师，以对话完成旅程。”进入状态。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "往返黔东南肇兴侗寨的大交通需自理，集合后按现场通知统一衔接后续安排。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "miao-night-walk-day-2",
+            "day": 2,
+            "title": "山谷夜步与寨子谈话 第2日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕人文在地推进当日节奏，结合访谈提纲安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              },
+              {
+                "type": "tips",
+                "title": "温馨提示",
+                "content": "建议参与者具备“乐于尊重寨子礼仪”的基础条件，并为当天留出体力与节奏缓冲。"
+              }
+            ]
+          },
+          {
+            "key": "miao-night-walk-day-3",
+            "day": 3,
+            "title": "山谷夜步与寨子谈话 第3日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕慢旅行推进当日节奏，结合访客礼物准备安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "miao-night-walk-day-4",
+            "day": 4,
+            "title": "回到城市收束，完成本次行程复盘",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "上午完成最后一段内容或收尾安排，随后返程或原地解散，整理记录与反馈，确认后续资料交付方式。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "根据当日收尾节点统一返程或原地解散，具体以领队通知为准。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          }
+        ]
+      },
+      "costs": {
+        "include": [
+          {
+            "label": "集合",
+            "content": "黔东南肇兴侗寨作为默认集合信息参考，最终以实际确认安排为准。"
+          },
+          {
+            "label": "服务",
+            "content": "包含夜步线路、访谈提纲、访客礼物准备等当前页面所述的主要服务内容。"
+          },
+          {
+            "label": "带领",
+            "content": "包含创作者/领队沟通、流程说明与必要的过程协作安排。"
+          },
+          {
+            "label": "节奏",
+            "content": "当前页面已按 4 天结构整理行程节奏，具体集合细节与准备事项会在确认后同步。"
+          }
+        ],
+        "exclude": [
+          {
+            "label": "贵州往返",
+            "content": "贵州往返交通相关费用需根据实际情况自行承担。"
+          },
+          {
+            "label": "个人消费",
+            "content": "个人消费相关费用需根据实际情况自行承担。"
+          }
+        ],
+        "refundRules": [
+          {
+            "days": "规则说明",
+            "percent": "出发前 12 天可退 80%，7 天内仅可转名。"
+          }
+        ]
+      },
+      "notices": [
+        {
+          "key": "traffic",
+          "title": "关于交通",
+          "content": "建议围绕黔东南肇兴侗寨提前规划交通，并尽量在出行前5日前完成最终确认，预留必要的时间缓冲。"
+        },
+        {
+          "key": "local",
+          "title": "关于当地",
+          "content": "请尊重当地生活节奏与现场规则。具体在地安排会根据目的地情况、创作者节奏与出行时间进一步确认。"
+        },
+        {
+          "key": "safety",
+          "title": "安全告知",
+          "content": "建议优先满足“乐于尊重寨子礼仪”等条件参与，建议年龄参考为10-65周岁；若存在“害怕夜行”等情况，请在确认前先沟通。"
+        },
+        {
+          "key": "packing",
+          "title": "准备清单",
+          "content": "请结合“支付后 4 天确认住宿与访谈名单”与“可微调 1 次访谈安排”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
+        }
+      ]
+    }
   },
   {
     "id": "svc-qiongbay-salt",
@@ -896,7 +1763,211 @@
       "https://picsum.photos/seed/yezai-service-salt-pan-diary-detail-1/1200/900",
       "https://picsum.photos/seed/yezai-service-salt-pan-diary-detail-2/1200/900",
       "https://picsum.photos/seed/yezai-service-salt-pan-diary-detail-3/1200/900"
-    ]
+    ],
+    "travelDetail": {
+      "id": "travel-detail-salt-pan-diary",
+      "title": "盐田潮汐观测日志",
+      "overview": {
+        "coverImage": "https://picsum.photos/seed/yezai-salt-pan-diary-highlight-1a/1200/760",
+        "whyJoinText": "琼海盐田的潮汐和渔市我拍过很多次，三天刚好能把工序和居民作息摸清楚，适合想拍纪录片式旅行的人。\n\n你将围绕潮汐表与观察指引、访问名单、步行路线展开体验与练习。",
+        "suitableTitle": "这段旅程适合谁",
+        "suitableText": "· 喜欢纪录片式旅行\n· 愿意早起\n· 想拍摄手工劳动\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
+      },
+      "sections": [
+        {
+          "key": "overview",
+          "title": "概况",
+          "anchorId": "section_overview"
+        },
+        {
+          "key": "highlights",
+          "title": "亮点",
+          "anchorId": "section_highlights"
+        },
+        {
+          "key": "itinerary",
+          "title": "行程",
+          "anchorId": "section_itinerary"
+        },
+        {
+          "key": "notices",
+          "title": "须知",
+          "anchorId": "section_notices"
+        }
+      ],
+      "highlights": [
+        {
+          "id": "salt-pan-diary-highlight-core",
+          "title": "盐田潮汐观测日志的核心体验",
+          "description": "琼海盐田的潮汐和渔市我拍过很多次，三天刚好能把工序和居民作息摸清楚，适合想拍纪录片式旅行的人。",
+          "images": [
+            "https://picsum.photos/seed/yezai-salt-pan-diary-highlight-1a/1200/760",
+            "https://picsum.photos/seed/yezai-salt-pan-diary-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "salt-pan-diary-highlight-method",
+          "title": "围绕城市漫游建立可执行的行程节奏",
+          "description": "本次内容会围绕潮汐表与观察指引、访问名单、步行路线展开，让体验、记录与在地互动都能有明确承载。",
+          "images": [
+            "https://picsum.photos/seed/yezai-salt-pan-diary-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "salt-pan-diary-highlight-place",
+          "title": "琼海市区出发的完整在地安排",
+          "description": "当前页面已经补齐 3 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
+          "images": [
+            "https://picsum.photos/seed/yezai-salt-pan-diary-highlight-3c/1200/760",
+            "https://picsum.photos/seed/yezai-salt-pan-diary-highlight-4d/1200/760"
+          ]
+        }
+      ],
+      "itinerary": {
+        "days": [
+          {
+            "key": "salt-pan-diary-day-1",
+            "day": 1,
+            "title": "琼海市区集合，确认本次安排",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "在琼海市区完成集合与签到，统一说明路线重点、节奏安排与本次体验方法，围绕“设计 3 天潮汐与渔市观察行程，记录盐田工序与居民作息。”进入状态。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "往返琼海市区的大交通需自理，集合后按现场通知统一衔接后续安排。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          },
+          {
+            "key": "salt-pan-diary-day-2",
+            "day": 2,
+            "title": "盐田潮汐观测日志 第2日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕慢旅行推进当日节奏，结合访问名单安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              },
+              {
+                "type": "tips",
+                "title": "温馨提示",
+                "content": "建议参与者具备“喜欢纪录片式旅行”的基础条件，并为当天留出体力与节奏缓冲。"
+              }
+            ]
+          },
+          {
+            "key": "salt-pan-diary-day-3",
+            "day": 3,
+            "title": "回到城市收束，完成本次行程复盘",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "上午完成最后一段内容或收尾安排，随后返程或原地解散，整理记录与反馈，确认后续资料交付方式。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "根据当日收尾节点统一返程或原地解散，具体以领队通知为准。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          }
+        ]
+      },
+      "costs": {
+        "include": [
+          {
+            "label": "集合",
+            "content": "琼海市区作为默认集合信息参考，最终以实际确认安排为准。"
+          },
+          {
+            "label": "服务",
+            "content": "包含潮汐表与观察指引、访问名单、步行路线等当前页面所述的主要服务内容。"
+          },
+          {
+            "label": "带领",
+            "content": "包含创作者/领队沟通、流程说明与必要的过程协作安排。"
+          },
+          {
+            "label": "节奏",
+            "content": "当前页面已按 3 天结构整理行程节奏，具体集合细节与准备事项会在确认后同步。"
+          }
+        ],
+        "exclude": [
+          {
+            "label": "交通与住",
+            "content": "交通与住宿预订相关费用需根据实际情况自行承担。"
+          }
+        ],
+        "refundRules": [
+          {
+            "days": "规则说明",
+            "percent": "交付前可退 80%，交付后不退。"
+          }
+        ]
+      },
+      "notices": [
+        {
+          "key": "traffic",
+          "title": "关于交通",
+          "content": "建议围绕琼海市区提前规划交通，并尽量在出行前3日前完成最终确认，预留必要的时间缓冲。"
+        },
+        {
+          "key": "local",
+          "title": "关于当地",
+          "content": "请尊重当地生活节奏与现场规则。具体在地安排会根据目的地情况、创作者节奏与出行时间进一步确认。"
+        },
+        {
+          "key": "safety",
+          "title": "安全告知",
+          "content": "建议优先满足“喜欢纪录片式旅行”等条件参与，建议年龄参考为8-70周岁；若存在“只想度假”等情况，请在确认前先沟通。"
+        },
+        {
+          "key": "packing",
+          "title": "准备清单",
+          "content": "请结合“支付后 2 天提供方案”与“可免费修改 1 次”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
+        }
+      ]
+    }
   },
   {
     "id": "svc-songhua-ice",
@@ -988,7 +2059,211 @@
       "https://picsum.photos/seed/yezai-service-songhua-dock-detail-1/1200/900",
       "https://picsum.photos/seed/yezai-service-songhua-dock-detail-2/1200/900",
       "https://picsum.photos/seed/yezai-service-songhua-dock-detail-3/1200/900"
-    ]
+    ],
+    "travelDetail": {
+      "id": "travel-detail-songhua-dock",
+      "title": "松花江口码头漫步",
+      "overview": {
+        "coverImage": "https://picsum.photos/seed/yezai-songhua-dock-highlight-1a/1200/760",
+        "whyJoinText": "松花江口的老码头和厂区我画过很多线稿，工人愿意讲的话，一条线能串起几十年。适合能扛冻、喜欢手绘的人。\n\n你将围绕导览手册、声音播放清单、线稿练习纸展开体验与练习。",
+        "suitableTitle": "这段旅程适合谁",
+        "suitableText": "· 能在低温下步行\n· 喜欢手绘\n· 对工业遗产感兴趣\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
+      },
+      "sections": [
+        {
+          "key": "overview",
+          "title": "概况",
+          "anchorId": "section_overview"
+        },
+        {
+          "key": "highlights",
+          "title": "亮点",
+          "anchorId": "section_highlights"
+        },
+        {
+          "key": "itinerary",
+          "title": "行程",
+          "anchorId": "section_itinerary"
+        },
+        {
+          "key": "notices",
+          "title": "须知",
+          "anchorId": "section_notices"
+        }
+      ],
+      "highlights": [
+        {
+          "id": "songhua-dock-highlight-core",
+          "title": "松花江口码头漫步的核心体验",
+          "description": "松花江口的老码头和厂区我画过很多线稿，工人愿意讲的话，一条线能串起几十年。适合能扛冻、喜欢手绘的人。",
+          "images": [
+            "https://picsum.photos/seed/yezai-songhua-dock-highlight-1a/1200/760",
+            "https://picsum.photos/seed/yezai-songhua-dock-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "songhua-dock-highlight-method",
+          "title": "围绕城市漫游建立可执行的行程节奏",
+          "description": "本次内容会围绕导览手册、声音播放清单、线稿练习纸展开，让体验、记录与在地互动都能有明确承载。",
+          "images": [
+            "https://picsum.photos/seed/yezai-songhua-dock-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "songhua-dock-highlight-place",
+          "title": "哈尔滨市区出发的完整在地安排",
+          "description": "当前页面已经补齐 3 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
+          "images": [
+            "https://picsum.photos/seed/yezai-songhua-dock-highlight-3c/1200/760",
+            "https://picsum.photos/seed/yezai-songhua-dock-highlight-4d/1200/760"
+          ]
+        }
+      ],
+      "itinerary": {
+        "days": [
+          {
+            "key": "songhua-dock-day-1",
+            "day": 1,
+            "title": "哈尔滨市区集合，确认本次安排",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "在哈尔滨市区完成集合与签到，统一说明路线重点、节奏安排与本次体验方法，围绕“顺着旧码头与厂区缓步，听工人故事，完成线稿记录。”进入状态。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "往返哈尔滨市区的大交通需自理，集合后按现场通知统一衔接后续安排。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "songhua-dock-day-2",
+            "day": 2,
+            "title": "松花江口码头漫步 第2日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕慢旅行推进当日节奏，结合声音播放清单安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              },
+              {
+                "type": "tips",
+                "title": "温馨提示",
+                "content": "建议参与者具备“能在低温下步行”的基础条件，并为当天留出体力与节奏缓冲。"
+              }
+            ]
+          },
+          {
+            "key": "songhua-dock-day-3",
+            "day": 3,
+            "title": "回到城市收束，完成本次行程复盘",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "上午完成最后一段内容或收尾安排，随后返程或原地解散，整理记录与反馈，确认后续资料交付方式。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "根据当日收尾节点统一返程或原地解散，具体以领队通知为准。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          }
+        ]
+      },
+      "costs": {
+        "include": [
+          {
+            "label": "集合",
+            "content": "哈尔滨市区作为默认集合信息参考，最终以实际确认安排为准。"
+          },
+          {
+            "label": "服务",
+            "content": "包含导览手册、声音播放清单、线稿练习纸等当前页面所述的主要服务内容。"
+          },
+          {
+            "label": "带领",
+            "content": "包含创作者/领队沟通、流程说明与必要的过程协作安排。"
+          },
+          {
+            "label": "节奏",
+            "content": "当前页面已按 3 天结构整理行程节奏，具体集合细节与准备事项会在确认后同步。"
+          }
+        ],
+        "exclude": [
+          {
+            "label": "机酒",
+            "content": "机酒相关费用需根据实际情况自行承担。"
+          }
+        ],
+        "refundRules": [
+          {
+            "days": "规则说明",
+            "percent": "出发前 8 天可退 70%，临近仅可替换同行人。"
+          }
+        ]
+      },
+      "notices": [
+        {
+          "key": "traffic",
+          "title": "关于交通",
+          "content": "建议围绕哈尔滨市区提前规划交通，并尽量在出行前5日前完成最终确认，预留必要的时间缓冲。"
+        },
+        {
+          "key": "local",
+          "title": "关于当地",
+          "content": "请尊重当地生活节奏与现场规则。具体在地安排会根据目的地情况、创作者节奏与出行时间进一步确认。"
+        },
+        {
+          "key": "safety",
+          "title": "安全告知",
+          "content": "建议优先满足“能在低温下步行”等条件参与，建议年龄参考为12-65周岁；若存在“怕冷”等情况，请在确认前先沟通。"
+        },
+        {
+          "key": "packing",
+          "title": "准备清单",
+          "content": "请结合“支付后 3 天寄送旅行包”与“不提供临时加位”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
+        }
+      ]
+    }
   },
   {
     "id": "svc-enxi-gorge",
@@ -1081,7 +2356,269 @@
       "https://picsum.photos/seed/yezai-service-enxi-residency-detail-1/1200/900",
       "https://picsum.photos/seed/yezai-service-enxi-residency-detail-2/1200/900",
       "https://picsum.photos/seed/yezai-service-enxi-residency-detail-3/1200/900"
-    ]
+    ],
+    "travelDetail": {
+      "id": "travel-detail-enxi-residency",
+      "title": "鄂西峡谷共居计划",
+      "overview": {
+        "coverImage": "https://picsum.photos/seed/yezai-enxi-residency-highlight-1a/1200/760",
+        "whyJoinText": "鄂西峡谷这几户人家我合作很久了，住进去三晚能拍出一组很扎实的纪实。适合愿意做家务、尊重拍摄对象的人。\n\n你将围绕家庭介绍档案、拍摄许可模板、共居日程展开体验与练习。",
+        "suitableTitle": "这段旅程适合谁",
+        "suitableText": "· 能主动做家务\n· 尊重拍摄对象\n· 喜欢慢节奏\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
+      },
+      "sections": [
+        {
+          "key": "overview",
+          "title": "概况",
+          "anchorId": "section_overview"
+        },
+        {
+          "key": "highlights",
+          "title": "亮点",
+          "anchorId": "section_highlights"
+        },
+        {
+          "key": "itinerary",
+          "title": "行程",
+          "anchorId": "section_itinerary"
+        },
+        {
+          "key": "notices",
+          "title": "须知",
+          "anchorId": "section_notices"
+        }
+      ],
+      "highlights": [
+        {
+          "id": "enxi-residency-highlight-core",
+          "title": "鄂西峡谷共居计划的核心体验",
+          "description": "鄂西峡谷这几户人家我合作很久了，住进去三晚能拍出一组很扎实的纪实。适合愿意做家务、尊重拍摄对象的人。",
+          "images": [
+            "https://picsum.photos/seed/yezai-enxi-residency-highlight-1a/1200/760",
+            "https://picsum.photos/seed/yezai-enxi-residency-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "enxi-residency-highlight-method",
+          "title": "围绕人文在地建立可执行的行程节奏",
+          "description": "本次内容会围绕家庭介绍档案、拍摄许可模板、共居日程展开，让体验、记录与在地互动都能有明确承载。",
+          "images": [
+            "https://picsum.photos/seed/yezai-enxi-residency-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "enxi-residency-highlight-place",
+          "title": "恩施市区出发的完整在地安排",
+          "description": "当前页面已经补齐 5 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
+          "images": [
+            "https://picsum.photos/seed/yezai-enxi-residency-highlight-3c/1200/760",
+            "https://picsum.photos/seed/yezai-enxi-residency-highlight-4d/1200/760"
+          ]
+        }
+      ],
+      "itinerary": {
+        "days": [
+          {
+            "key": "enxi-residency-day-1",
+            "day": 1,
+            "title": "恩施市区集合，确认本次安排",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "在恩施市区完成集合与签到，统一说明路线重点、节奏安排与本次体验方法，围绕“陪伴旅人入住峡谷家庭三晚，完成一组纪实影像。”进入状态。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "往返恩施市区的大交通需自理，集合后按现场通知统一衔接后续安排。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          },
+          {
+            "key": "enxi-residency-day-2",
+            "day": 2,
+            "title": "鄂西峡谷共居计划 第2日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕慢旅行推进当日节奏，结合拍摄许可模板安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          },
+          {
+            "key": "enxi-residency-day-3",
+            "day": 3,
+            "title": "鄂西峡谷共居计划 第3日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕人文在地推进当日节奏，结合共居日程安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              },
+              {
+                "type": "tips",
+                "title": "温馨提示",
+                "content": "建议参与者具备“能主动做家务”的基础条件，并为当天留出体力与节奏缓冲。"
+              }
+            ]
+          },
+          {
+            "key": "enxi-residency-day-4",
+            "day": 4,
+            "title": "鄂西峡谷共居计划 第4日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕慢旅行推进当日节奏，结合家庭介绍档案安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          },
+          {
+            "key": "enxi-residency-day-5",
+            "day": 5,
+            "title": "回到城市收束，完成本次行程复盘",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "上午完成最后一段内容或收尾安排，随后返程或原地解散，整理记录与反馈，确认后续资料交付方式。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "根据当日收尾节点统一返程或原地解散，具体以领队通知为准。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          }
+        ]
+      },
+      "costs": {
+        "include": [
+          {
+            "label": "集合",
+            "content": "恩施市区作为默认集合信息参考，最终以实际确认安排为准。"
+          },
+          {
+            "label": "服务",
+            "content": "包含家庭介绍档案、拍摄许可模板、共居日程等当前页面所述的主要服务内容。"
+          },
+          {
+            "label": "带领",
+            "content": "包含创作者/领队沟通、流程说明与必要的过程协作安排。"
+          },
+          {
+            "label": "节奏",
+            "content": "当前页面已按 5 天结构整理行程节奏，具体集合细节与准备事项会在确认后同步。"
+          }
+        ],
+        "exclude": [
+          {
+            "label": "相机设备",
+            "content": "相机设备相关费用需根据实际情况自行承担。"
+          },
+          {
+            "label": "交通",
+            "content": "交通相关费用需根据实际情况自行承担。"
+          }
+        ],
+        "refundRules": [
+          {
+            "days": "规则说明",
+            "percent": "匹配完成前可退全款，之后按家庭预备成本扣除。"
+          }
+        ]
+      },
+      "notices": [
+        {
+          "key": "traffic",
+          "title": "关于交通",
+          "content": "建议围绕恩施市区提前规划交通，并尽量在出行前7日前完成最终确认，预留必要的时间缓冲。"
+        },
+        {
+          "key": "local",
+          "title": "关于当地",
+          "content": "请尊重当地生活节奏与现场规则。具体在地安排会根据目的地情况、创作者节奏与出行时间进一步确认。"
+        },
+        {
+          "key": "safety",
+          "title": "安全告知",
+          "content": "建议优先满足“能主动做家务”等条件参与，建议年龄参考为18-55周岁；若存在“只想旁观”等情况，请在确认前先沟通。"
+        },
+        {
+          "key": "packing",
+          "title": "准备清单",
+          "content": "请结合“支付后 5 天安排匹配家庭”与“联合家庭协商，允许一次小调”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
+        }
+      ]
+    }
   },
   {
     "id": "svc-nanjiang-dune",
@@ -1174,7 +2711,269 @@
       "https://picsum.photos/seed/yezai-service-dune-sunset-detail-1/1200/900",
       "https://picsum.photos/seed/yezai-service-dune-sunset-detail-2/1200/900",
       "https://picsum.photos/seed/yezai-service-dune-sunset-detail-3/1200/900"
-    ]
+    ],
+    "travelDetail": {
+      "id": "travel-detail-dune-sunset",
+      "title": "沙丘黄昏聆听",
+      "overview": {
+        "coverImage": "https://picsum.photos/seed/yezai-dune-sunset-highlight-1a/1200/760",
+        "whyJoinText": "南疆沙丘的黄昏我录过很多次，开车穿过去、停下来录音的那一段，特别适合想独处又喜欢公路的人。\n\n你将围绕公路停靠点表、录音指南、沙丘安全提示展开体验与练习。",
+        "suitableTitle": "这段旅程适合谁",
+        "suitableText": "· 喜欢公路\n· 能忍受风沙\n· 乐于独处\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
+      },
+      "sections": [
+        {
+          "key": "overview",
+          "title": "概况",
+          "anchorId": "section_overview"
+        },
+        {
+          "key": "highlights",
+          "title": "亮点",
+          "anchorId": "section_highlights"
+        },
+        {
+          "key": "itinerary",
+          "title": "行程",
+          "anchorId": "section_itinerary"
+        },
+        {
+          "key": "notices",
+          "title": "须知",
+          "anchorId": "section_notices"
+        }
+      ],
+      "highlights": [
+        {
+          "id": "dune-sunset-highlight-core",
+          "title": "沙丘黄昏聆听的核心体验",
+          "description": "南疆沙丘的黄昏我录过很多次，开车穿过去、停下来录音的那一段，特别适合想独处又喜欢公路的人。",
+          "images": [
+            "https://picsum.photos/seed/yezai-dune-sunset-highlight-1a/1200/760",
+            "https://picsum.photos/seed/yezai-dune-sunset-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "dune-sunset-highlight-method",
+          "title": "围绕公路旅行建立可执行的行程节奏",
+          "description": "本次内容会围绕公路停靠点表、录音指南、沙丘安全提示展开，让体验、记录与在地互动都能有明确承载。",
+          "images": [
+            "https://picsum.photos/seed/yezai-dune-sunset-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "dune-sunset-highlight-place",
+          "title": "喀什市区出发的完整在地安排",
+          "description": "当前页面已经补齐 5 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
+          "images": [
+            "https://picsum.photos/seed/yezai-dune-sunset-highlight-3c/1200/760",
+            "https://picsum.photos/seed/yezai-dune-sunset-highlight-4d/1200/760"
+          ]
+        }
+      ],
+      "itinerary": {
+        "days": [
+          {
+            "key": "dune-sunset-day-1",
+            "day": 1,
+            "title": "喀什市区集合，确认本次安排",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "在喀什市区完成集合与签到，统一说明路线重点、节奏安排与本次体验方法，围绕“驾车穿越南疆沙丘，黄昏时分停驻录音并独处。”进入状态。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "往返喀什市区的大交通需自理，集合后按现场通知统一衔接后续安排。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "dune-sunset-day-2",
+            "day": 2,
+            "title": "沙丘黄昏聆听 第2日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕山地穿行推进当日节奏，结合录音指南安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "dune-sunset-day-3",
+            "day": 3,
+            "title": "沙丘黄昏聆听 第3日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕公路旅行推进当日节奏，结合沙丘安全提示安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              },
+              {
+                "type": "tips",
+                "title": "温馨提示",
+                "content": "建议参与者具备“喜欢公路”的基础条件，并为当天留出体力与节奏缓冲。"
+              }
+            ]
+          },
+          {
+            "key": "dune-sunset-day-4",
+            "day": 4,
+            "title": "沙丘黄昏聆听 第4日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕山地穿行推进当日节奏，结合公路停靠点表安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "dune-sunset-day-5",
+            "day": 5,
+            "title": "回到城市收束，完成本次行程复盘",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "上午完成最后一段内容或收尾安排，随后返程或原地解散，整理记录与反馈，确认后续资料交付方式。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "根据当日收尾节点统一返程或原地解散，具体以领队通知为准。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          }
+        ]
+      },
+      "costs": {
+        "include": [
+          {
+            "label": "集合",
+            "content": "喀什市区作为默认集合信息参考，最终以实际确认安排为准。"
+          },
+          {
+            "label": "服务",
+            "content": "包含公路停靠点表、录音指南、沙丘安全提示等当前页面所述的主要服务内容。"
+          },
+          {
+            "label": "带领",
+            "content": "包含创作者/领队沟通、流程说明与必要的过程协作安排。"
+          },
+          {
+            "label": "节奏",
+            "content": "当前页面已按 5 天结构整理行程节奏，具体集合细节与准备事项会在确认后同步。"
+          }
+        ],
+        "exclude": [
+          {
+            "label": "机票",
+            "content": "机票相关费用需根据实际情况自行承担。"
+          },
+          {
+            "label": "个人装备",
+            "content": "个人装备相关费用需根据实际情况自行承担。"
+          }
+        ],
+        "refundRules": [
+          {
+            "days": "规则说明",
+            "percent": "出发前 14 天可退 60%，之后依实际支出结算。"
+          }
+        ]
+      },
+      "notices": [
+        {
+          "key": "traffic",
+          "title": "关于交通",
+          "content": "建议围绕喀什市区提前规划交通，并尽量在出行前10日前完成最终确认，预留必要的时间缓冲。"
+        },
+        {
+          "key": "local",
+          "title": "关于当地",
+          "content": "请尊重当地生活节奏与现场规则。具体在地安排会根据目的地情况、创作者节奏与出行时间进一步确认。"
+        },
+        {
+          "key": "safety",
+          "title": "安全告知",
+          "content": "建议优先满足“喜欢公路”等条件参与，建议年龄参考为16-60周岁；若存在“怕沙”等情况，请在确认前先沟通。"
+        },
+        {
+          "key": "packing",
+          "title": "准备清单",
+          "content": "请结合“支付后 4 天提供设备清单”与“不可临时改期”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
+        }
+      ]
+    }
   },
   {
     "id": "svc-qinghai-loop",
@@ -1266,7 +3065,265 @@
       "https://picsum.photos/seed/yezai-service-qinghai-loop-detail-1/1200/900",
       "https://picsum.photos/seed/yezai-service-qinghai-loop-detail-2/1200/900",
       "https://picsum.photos/seed/yezai-service-qinghai-loop-detail-3/1200/900"
-    ]
+    ],
+    "travelDetail": {
+      "id": "travel-detail-qinghai-loop",
+      "title": "湖岸环线体感",
+      "overview": {
+        "coverImage": "https://picsum.photos/seed/yezai-qinghai-loop-highlight-1a/1200/760",
+        "whyJoinText": "青海湖岸环线我跑过很多趟，观星和牧场交流的节点都摸熟了，可以根据你的时间帮你设计一版。\n\n你将围绕环线路书、露营点位推荐、观测指引展开体验与练习。",
+        "suitableTitle": "这段旅程适合谁",
+        "suitableText": "· 喜欢自驾或骑行\n· 想理解湖岸生态\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
+      },
+      "sections": [
+        {
+          "key": "overview",
+          "title": "概况",
+          "anchorId": "section_overview"
+        },
+        {
+          "key": "highlights",
+          "title": "亮点",
+          "anchorId": "section_highlights"
+        },
+        {
+          "key": "itinerary",
+          "title": "行程",
+          "anchorId": "section_itinerary"
+        },
+        {
+          "key": "notices",
+          "title": "须知",
+          "anchorId": "section_notices"
+        }
+      ],
+      "highlights": [
+        {
+          "id": "qinghai-loop-highlight-core",
+          "title": "湖岸环线体感的核心体验",
+          "description": "青海湖岸环线我跑过很多趟，观星和牧场交流的节点都摸熟了，可以根据你的时间帮你设计一版。",
+          "images": [
+            "https://picsum.photos/seed/yezai-qinghai-loop-highlight-1a/1200/760",
+            "https://picsum.photos/seed/yezai-qinghai-loop-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "qinghai-loop-highlight-method",
+          "title": "围绕公路旅行建立可执行的行程节奏",
+          "description": "本次内容会围绕环线路书、露营点位推荐、观测指引展开，让体验、记录与在地互动都能有明确承载。",
+          "images": [
+            "https://picsum.photos/seed/yezai-qinghai-loop-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "qinghai-loop-highlight-place",
+          "title": "西宁市区出发的完整在地安排",
+          "description": "当前页面已经补齐 5 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
+          "images": [
+            "https://picsum.photos/seed/yezai-qinghai-loop-highlight-3c/1200/760",
+            "https://picsum.photos/seed/yezai-qinghai-loop-highlight-4d/1200/760"
+          ]
+        }
+      ],
+      "itinerary": {
+        "days": [
+          {
+            "key": "qinghai-loop-day-1",
+            "day": 1,
+            "title": "西宁市区集合，确认本次安排",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "在西宁市区完成集合与签到，统一说明路线重点、节奏安排与本次体验方法，围绕“根据时间设计湖岸环线，加入观星与牧场交流节点。”进入状态。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "往返西宁市区的大交通需自理，集合后按现场通知统一衔接后续安排。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          },
+          {
+            "key": "qinghai-loop-day-2",
+            "day": 2,
+            "title": "湖岸环线体感 第2日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕田野考察推进当日节奏，结合露营点位推荐安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          },
+          {
+            "key": "qinghai-loop-day-3",
+            "day": 3,
+            "title": "湖岸环线体感 第3日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕公路旅行推进当日节奏，结合观测指引安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              },
+              {
+                "type": "tips",
+                "title": "温馨提示",
+                "content": "建议参与者具备“喜欢自驾或骑行”的基础条件，并为当天留出体力与节奏缓冲。"
+              }
+            ]
+          },
+          {
+            "key": "qinghai-loop-day-4",
+            "day": 4,
+            "title": "湖岸环线体感 第4日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕田野考察推进当日节奏，结合环线路书安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          },
+          {
+            "key": "qinghai-loop-day-5",
+            "day": 5,
+            "title": "回到城市收束，完成本次行程复盘",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "上午完成最后一段内容或收尾安排，随后返程或原地解散，整理记录与反馈，确认后续资料交付方式。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "根据当日收尾节点统一返程或原地解散，具体以领队通知为准。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          }
+        ]
+      },
+      "costs": {
+        "include": [
+          {
+            "label": "集合",
+            "content": "西宁市区作为默认集合信息参考，最终以实际确认安排为准。"
+          },
+          {
+            "label": "服务",
+            "content": "包含环线路书、露营点位推荐、观测指引等当前页面所述的主要服务内容。"
+          },
+          {
+            "label": "带领",
+            "content": "包含创作者/领队沟通、流程说明与必要的过程协作安排。"
+          },
+          {
+            "label": "节奏",
+            "content": "当前页面已按 5 天结构整理行程节奏，具体集合细节与准备事项会在确认后同步。"
+          }
+        ],
+        "exclude": [
+          {
+            "label": "车辆与营",
+            "content": "车辆与营地搭建相关费用需根据实际情况自行承担。"
+          }
+        ],
+        "refundRules": [
+          {
+            "days": "规则说明",
+            "percent": "交付前可退 90%，交付后按比例退。"
+          }
+        ]
+      },
+      "notices": [
+        {
+          "key": "traffic",
+          "title": "关于交通",
+          "content": "建议围绕西宁市区提前规划交通，并尽量在出行前5日前完成最终确认，预留必要的时间缓冲。"
+        },
+        {
+          "key": "local",
+          "title": "关于当地",
+          "content": "请尊重当地生活节奏与现场规则。具体在地安排会根据目的地情况、创作者节奏与出行时间进一步确认。"
+        },
+        {
+          "key": "safety",
+          "title": "安全告知",
+          "content": "建议优先满足“喜欢自驾或骑行”等条件参与，建议年龄参考为12-65周岁；若存在“需要密集服务”等情况，请在确认前先沟通。"
+        },
+        {
+          "key": "packing",
+          "title": "准备清单",
+          "content": "请结合“支付后 3 天交付方案”与“支持 2 次调整”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
+        }
+      ]
+    }
   },
   {
     "id": "svc-yunnan-rainforest",
@@ -1357,7 +3414,265 @@
       "https://picsum.photos/seed/yezai-service-rainforest-dawn-detail-1/1200/900",
       "https://picsum.photos/seed/yezai-service-rainforest-dawn-detail-2/1200/900",
       "https://picsum.photos/seed/yezai-service-rainforest-dawn-detail-3/1200/900"
-    ]
+    ],
+    "travelDetail": {
+      "id": "travel-detail-rainforest-dawn",
+      "title": "雨林晨雾观察",
+      "overview": {
+        "coverImage": "https://picsum.photos/seed/yezai-rainforest-dawn-highlight-1a/1200/760",
+        "whyJoinText": "雨林晨雾和茶树的气味我记了很多本，跟着植物学者走几趟，用嗅觉认茶会变成习惯。推荐给愿意早起、能静下来观察的人。\n\n你将围绕植物观察册、气味练习卡、村民共餐展开体验与练习。",
+        "suitableTitle": "这段旅程适合谁",
+        "suitableText": "· 愿意早起\n· 能静坐观察\n· 喜欢手写\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
+      },
+      "sections": [
+        {
+          "key": "overview",
+          "title": "概况",
+          "anchorId": "section_overview"
+        },
+        {
+          "key": "highlights",
+          "title": "亮点",
+          "anchorId": "section_highlights"
+        },
+        {
+          "key": "itinerary",
+          "title": "行程",
+          "anchorId": "section_itinerary"
+        },
+        {
+          "key": "notices",
+          "title": "须知",
+          "anchorId": "section_notices"
+        }
+      ],
+      "highlights": [
+        {
+          "id": "rainforest-dawn-highlight-core",
+          "title": "雨林晨雾观察的核心体验",
+          "description": "雨林晨雾和茶树的气味我记了很多本，跟着植物学者走几趟，用嗅觉认茶会变成习惯。推荐给愿意早起、能静下来观察的人。",
+          "images": [
+            "https://picsum.photos/seed/yezai-rainforest-dawn-highlight-1a/1200/760",
+            "https://picsum.photos/seed/yezai-rainforest-dawn-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "rainforest-dawn-highlight-method",
+          "title": "围绕徒步自然建立可执行的行程节奏",
+          "description": "本次内容会围绕植物观察册、气味练习卡、村民共餐展开，让体验、记录与在地互动都能有明确承载。",
+          "images": [
+            "https://picsum.photos/seed/yezai-rainforest-dawn-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "rainforest-dawn-highlight-place",
+          "title": "西双版纳景洪出发的完整在地安排",
+          "description": "当前页面已经补齐 5 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
+          "images": [
+            "https://picsum.photos/seed/yezai-rainforest-dawn-highlight-3c/1200/760",
+            "https://picsum.photos/seed/yezai-rainforest-dawn-highlight-4d/1200/760"
+          ]
+        }
+      ],
+      "itinerary": {
+        "days": [
+          {
+            "key": "rainforest-dawn-day-1",
+            "day": 1,
+            "title": "西双版纳景洪集合，确认本次安排",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "在西双版纳景洪完成集合与签到，统一说明路线重点、节奏安排与本次体验方法，围绕“跟随植物学者记录雨林晨雾，练习以嗅觉识别茶树。”进入状态。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "往返西双版纳景洪的大交通需自理，集合后按现场通知统一衔接后续安排。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "rainforest-dawn-day-2",
+            "day": 2,
+            "title": "雨林晨雾观察 第2日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕慢旅行推进当日节奏，结合气味练习卡安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "rainforest-dawn-day-3",
+            "day": 3,
+            "title": "雨林晨雾观察 第3日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕徒步自然推进当日节奏，结合村民共餐安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              },
+              {
+                "type": "tips",
+                "title": "温馨提示",
+                "content": "建议参与者具备“愿意早起”的基础条件，并为当天留出体力与节奏缓冲。"
+              }
+            ]
+          },
+          {
+            "key": "rainforest-dawn-day-4",
+            "day": 4,
+            "title": "雨林晨雾观察 第4日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕慢旅行推进当日节奏，结合植物观察册安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "rainforest-dawn-day-5",
+            "day": 5,
+            "title": "回到城市收束，完成本次行程复盘",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "上午完成最后一段内容或收尾安排，随后返程或原地解散，整理记录与反馈，确认后续资料交付方式。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "根据当日收尾节点统一返程或原地解散，具体以领队通知为准。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          }
+        ]
+      },
+      "costs": {
+        "include": [
+          {
+            "label": "集合",
+            "content": "西双版纳景洪作为默认集合信息参考，最终以实际确认安排为准。"
+          },
+          {
+            "label": "服务",
+            "content": "包含植物观察册、气味练习卡、村民共餐等当前页面所述的主要服务内容。"
+          },
+          {
+            "label": "带领",
+            "content": "包含创作者/领队沟通、流程说明与必要的过程协作安排。"
+          },
+          {
+            "label": "节奏",
+            "content": "当前页面已按 5 天结构整理行程节奏，具体集合细节与准备事项会在确认后同步。"
+          }
+        ],
+        "exclude": [
+          {
+            "label": "机酒",
+            "content": "机酒相关费用需根据实际情况自行承担。"
+          }
+        ],
+        "refundRules": [
+          {
+            "days": "规则说明",
+            "percent": "出发前 10 天可退 70%，之后仅可转让。"
+          }
+        ]
+      },
+      "notices": [
+        {
+          "key": "traffic",
+          "title": "关于交通",
+          "content": "建议围绕西双版纳景洪提前规划交通，并尽量在出行前7日前完成最终确认，预留必要的时间缓冲。"
+        },
+        {
+          "key": "local",
+          "title": "关于当地",
+          "content": "请尊重当地生活节奏与现场规则。具体在地安排会根据目的地情况、创作者节奏与出行时间进一步确认。"
+        },
+        {
+          "key": "safety",
+          "title": "安全告知",
+          "content": "建议优先满足“愿意早起”等条件参与，建议年龄参考为10-60周岁；若存在“害怕虫蚁”等情况，请在确认前先沟通。"
+        },
+        {
+          "key": "packing",
+          "title": "准备清单",
+          "content": "请结合“支付后 6 天寄送准备包”与“不接受临时人数增加”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
+        }
+      ]
+    }
   },
   {
     "id": "svc-wuyi-ancient",
@@ -1450,7 +3765,242 @@
       "https://picsum.photos/seed/yezai-service-wuyi-ink-trail-detail-1/1200/900",
       "https://picsum.photos/seed/yezai-service-wuyi-ink-trail-detail-2/1200/900",
       "https://picsum.photos/seed/yezai-service-wuyi-ink-trail-detail-3/1200/900"
-    ]
+    ],
+    "travelDetail": {
+      "id": "travel-detail-wuyi-ink-trail",
+      "title": "武夷古道静心行",
+      "overview": {
+        "coverImage": "https://picsum.photos/seed/yezai-wuyi-ink-trail-highlight-1a/1200/760",
+        "whyJoinText": "武夷古道和茶农做青茶我走了很多年，体感写作这条线特别适合想慢下来、愿意动手、不怕淋雨的人。\n\n你将围绕古道行走笔记、茶叶制作体验、呼吸练习展开体验与练习。",
+        "suitableTitle": "这段旅程适合谁",
+        "suitableText": "· 渴望慢下来\n· 愿意实作\n· 不介意淋雨\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
+      },
+      "sections": [
+        {
+          "key": "overview",
+          "title": "概况",
+          "anchorId": "section_overview"
+        },
+        {
+          "key": "highlights",
+          "title": "亮点",
+          "anchorId": "section_highlights"
+        },
+        {
+          "key": "itinerary",
+          "title": "行程",
+          "anchorId": "section_itinerary"
+        },
+        {
+          "key": "notices",
+          "title": "须知",
+          "anchorId": "section_notices"
+        }
+      ],
+      "highlights": [
+        {
+          "id": "wuyi-ink-trail-highlight-core",
+          "title": "武夷古道静心行的核心体验",
+          "description": "武夷古道和茶农做青茶我走了很多年，体感写作这条线特别适合想慢下来、愿意动手、不怕淋雨的人。",
+          "images": [
+            "https://picsum.photos/seed/yezai-wuyi-ink-trail-highlight-1a/1200/760",
+            "https://picsum.photos/seed/yezai-wuyi-ink-trail-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "wuyi-ink-trail-highlight-method",
+          "title": "围绕慢旅行建立可执行的行程节奏",
+          "description": "本次内容会围绕古道行走笔记、茶叶制作体验、呼吸练习展开，让体验、记录与在地互动都能有明确承载。",
+          "images": [
+            "https://picsum.photos/seed/yezai-wuyi-ink-trail-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "wuyi-ink-trail-highlight-place",
+          "title": "武夷山景区入口出发的完整在地安排",
+          "description": "当前页面已经补齐 4 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
+          "images": [
+            "https://picsum.photos/seed/yezai-wuyi-ink-trail-highlight-3c/1200/760",
+            "https://picsum.photos/seed/yezai-wuyi-ink-trail-highlight-4d/1200/760"
+          ]
+        }
+      ],
+      "itinerary": {
+        "days": [
+          {
+            "key": "wuyi-ink-trail-day-1",
+            "day": 1,
+            "title": "武夷山景区入口集合，确认本次安排",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "在武夷山景区入口完成集合与签到，统一说明路线重点、节奏安排与本次体验方法，围绕“沿古道行走与茶农共制青茶，以体感写作为主线。”进入状态。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "往返武夷山景区入口的大交通需自理，集合后按现场通知统一衔接后续安排。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "wuyi-ink-trail-day-2",
+            "day": 2,
+            "title": "武夷古道静心行 第2日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕人文在地推进当日节奏，结合茶叶制作体验安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              },
+              {
+                "type": "tips",
+                "title": "温馨提示",
+                "content": "建议参与者具备“渴望慢下来”的基础条件，并为当天留出体力与节奏缓冲。"
+              }
+            ]
+          },
+          {
+            "key": "wuyi-ink-trail-day-3",
+            "day": 3,
+            "title": "武夷古道静心行 第3日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕慢旅行推进当日节奏，结合呼吸练习安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          },
+          {
+            "key": "wuyi-ink-trail-day-4",
+            "day": 4,
+            "title": "回到城市收束，完成本次行程复盘",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "上午完成最后一段内容或收尾安排，随后返程或原地解散，整理记录与反馈，确认后续资料交付方式。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "根据当日收尾节点统一返程或原地解散，具体以领队通知为准。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及住宿或驻点，将按当日推进节点安排，并以最终行前通知为准。"
+              }
+            ]
+          }
+        ]
+      },
+      "costs": {
+        "include": [
+          {
+            "label": "集合",
+            "content": "武夷山景区入口作为默认集合信息参考，最终以实际确认安排为准。"
+          },
+          {
+            "label": "服务",
+            "content": "包含古道行走笔记、茶叶制作体验、呼吸练习等当前页面所述的主要服务内容。"
+          },
+          {
+            "label": "带领",
+            "content": "包含创作者/领队沟通、流程说明与必要的过程协作安排。"
+          },
+          {
+            "label": "节奏",
+            "content": "当前页面已按 4 天结构整理行程节奏，具体集合细节与准备事项会在确认后同步。"
+          }
+        ],
+        "exclude": [
+          {
+            "label": "往返交通",
+            "content": "往返交通相关费用需根据实际情况自行承担。"
+          },
+          {
+            "label": "个人加购",
+            "content": "个人加购相关费用需根据实际情况自行承担。"
+          }
+        ],
+        "refundRules": [
+          {
+            "days": "规则说明",
+            "percent": "行前 7 天退 60%，其余扣除茶农准备成本。"
+          }
+        ]
+      },
+      "notices": [
+        {
+          "key": "traffic",
+          "title": "关于交通",
+          "content": "建议围绕武夷山景区入口提前规划交通，并尽量在出行前5日前完成最终确认，预留必要的时间缓冲。"
+        },
+        {
+          "key": "local",
+          "title": "关于当地",
+          "content": "请尊重当地生活节奏与现场规则。具体在地安排会根据目的地情况、创作者节奏与出行时间进一步确认。"
+        },
+        {
+          "key": "safety",
+          "title": "安全告知",
+          "content": "建议优先满足“渴望慢下来”等条件参与，建议年龄参考为12-65周岁；若存在“需要硬性打卡”等情况，请在确认前先沟通。"
+        },
+        {
+          "key": "packing",
+          "title": "准备清单",
+          "content": "请结合“支付后 5 天发送体感练习音频”与“可更换 1 次日期”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
+        }
+      ]
+    }
   },
   {
     "id": "svc-minbei-creek",
@@ -1540,6 +4090,210 @@
       "https://picsum.photos/seed/yezai-service-minbei-creek-study-detail-1/1200/900",
       "https://picsum.photos/seed/yezai-service-minbei-creek-study-detail-2/1200/900",
       "https://picsum.photos/seed/yezai-service-minbei-creek-study-detail-3/1200/900"
-    ]
+    ],
+    "travelDetail": {
+      "id": "travel-detail-minbei-creek-study",
+      "title": "溪谷水声研究",
+      "overview": {
+        "coverImage": "https://picsum.photos/seed/yezai-minbei-creek-study-highlight-1a/1200/760",
+        "whyJoinText": "闽北溪谷的水声我录了很多段，按你的驻留天数可以帮你设计一条采集路线，适合自带设备、喜欢林间走的人。\n\n你将围绕驻留日程、录音节点图、村落联系人展开体验与练习。",
+        "suitableTitle": "这段旅程适合谁",
+        "suitableText": "· 自带录音设备\n· 喜欢林间漫步\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
+      },
+      "sections": [
+        {
+          "key": "overview",
+          "title": "概况",
+          "anchorId": "section_overview"
+        },
+        {
+          "key": "highlights",
+          "title": "亮点",
+          "anchorId": "section_highlights"
+        },
+        {
+          "key": "itinerary",
+          "title": "行程",
+          "anchorId": "section_itinerary"
+        },
+        {
+          "key": "notices",
+          "title": "须知",
+          "anchorId": "section_notices"
+        }
+      ],
+      "highlights": [
+        {
+          "id": "minbei-creek-study-highlight-core",
+          "title": "溪谷水声研究的核心体验",
+          "description": "闽北溪谷的水声我录了很多段，按你的驻留天数可以帮你设计一条采集路线，适合自带设备、喜欢林间走的人。",
+          "images": [
+            "https://picsum.photos/seed/yezai-minbei-creek-study-highlight-1a/1200/760",
+            "https://picsum.photos/seed/yezai-minbei-creek-study-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "minbei-creek-study-highlight-method",
+          "title": "围绕慢旅行建立可执行的行程节奏",
+          "description": "本次内容会围绕驻留日程、录音节点图、村落联系人展开，让体验、记录与在地互动都能有明确承载。",
+          "images": [
+            "https://picsum.photos/seed/yezai-minbei-creek-study-highlight-2b/1200/760"
+          ]
+        },
+        {
+          "id": "minbei-creek-study-highlight-place",
+          "title": "闽北溪谷入口出发的完整在地安排",
+          "description": "当前页面已经补齐 3 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
+          "images": [
+            "https://picsum.photos/seed/yezai-minbei-creek-study-highlight-3c/1200/760",
+            "https://picsum.photos/seed/yezai-minbei-creek-study-highlight-4d/1200/760"
+          ]
+        }
+      ],
+      "itinerary": {
+        "days": [
+          {
+            "key": "minbei-creek-study-day-1",
+            "day": 1,
+            "title": "闽北溪谷入口集合，确认本次安排",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "在闽北溪谷入口完成集合与签到，统一说明路线重点、节奏安排与本次体验方法，围绕“根据驻留天数设计溪谷采集路线，帮助旅人记录溪流声音。”进入状态。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "往返闽北溪谷入口的大交通需自理，集合后按现场通知统一衔接后续安排。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          },
+          {
+            "key": "minbei-creek-study-day-2",
+            "day": 2,
+            "title": "溪谷水声研究 第2日推进",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "围绕徒步自然推进当日节奏，结合录音节点图安排步行、停留、观察或沟通时段，让体验和推进保持平衡。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "以步行、短驳接驳或现场协调交通为主，实际安排会根据路况和团队状态微调。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              },
+              {
+                "type": "tips",
+                "title": "温馨提示",
+                "content": "建议参与者具备“自带录音设备”的基础条件，并为当天留出体力与节奏缓冲。"
+              }
+            ]
+          },
+          {
+            "key": "minbei-creek-study-day-3",
+            "day": 3,
+            "title": "回到城市收束，完成本次行程复盘",
+            "modules": [
+              {
+                "type": "schedule",
+                "title": "当日行程",
+                "content": "上午完成最后一段内容或收尾安排，随后返程或原地解散，整理记录与反馈，确认后续资料交付方式。"
+              },
+              {
+                "type": "transport",
+                "title": "交通",
+                "content": "根据当日收尾节点统一返程或原地解散，具体以领队通知为准。"
+              },
+              {
+                "type": "meals",
+                "title": "餐食",
+                "content": "餐食安排以当天节点为准，建议随身保留轻补给与饮水，避免中段断档。"
+              },
+              {
+                "type": "accommodation",
+                "title": "住宿",
+                "content": "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
+              }
+            ]
+          }
+        ]
+      },
+      "costs": {
+        "include": [
+          {
+            "label": "集合",
+            "content": "闽北溪谷入口作为默认集合信息参考，最终以实际确认安排为准。"
+          },
+          {
+            "label": "服务",
+            "content": "包含驻留日程、录音节点图、村落联系人等当前页面所述的主要服务内容。"
+          },
+          {
+            "label": "带领",
+            "content": "包含创作者/领队沟通、流程说明与必要的过程协作安排。"
+          },
+          {
+            "label": "节奏",
+            "content": "当前页面已按 3 天结构整理行程节奏，具体集合细节与准备事项会在确认后同步。"
+          }
+        ],
+        "exclude": [
+          {
+            "label": "交通与住",
+            "content": "交通与住宿预订相关费用需根据实际情况自行承担。"
+          }
+        ],
+        "refundRules": [
+          {
+            "days": "规则说明",
+            "percent": "定稿前可退 70%，定稿后按工作量结算。"
+          }
+        ]
+      },
+      "notices": [
+        {
+          "key": "traffic",
+          "title": "关于交通",
+          "content": "建议围绕闽北溪谷入口提前规划交通，并尽量在出行前3日前完成最终确认，预留必要的时间缓冲。"
+        },
+        {
+          "key": "local",
+          "title": "关于当地",
+          "content": "请尊重当地生活节奏与现场规则。具体在地安排会根据目的地情况、创作者节奏与出行时间进一步确认。"
+        },
+        {
+          "key": "safety",
+          "title": "安全告知",
+          "content": "建议优先满足“自带录音设备”等条件参与，建议年龄参考为10-60周岁；若存在“只想城市活动”等情况，请在确认前先沟通。"
+        },
+        {
+          "key": "packing",
+          "title": "准备清单",
+          "content": "请结合“支付后 2 天提供框架，5 天内定稿”与“含 2 次在线讨论”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
+        }
+      ]
+    }
   }
 ]

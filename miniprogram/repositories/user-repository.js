@@ -1,10 +1,21 @@
-const { DATA_SOURCE_TYPES, getUserDataSource } = require("../constants/data-source");
+const { DATA_SOURCE_TYPES, getUserDataSource, isCloudFallbackEnabled } = require("../constants/data-source");
 const cloudUserApi = require("../api/cloud/user");
 const legacyUserRepository = require("./legacy/user-repository");
 const { mapUser } = require("../mappers/user");
 
 function getRepository() {
   return getUserDataSource() === DATA_SOURCE_TYPES.CLOUD ? cloudUserApi : legacyUserRepository;
+}
+
+function getSessionSnapshot() {
+  const sessionActive = legacyUserRepository.isSessionActive();
+  const cachedUser = legacyUserRepository.getCachedUser();
+  const user = sessionActive ? mapUser(cachedUser || {}) : null;
+
+  return {
+    loggedIn: Boolean(sessionActive),
+    user
+  };
 }
 
 async function getCurrentUser() {
@@ -56,6 +67,9 @@ async function login() {
     legacyUserRepository.setCachedUser(user);
     return user;
   } catch (error) {
+    if (!isCloudFallbackEnabled()) {
+      throw error;
+    }
     const fallbackUser = await legacyUserRepository.login(profile);
     return mapUser(fallbackUser);
   }
@@ -68,6 +82,7 @@ async function logout() {
 
 module.exports = {
   getCurrentUser,
+  getSessionSnapshot,
   login,
   logout
 };

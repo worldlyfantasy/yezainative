@@ -1,14 +1,17 @@
-const { getMyPageData, login, logout } = require("../../services/user");
+const { getMyPageData, getMyPageInitialState, login, logout } = require("../../services/user");
 const { showOfflineOrderNotice } = require("../../utils/offline");
 const { pickAuditText } = require("../../utils/audit");
 
 Page({
-  data: {
-    loggedIn: false,
-    user: null,
-    shortcuts: [],
-    activeTrips: [],
-    recentOrders: []
+  data: Object.assign(
+    {
+      refreshPending: false
+    },
+    getMyPageInitialState()
+  ),
+
+  onLoad() {
+    this.setData(getMyPageInitialState());
   },
 
   onShow() {
@@ -16,7 +19,28 @@ Page({
   },
 
   async refresh() {
-    this.setData(await getMyPageData());
+    if (this.data.refreshPending) {
+      return;
+    }
+
+    this.setData({
+      refreshPending: true
+    });
+
+    try {
+      this.setData(
+        Object.assign(
+          {
+            refreshPending: false
+          },
+          await getMyPageData()
+        )
+      );
+    } catch (error) {
+      this.setData({
+        refreshPending: false
+      });
+    }
   },
 
   async handleLogin() {
