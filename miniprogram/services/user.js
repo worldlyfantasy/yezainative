@@ -1,4 +1,4 @@
-const { getCurrentUser, getSessionSnapshot, login, logout } = require("../repositories/user-repository");
+const { getCurrentUser, getSessionSnapshot, login, updateProfile, logout } = require("../repositories/user-repository");
 const { getRecentOrders } = require("../repositories/transaction-repository");
 const { getServiceCreatorRoles, getServiceCreatorRoleText } = require("./service-roles");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("./navigation");
@@ -116,6 +116,7 @@ module.exports = {
   getCurrentUser,
   getMyPageInitialState,
   login,
+  updateProfile,
   logout,
   getMyPageData,
   ensureLoggedIn

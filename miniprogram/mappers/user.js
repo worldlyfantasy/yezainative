@@ -22,7 +22,8 @@ function mapUser(payload) {
     nickname: normalizeNickname(source.nickname),
     avatarUrl: source.avatarUrl || "",
     memberLabel: source.memberLabel || "野哉会员",
-    role: source.role || "user"
+    role: source.role || "user",
+    profileConfigured: Boolean(source.profileConfigured)
   };
 }
 

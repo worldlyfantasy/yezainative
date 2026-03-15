@@ -176,19 +176,74 @@
   gap: 24rpx;
 }
 
-.profile-identity__avatar {
+.profile-identity__avatar-wrap {
+  position: relative;
   width: 132rpx;
   height: 132rpx;
   flex-shrink: 0;
+  z-index: 0;
+}
+
+.profile-identity__avatar-hitbox {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  opacity: 0;
+}
+
+.profile-identity__avatar-hitbox::after {
+  border: none;
+}
+
+.profile-identity__avatar {
+  width: 132rpx;
+  height: 132rpx;
   border-radius: 50%;
   border: 6rpx solid rgba(255, 250, 242, 0.8);
   box-shadow: 0 12rpx 24rpx rgba(98, 79, 54, 0.12);
 }
 
+.profile-identity__avatar--placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  background:
+    radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0) 36%),
+    linear-gradient(145deg, rgba(212, 205, 194, 0.9), rgba(236, 232, 224, 0.98));
+  box-shadow:
+    inset 0 2rpx 10rpx rgba(255, 255, 255, 0.46),
+    0 12rpx 24rpx rgba(98, 79, 54, 0.08);
+}
+
+.profile-identity__avatar-placeholder {
+  font-size: 18rpx;
+  line-height: 1.35;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+  color: rgba(97, 89, 77, 0.9);
+}
+
 .profile-identity__meta {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-width: 0;
   padding-top: 2rpx;
+}
+
+.profile-identity__name-hit {
+  display: inline-flex;
+  align-items: flex-start;
+  max-width: 100%;
+}
+
+.profile-identity__name-hit--pressing {
+  opacity: 0.76;
 }
 
 .profile-identity__name {
@@ -243,6 +298,55 @@
 
 .profile-identity__logout--pressing {
   opacity: 0.75;
+}
+
+.profile-identity__nickname-editor {
+  margin-left: 160rpx;
+  margin-right: 20rpx;
+}
+
+.profile-identity__nickname-input {
+  min-height: 74rpx;
+  padding: 0 22rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 250, 242, 0.94);
+  font-size: 28rpx;
+  color: #2a2119;
+  box-shadow: inset 0 0 0 1rpx rgba(151, 124, 91, 0.12);
+}
+
+.profile-identity__nickname-actions {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  margin-top: 14rpx;
+}
+
+.profile-identity__nickname-cancel,
+.profile-identity__nickname-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 104rpx;
+  min-height: 60rpx;
+  padding: 0 22rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+}
+
+.profile-identity__nickname-cancel {
+  color: rgba(143, 61, 36, 0.88);
+  background: rgba(255, 250, 242, 0.82);
+}
+
+.profile-identity__nickname-save {
+  color: #f8f1e7;
+  background: linear-gradient(135deg, #9a6840, #7d5231);
+}
+
+.profile-identity__nickname-cancel--pressing,
+.profile-identity__nickname-save--pressing {
+  opacity: 0.78;
 }
 
 .profile-entry-grid {

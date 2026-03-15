@@ -37,31 +37,11 @@ async function getCurrentUser() {
   }
 }
 
-function requestWechatProfile() {
-  return new Promise((resolve) => {
-    if (typeof wx.getUserProfile !== "function") {
-      resolve({});
-      return;
-    }
-
-    wx.getUserProfile({
-      desc: "用于完善个人资料与订单联系信息",
-      success: (result) => {
-        resolve(result && result.userInfo ? result.userInfo : {});
-      },
-      fail: () => {
-        resolve({});
-      }
-    });
-  });
-}
-
 async function login() {
   const repository = getRepository();
-  const profile = await requestWechatProfile();
 
   try {
-    const payload = await repository.login(profile);
+    const payload = await repository.login();
     const user = mapUser(payload);
     legacyUserRepository.setSessionActive(true);
     legacyUserRepository.setCachedUser(user);
@@ -70,7 +50,25 @@ async function login() {
     if (!isCloudFallbackEnabled()) {
       throw error;
     }
-    const fallbackUser = await legacyUserRepository.login(profile);
+    const fallbackUser = await legacyUserRepository.login();
+    return mapUser(fallbackUser);
+  }
+}
+
+async function updateProfile(profile) {
+  const repository = getRepository();
+
+  try {
+    const payload = await repository.updateProfile(profile);
+    const user = mapUser(payload);
+    legacyUserRepository.setCachedUser(user);
+    return user;
+  } catch (error) {
+    if (!isCloudFallbackEnabled()) {
+      throw error;
+    }
+
+    const fallbackUser = await legacyUserRepository.updateProfile(profile);
     return mapUser(fallbackUser);
   }
 }
@@ -84,5 +82,6 @@ module.exports = {
   getCurrentUser,
   getSessionSnapshot,
   login,
+  updateProfile,
   logout
 };

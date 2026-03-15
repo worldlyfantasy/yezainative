@@ -35,7 +35,14 @@ function login(profile) {
   });
 }
 
+function updateProfile(profile) {
+  return callUserGateway("updateProfile", {
+    profile: profile || {}
+  });
+}
+
 module.exports = {
   getCurrentUser,
-  login
+  login,
+  updateProfile
 };

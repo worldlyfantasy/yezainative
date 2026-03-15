@@ -14,12 +14,40 @@
       <text class="profile-hero__eyebrow">MY YEZAI</text>
       <view class="profile-identity">
         <view class="profile-identity__row">
-          <image class="profile-identity__avatar" src="{{user.avatarUrl}}" mode="aspectFill"></image>
+          <view class="profile-identity__avatar-wrap">
+            <image wx:if="{{profileDraftAvatarUrl}}" class="profile-identity__avatar" src="{{profileDraftAvatarUrl}}" mode="aspectFill"></image>
+            <image wx:elif="{{user.avatarUrl}}" class="profile-identity__avatar" src="{{user.avatarUrl}}" mode="aspectFill"></image>
+            <view wx:else class="profile-identity__avatar profile-identity__avatar--placeholder">
+              <text class="profile-identity__avatar-placeholder">点击</text>
+              <text class="profile-identity__avatar-placeholder">编辑</text>
+            </view>
+            <button class="profile-identity__avatar-hitbox" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar"></button>
+          </view>
           <view class="profile-identity__meta">
-            <text class="profile-identity__name">{{user.nickname}}</text>
+            <view class="profile-identity__name-hit" catchtap="handleStartNicknameEdit" hover-class="profile-identity__name-hit--pressing" hover-stay-time="100">
+              <text class="profile-identity__name">{{user.nickname}}</text>
+            </view>
             <text class="profile-identity__member">{{user.memberLabel}}</text>
           </view>
           <view class="profile-identity__logout" bindtap="handleLogout" hover-class="profile-identity__logout--pressing" hover-stay-time="100"><text class="profile-identity__logout-text">退出</text><text class="profile-identity__logout-arrow">→</text></view>
+        </view>
+        <view wx:if="{{profileNicknameEditing}}" class="profile-identity__nickname-editor">
+          <input
+            class="profile-identity__nickname-input"
+            type="nickname"
+            maxlength="20"
+            placeholder="输入或选择昵称"
+            value="{{profileDraftNickname}}"
+            focus="{{nicknameInputFocus}}"
+            confirm-type="done"
+            bindinput="handleNicknameInput"
+            bindblur="handleNicknameBlur"
+            bindconfirm="handleNicknameConfirm"
+          />
+          <view class="profile-identity__nickname-actions">
+            <view class="profile-identity__nickname-cancel" bindtap="handleNicknameCancel" hover-class="profile-identity__nickname-cancel--pressing" hover-stay-time="100">取消</view>
+            <view class="profile-identity__nickname-save" bindtap="handleNicknameSaveTap" hover-class="profile-identity__nickname-save--pressing" hover-stay-time="100">完成</view>
+          </view>
         </view>
       </view>
     </view>

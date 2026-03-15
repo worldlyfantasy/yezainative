@@ -41,12 +41,27 @@ function login() {
     avatarUrl: "https://picsum.photos/seed/yezai-user-avatar/240/240",
     nickname: "旅人",
     memberLabel: "野哉会员",
-    role: "user"
+    role: "user",
+    profileConfigured: true
   };
 
   setCachedUser(profile);
   setSessionActive(true);
   return Promise.resolve(profile);
+}
+
+function updateProfile(profile) {
+  const currentUser = getCachedUser() || {};
+  const nextUser = Object.assign({}, currentUser, {
+    nickname: profile && profile.nickname ? profile.nickname : currentUser.nickname || "旅人",
+    avatarUrl: profile && profile.avatarUrl ? profile.avatarUrl : currentUser.avatarUrl || "",
+    memberLabel: currentUser.memberLabel || "野哉会员",
+    role: currentUser.role || "user",
+    profileConfigured: true
+  });
+
+  setCachedUser(nextUser);
+  return Promise.resolve(nextUser);
 }
 
 function logout() {
@@ -58,6 +73,7 @@ function logout() {
 module.exports = {
   getCurrentUser,
   login,
+  updateProfile,
   logout,
   getCachedUser,
   setCachedUser,
