@@ -592,9 +592,8 @@
 
 .active-trip-card__top {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16rpx;
+  align-items: center;
+  gap: 12rpx;
 }
 
 .active-trip-card__title {
@@ -607,10 +606,10 @@
   color: #2a2119;
 }
 
-.active-trip-card__badge {
+.active-trip-card__phase {
   flex-shrink: 0;
   display: inline-block;
-  padding: 8rpx 12rpx;
+  padding: 7rpx 12rpx;
   border-radius: 999rpx;
   background: rgba(143, 61, 36, 0.09);
   font-size: 20rpx;

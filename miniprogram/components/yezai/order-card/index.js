@@ -13,11 +13,6 @@ Component({
       this.triggerEvent("cardtap", {
         id: this.properties.order.id
       });
-    },
-    handlePayTap() {
-      this.triggerEvent("paytap", {
-        id: this.properties.order.id
-      });
     }
   }
 });

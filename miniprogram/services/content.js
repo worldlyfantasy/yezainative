@@ -18,6 +18,13 @@ const { parseIdeaBody } = require("../utils/content");
 const { isFavorited } = require("./favorites");
 const { pickAuditText } = require("../utils/audit");
 const { getServiceCreatorRoles } = require("./service-roles");
+const {
+  normalizeCreatorAssetFields,
+  normalizeDestinationAssetFields,
+  normalizeHeroSlides,
+  normalizeIdeaAssetFields,
+  normalizeServiceAssetFields
+} = require("./image-ref");
 
 function buildOptionList(items, mode) {
   return [{ label: "全部", value: "" }].concat(
@@ -39,7 +46,7 @@ function buildOptionList(items, mode) {
 
 function getHomePageData() {
   return {
-    heroSlides: [
+    heroSlides: normalizeHeroSlides([
       {
         id: "hero-aba-presence",
         variant: "photo",
@@ -61,12 +68,13 @@ function getHomePageData() {
         desc: "",
         subDesc: ""
       }
-    ],
-    featuredCreators: creators.slice(0, 3),
-    featuredDestinations: destinations.slice(0, 4),
+    ]),
+    featuredCreators: creators.slice(0, 3).map(normalizeCreatorAssetFields),
+    featuredDestinations: destinations.slice(0, 4).map(normalizeDestinationAssetFields),
     featuredIdeas: ideas.slice(0, 3).map((idea) => {
+      const normalizedIdea = normalizeIdeaAssetFields(idea);
       const author = creators.find((creator) => creator.id === idea.authorId);
-      return Object.assign({}, idea, {
+      return Object.assign({}, normalizedIdea, {
         authorName: author ? author.name : ""
       });
     })
@@ -95,23 +103,21 @@ function getCreatorDetailData(slug) {
   const relatedServices = services
     .filter((service) => creator.serviceIds.includes(service.id))
     .map((service) => Object.assign({}, service, { creatorName: creator.name }));
-  const groupServices = relatedServices.filter((service) => creator.groupIds.includes(service.id));
   const creatorIdeas = (ideas || []).filter((idea) => idea.authorId === creator.id);
 
   return {
-    creator: Object.assign({}, creator, {
+    creator: Object.assign({}, normalizeCreatorAssetFields(creator), {
       isFavorited: isFavorited("creators", creator.slug)
     }),
-    creatorDestinations,
-    relatedServices,
-    groupServices,
-    creatorIdeas
+    creatorDestinations: creatorDestinations.map(normalizeDestinationAssetFields),
+    relatedServices: relatedServices.map(normalizeServiceAssetFields),
+    creatorIdeas: creatorIdeas.map(normalizeIdeaAssetFields)
   };
 }
 
 function getDestinationsPageData(search) {
   return {
-    destinations: filterDestinations(search || "")
+    destinations: filterDestinations(search || "").map(normalizeDestinationAssetFields)
   };
 }
 
@@ -153,16 +159,16 @@ function getDestinationDetailData(slug, filters) {
   });
 
   return {
-    destination: Object.assign({}, destination, {
+    destination: Object.assign({}, normalizeDestinationAssetFields(destination), {
       isFavorited: isFavorited("destinations", destination.slug)
     }),
     typeOptions,
     styleOptions,
     typeLabels: typeOptions.map((item) => item.label),
     styleLabels: styleOptions.map((item) => item.label),
-    relatedCreators,
-    relatedIdeas,
-    services: matchedServices
+    relatedCreators: relatedCreators.map(normalizeCreatorAssetFields),
+    relatedIdeas: relatedIdeas.map(normalizeIdeaAssetFields),
+    services: matchedServices.map(normalizeServiceAssetFields)
   };
 }
 
@@ -187,7 +193,7 @@ function getIdeasPageData(theme, creatorSlug) {
   return {
     themes,
     pageTitle,
-    ideas: filteredIdeas
+    ideas: filteredIdeas.map(normalizeIdeaAssetFields)
   };
 }
 
@@ -200,10 +206,10 @@ function getIdeaDetailData(slug) {
   const author = creators.find((creator) => creator.id === idea.authorId) || null;
 
   return {
-    idea: Object.assign({}, idea, {
+    idea: Object.assign({}, normalizeIdeaAssetFields(idea), {
       isFavorited: isFavorited("ideas", idea.slug)
     }),
-    author,
+    author: normalizeCreatorAssetFields(author),
     blocks: parseIdeaBody(idea.body)
   };
 }
@@ -567,11 +573,13 @@ function getServiceDetailData(slug) {
     return null;
   }
 
+  const normalizedService = normalizeServiceAssetFields(service);
   const creator = creators.find((item) => item.id === service.creatorId) || null;
   const relatedDestinations = destinations.filter((item) => service.destinationSlugs.includes(item.slug));
-  const heroCover = service.cover || (relatedDestinations[0] ? relatedDestinations[0].cover : "");
+  const normalizedDestinations = relatedDestinations.map(normalizeDestinationAssetFields);
+  const heroCover = normalizedService.cover || (normalizedDestinations[0] ? normalizedDestinations[0].cover : "");
   const photoGallery =
-    service.gallery && service.gallery.length ? service.gallery : heroCover ? [heroCover] : [];
+    normalizedService.gallery && normalizedService.gallery.length ? normalizedService.gallery : heroCover ? [heroCover] : [];
 
   const photoBaseList = heroCover ? [heroCover].concat(photoGallery) : photoGallery;
   const photoTotal = photoBaseList.length;
@@ -597,10 +605,10 @@ function getServiceDetailData(slug) {
   const groupPeriods = (service.groupPeriods || []).map(buildGroupPeriodDisplay);
   const tags = Array.isArray(service.tags) ? service.tags : [];
   const creatorRoles = getServiceCreatorRoles(service);
-  const travelDetail = service.travelDetail || buildServiceTravelDetail(service, tags, photoBaseList);
+  const travelDetail = normalizedService.travelDetail || buildServiceTravelDetail(normalizedService, tags, photoBaseList);
 
   return {
-    service: Object.assign({}, service, {
+    service: Object.assign({}, normalizedService, {
       isFavorited: isFavorited("services", service.slug),
       tags,
       creatorRoles,
@@ -608,8 +616,8 @@ function getServiceDetailData(slug) {
       refundDisplay: getServiceAdjustmentDisplayText(service.refund)
     }),
     travelDetail,
-    creator,
-    relatedDestinations,
+    creator: normalizeCreatorAssetFields(creator),
+    relatedDestinations: normalizedDestinations,
     heroCover,
     photoGallery,
     photoTotal,

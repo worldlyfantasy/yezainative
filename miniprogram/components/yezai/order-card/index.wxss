@@ -20,11 +20,6 @@
   color: #6a5a4b;
 }
 
-.order-card__status {
-  font-size: 22rpx;
-  color: #993921;
-}
-
 .order-card__name {
   font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 34rpx;

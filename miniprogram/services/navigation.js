@@ -3,7 +3,7 @@ const TOP_LEVEL_ROUTES = {
   home: "/pages/home/home",
   creators: "/pages/creators/index",
   destinations: "/pages/destinations/index",
-  ideas: "/pages/ideas/index",
+  ideas: "/pkg/content/ideas/index",
   profile: "/pages/profile/index"
 };
 
@@ -24,29 +24,29 @@ function resolveTopLevelRoute(route) {
     return TOP_LEVEL_ROUTES.home;
   }
 
-  if (normalized.indexOf("pages/creator-detail/") === 0 || normalized.indexOf("pages/creators/") === 0) {
+  if (normalized.indexOf("pkg/explore/creator-detail/") === 0 || normalized.indexOf("pages/creators/") === 0) {
     return TOP_LEVEL_ROUTES.creators;
   }
 
   if (
-    normalized.indexOf("pages/destination-detail/") === 0 ||
+    normalized.indexOf("pkg/explore/destination-detail/") === 0 ||
     normalized.indexOf("pages/destinations/") === 0 ||
-    normalized.indexOf("pages/service-detail/") === 0 ||
-    normalized.indexOf("pages/checkout/") === 0
+    normalized.indexOf("pkg/explore/service-detail/") === 0 ||
+    normalized.indexOf("pkg/explore/checkout/") === 0
   ) {
     return TOP_LEVEL_ROUTES.destinations;
   }
 
-  if (normalized.indexOf("pages/idea-detail/") === 0 || normalized.indexOf("pages/ideas/") === 0) {
+  if (normalized.indexOf("pkg/content/idea-detail/") === 0 || normalized.indexOf("pkg/content/ideas/") === 0) {
     return TOP_LEVEL_ROUTES.creators;
   }
 
   if (
     normalized.indexOf("pages/profile/") === 0 ||
-    normalized.indexOf("pages/favorites/") === 0 ||
-    normalized.indexOf("pages/orders/") === 0 ||
-    normalized.indexOf("pages/order-detail/") === 0 ||
-    normalized.indexOf("pages/payment-result/") === 0
+    normalized.indexOf("pkg/account/favorites/") === 0 ||
+    normalized.indexOf("pkg/account/orders/") === 0 ||
+    normalized.indexOf("pkg/account/order-detail/") === 0 ||
+    normalized.indexOf("pkg/account/payment-result/") === 0
   ) {
     return TOP_LEVEL_ROUTES.profile;
   }

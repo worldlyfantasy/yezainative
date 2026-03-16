@@ -265,14 +265,14 @@ Page({
     const key = event.currentTarget.dataset.key;
     if (key === "orders") {
       wx.navigateTo({
-        url: "/pages/orders/index"
+        url: "/pkg/account/orders/index"
       });
       return;
     }
 
     if (key === "favorites") {
       wx.navigateTo({
-        url: "/pages/favorites/index"
+        url: "/pkg/account/favorites/index"
       });
       return;
     }
@@ -284,7 +284,7 @@ Page({
     const slug = event.currentTarget.dataset.slug;
     if (!slug) return;
     wx.navigateTo({
-      url: `/pages/service-detail/index?slug=${slug}`
+      url: `/pkg/explore/service-detail/index?slug=${slug}`
     });
   },
 
@@ -292,13 +292,13 @@ Page({
     const slug = event.currentTarget.dataset.slug;
     if (!slug) return;
     wx.navigateTo({
-      url: `/pages/creator-detail/index?slug=${slug}`
+      url: `/pkg/explore/creator-detail/index?slug=${slug}`
     });
   },
 
   onOrderTap(event) {
     wx.navigateTo({
-      url: `/pages/order-detail/index?id=${event.currentTarget.dataset.id}`
+      url: `/pkg/account/order-detail/index?id=${event.currentTarget.dataset.id}`
     });
   }
 });

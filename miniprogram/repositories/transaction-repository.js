@@ -1,4 +1,4 @@
-const { getOrderTabsMeta } = require("../constants/transaction-meta");
+const { getOrderTabsMeta, filterOrdersByDisplayStatus } = require("../constants/transaction-meta");
 const { DATA_SOURCE_TYPES, getTransactionDataSource, isCloudFallbackEnabled } = require("../constants/data-source");
 const cloudTransactionApi = require("../api/cloud/transaction");
 const legacyTransactionRepository = require("./legacy/transaction-repository");
@@ -44,7 +44,7 @@ function getOrders(statusKey) {
   if (!hasActiveUserSession()) {
     return Promise.resolve([]);
   }
-  return invoke("getOrders", mapOrders, [statusKey]);
+  return invoke("getOrders", mapOrders, ["all"]).then((orders) => filterOrdersByDisplayStatus(orders, statusKey));
 }
 
 function getRecentOrders(limit) {

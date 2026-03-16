@@ -11,12 +11,38 @@ const {
   mapIdeaDetailData,
   mapServiceDetailData
 } = require("../mappers/content");
+const CONTENT_CACHE_TTL_MS = 60 * 1000;
+const responseCache = new Map();
 
 function getRepository() {
   return getContentDataSource() === DATA_SOURCE_TYPES.CLOUD ? cloudContentApi : legacyContentRepository;
 }
 
+function buildCacheKey(methodName, args) {
+  return `${methodName}:${JSON.stringify(args || [])}`;
+}
+
+function getCachedValue(cacheKey) {
+  const cached = responseCache.get(cacheKey);
+  if (!cached) {
+    return undefined;
+  }
+
+  if (cached.expiresAt <= Date.now()) {
+    responseCache.delete(cacheKey);
+    return undefined;
+  }
+
+  return cached.value;
+}
+
 async function invoke(methodName, mapper, args) {
+  const cacheKey = buildCacheKey(methodName, args);
+  const cachedValue = getCachedValue(cacheKey);
+  if (cachedValue !== undefined) {
+    return cachedValue;
+  }
+
   const repository = getRepository();
   let payload;
 
@@ -30,7 +56,12 @@ async function invoke(methodName, mapper, args) {
     }
   }
 
-  return mapper(payload);
+  const mapped = mapper(payload);
+  responseCache.set(cacheKey, {
+    expiresAt: Date.now() + CONTENT_CACHE_TTL_MS,
+    value: mapped
+  });
+  return mapped;
 }
 
 function getHomePageData() {

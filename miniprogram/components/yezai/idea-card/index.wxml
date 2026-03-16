@@ -1,4 +1,4 @@
-<view class="idea-card" bindtap="handleTap">
+<view class="idea-card {{showDivider ? '' : 'idea-card--no-divider'}}" bindtap="handleTap">
   <image class="idea-card__cover" src="{{idea.cover}}" mode="aspectFill"></image>
   <view class="idea-card__body">
     <text class="idea-card__theme">{{idea.theme}}</text>

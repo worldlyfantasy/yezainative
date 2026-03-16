@@ -1,0 +1,94 @@
+<view wx:if="{{loading}}" class="page-shell">
+  <view class="skeleton-line skeleton-line--back"></view>
+
+  <view class="section-block destination-hero">
+    <view class="destination-hero__cover skeleton-card"></view>
+    <view class="destination-hero__body">
+      <view class="skeleton-line skeleton-line--eyebrow"></view>
+      <view class="skeleton-line skeleton-line--page-title"></view>
+      <view class="skeleton-stack">
+        <view class="skeleton-line skeleton-line--long"></view>
+        <view class="skeleton-line skeleton-line--medium"></view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-block">
+    <view class="skeleton-line skeleton-line--section"></view>
+    <view class="skeleton-card-list">
+      <view class="skeleton-card"></view>
+      <view class="skeleton-card"></view>
+    </view>
+  </view>
+
+  <view class="section-block">
+    <view class="skeleton-line skeleton-line--section"></view>
+    <view class="skeleton-card-list">
+      <view class="skeleton-card"></view>
+    </view>
+  </view>
+</view>
+
+<view wx:elif="{{destination}}" class="page-shell">
+  <text class="back-link" bindtap="goBack">← 返回目的地</text>
+
+  <view class="section-block destination-hero">
+    <image class="destination-hero__cover" src="{{destination.cover}}" mode="aspectFill"></image>
+    <view class="destination-hero__body">
+      <text class="page-eyebrow">目的地</text>
+      <view class="destination-hero__title-row">
+        <text class="page-title destination-hero__title">{{destination.name}}</text>
+        <favorite-star
+          favorited="{{destination.isFavorited}}"
+          notice-state="{{favoriteNoticeState}}"
+          notice-label="{{favoriteNoticeLabel}}"
+          notice-action-label="{{favoriteNoticeActionLabel}}"
+          notice-mode="{{favoriteNoticeMode}}"
+          bind:toggle="toggleFavorite"
+          bind:noticeaction="handleFavoriteNoticeAction"
+        ></favorite-star>
+      </view>
+      <text class="page-subtitle">{{destination.descriptionDetail || destination.description}}</text>
+    </view>
+  </view>
+
+  <view class="section-block">
+    <text class="section-title destination-journeys__title">在彼途中</text>
+    <view wx:if="{{services.length}}" class="card-stack">
+      <service-card wx:for="{{services}}" wx:key="id" service="{{item}}" creator-name="{{item.creatorName}}" bind:cardtap="onServiceTap"></service-card>
+    </view>
+    <view wx:else class="empty-state">暂无符合筛选的服务。</view>
+  </view>
+
+  <view class="section-block">
+    <view class="section-head">
+      <text class="section-title">驻足之人</text>
+      <text class="section-link" bindtap="goCreatorList">查看全部 →</text>
+    </view>
+    <view wx:if="{{relatedCreators.length}}" class="card-stack">
+      <creator-card wx:for="{{relatedCreators}}" wx:key="id" creator="{{item}}" bind:cardtap="onCreatorTap"></creator-card>
+    </view>
+  </view>
+
+  <view wx:if="{{relatedIdeas.length}}" class="section-block destination-stories">
+    <text class="section-title destination-stories__title">此地故事</text>
+    <view class="destination-story-list">
+      <view
+        wx:for="{{relatedIdeas}}"
+        wx:key="id"
+        class="destination-story-item"
+        data-slug="{{item.slug}}"
+        bindtap="onStoryTap"
+      >
+        <view class="destination-story-item__main">
+          <text class="destination-story-item__title">{{item.title}}</text>
+          <text class="destination-story-item__summary">{{item.summary}}</text>
+          <text class="destination-story-item__author">作者：{{item.authorName}}</text>
+        </view>
+        <text class="destination-story-item__arrow">→</text>
+      </view>
+    </view>
+  </view>
+</view>
+
+<app-tab-bar></app-tab-bar>

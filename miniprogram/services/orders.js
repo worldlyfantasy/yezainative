@@ -17,11 +17,11 @@ function getStatusMeta() {
 
   return {
     all: { key: "all", label: "全部" },
-    pending: { key: "pending", label: "待支付" },
-    paid: { key: "paid", label: "已付款" },
+    pending: { key: "pending", label: "待确认" },
+    paid: { key: "paid", label: "已确认" },
     traveling: { key: "traveling", label: "进行中" },
     completed: { key: "completed", label: "已完成" },
-    canceled: { key: "canceled", label: "已退订" }
+    canceled: { key: "canceled", label: "已取消" }
   };
 }
 
@@ -31,17 +31,15 @@ function getOrderTabsMeta() {
       { key: "all", label: "全部" },
       { key: "pending", label: "待确认" },
       { key: "not_departed", label: "未出行" },
-      { key: "canceled", label: "已取消" },
-      { key: "to_review", label: "待反馈" }
+      { key: "completed", label: "已完成" }
     ];
   }
 
   return [
     { key: "all", label: "全部" },
-    { key: "pending", label: "待支付" },
+    { key: "pending", label: "待确认" },
     { key: "not_departed", label: "未出行" },
-    { key: "canceled", label: "已退订" },
-    { key: "to_review", label: "待反馈" }
+    { key: "completed", label: "已完成" }
   ];
 }
 
@@ -95,12 +93,12 @@ function saveOrders(orders) {
 function buildOrderCard(order) {
   const statusMeta = getStatusMeta();
   return Object.assign({}, order, {
-    idPrefixText: isAuditMode() ? "报名" : "订单",
+    idPrefixText: "报名",
     statusText: statusMeta[order.status] ? statusMeta[order.status].label : order.statusText,
     amountText: `¥${order.amount}`,
     payableText: `¥${order.payable}`,
-    canContinuePay: order.status === "pending",
-    primaryActionText: isAuditMode() ? "确认报名" : "继续支付"
+    canContinuePay: false,
+    primaryActionText: "查看详情"
   });
 }
 
@@ -116,10 +114,10 @@ function getOrders(statusKey) {
       list = orders.filter((o) => o.status === "pending");
     } else if (statusKey === "not_departed") {
       list = orders.filter((o) => o.status === "paid" || o.status === "traveling");
+    } else if (statusKey === "completed") {
+      list = orders.filter((o) => o.status === "completed");
     } else if (statusKey === "canceled") {
       list = orders.filter((o) => o.status === "canceled");
-    } else if (statusKey === "to_review") {
-      list = orders.filter((o) => o.status === "completed");
     }
   }
   return list.map(buildOrderCard);

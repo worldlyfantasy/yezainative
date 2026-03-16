@@ -5,6 +5,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const CONFIG_COLLECTION = "app_configs";
+const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000;
+const configCache = new Map();
 
 function isPlainObject(value) {
   return Boolean(value) && Object.prototype.toString.call(value) === "[object Object]";
@@ -33,14 +35,48 @@ function deepMerge(base, override) {
 }
 
 async function getStoredConfig(key) {
-  try {
-    const result = await db.collection(CONFIG_COLLECTION).where({ key }).limit(1).get();
-    if (!result.data || !result.data.length) {
-      return null;
+  const cached = configCache.get(key);
+  if (cached) {
+    if (cached.expiresAt > Date.now()) {
+      return cached.value;
     }
 
-    const doc = result.data[0];
-    return doc.value && isPlainObject(doc.value) ? doc.value : doc;
+    if (cached.promise) {
+      return cached.promise;
+    }
+  }
+
+  const loadPromise = (async () => {
+    try {
+      const result = await db.collection(CONFIG_COLLECTION).where({ key }).limit(1).get();
+      if (!result.data || !result.data.length) {
+        configCache.set(key, {
+          expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,
+          value: null
+        });
+        return null;
+      }
+
+      const doc = result.data[0];
+      const value = doc.value && isPlainObject(doc.value) ? doc.value : doc;
+      configCache.set(key, {
+        expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,
+        value
+      });
+      return value;
+    } catch (error) {
+      configCache.delete(key);
+      return null;
+    }
+  })();
+
+  configCache.set(key, {
+    expiresAt: 0,
+    promise: loadPromise
+  });
+
+  try {
+    return await loadPromise;
   } catch (error) {
     return null;
   }

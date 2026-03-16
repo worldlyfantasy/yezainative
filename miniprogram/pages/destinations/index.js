@@ -32,7 +32,7 @@ Page({
 
   onDestinationTap(event) {
     wx.navigateTo({
-      url: `/pages/destination-detail/index?slug=${event.detail.slug}`
+      url: `/pkg/explore/destination-detail/index?slug=${event.detail.slug}`
     });
   }
 });

@@ -1,0 +1,42 @@
+.payment-result-page {
+  min-height: calc(100vh - 196rpx);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0;
+}
+
+.payment-card {
+  width: 100%;
+  max-width: 560rpx;
+  text-align: center;
+  border-bottom: 0;
+  padding-bottom: 0;
+  margin: 0 auto 160rpx;
+}
+
+.payment-card__icon {
+  display: block;
+  font-size: 88rpx;
+  color: #8f3d24;
+  line-height: 1;
+}
+
+.payment-card__title {
+  margin-top: 28rpx;
+}
+
+.payment-card .page-subtitle {
+  margin-top: 28rpx;
+  padding: 0 12rpx;
+  font-size: 28rpx;
+  line-height: 1.9;
+}
+
+.payment-card__button {
+  width: 72%;
+  margin: 44rpx auto 0;
+  min-height: 88rpx;
+  border-radius: 24rpx;
+  font-size: 30rpx;
+}

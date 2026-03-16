@@ -60,12 +60,12 @@ function filterOrdersByStatus(orders, statusKey) {
     return orders.filter((order) => order.status === "paid" || order.status === "traveling");
   }
 
-  if (statusKey === "canceled") {
-    return orders.filter((order) => order.status === "canceled");
+  if (statusKey === "completed") {
+    return orders.filter((order) => order.status === "completed");
   }
 
-  if (statusKey === "to_review") {
-    return orders.filter((order) => order.status === "completed");
+  if (statusKey === "canceled") {
+    return orders.filter((order) => order.status === "canceled");
   }
 
   return orders.filter((order) => order.status === statusKey);

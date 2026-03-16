@@ -3,20 +3,52 @@
     "pages/splash/splash",
     "pages/home/home",
     "pages/creators/index",
-    "pages/creator-detail/index",
     "pages/destinations/index",
-    "pages/destination-detail/index",
-    "pages/ideas/index",
-    "pages/idea-detail/index",
-    "pages/service-detail/index",
-    "pages/how-it-works/index",
-    "pages/favorites/index",
     "pages/profile/index",
-    "pages/orders/index",
-    "pages/order-detail/index",
-    "pages/checkout/index",
-    "pages/payment-result/index"
+    "pages/how-it-works/index"
   ],
+  "subPackages": [
+    {
+      "root": "pkg/explore",
+      "pages": [
+        "creator-detail/index",
+        "destination-detail/index",
+        "service-detail/index",
+        "checkout/index"
+      ]
+    },
+    {
+      "root": "pkg/content",
+      "pages": [
+        "ideas/index",
+        "idea-detail/index"
+      ]
+    },
+    {
+      "root": "pkg/account",
+      "pages": [
+        "favorites/index",
+        "orders/index",
+        "order-detail/index",
+        "payment-result/index"
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/home/home": {
+      "network": "all",
+      "packages": [
+        "pkg/explore",
+        "pkg/content"
+      ]
+    },
+    "pages/profile/index": {
+      "network": "all",
+      "packages": [
+        "pkg/account"
+      ]
+    }
+  },
   "usingComponents": {
     "app-tab-bar": "/custom-tab-bar/index",
     "hero-image": "/components/yezai/hero-image/index",

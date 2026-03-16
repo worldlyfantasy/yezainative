@@ -6,6 +6,10 @@ Component({
     destination: {
       type: Object,
       value: {}
+    },
+    showDivider: {
+      type: Boolean,
+      value: true
     }
   },
   methods: {

@@ -67,7 +67,7 @@ Page({
 
   goIdeas() {
     wx.navigateTo({
-      url: "/pages/ideas/index"
+      url: "/pkg/content/ideas/index"
     });
   },
 
@@ -78,7 +78,7 @@ Page({
     }
 
     wx.navigateTo({
-      url: `/pages/idea-detail/index?slug=${slug}`
+      url: `/pkg/content/idea-detail/index?slug=${slug}`
     });
   },
 
@@ -92,19 +92,19 @@ Page({
 
   onCreatorTap(event) {
     wx.navigateTo({
-      url: `/pages/creator-detail/index?slug=${event.detail.slug}`
+      url: `/pkg/explore/creator-detail/index?slug=${event.detail.slug}`
     });
   },
 
   onDestinationTap(event) {
     wx.navigateTo({
-      url: `/pages/destination-detail/index?slug=${event.detail.slug}`
+      url: `/pkg/explore/destination-detail/index?slug=${event.detail.slug}`
     });
   },
 
   onIdeaTap(event) {
     wx.navigateTo({
-      url: `/pages/idea-detail/index?slug=${event.detail.slug}`
+      url: `/pkg/content/idea-detail/index?slug=${event.detail.slug}`
     });
   }
 });

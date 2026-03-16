@@ -1,0 +1,241 @@
+.checkout-page {
+  padding-bottom: 320rpx;
+}
+
+/* ---------- 订单摘要 ---------- */
+.checkout-summary {
+  padding-bottom: 28rpx;
+}
+
+.checkout-summary__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 20rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+}
+
+.checkout-summary__label {
+  color: #6a5a4b;
+  flex-shrink: 0;
+  margin-right: 24rpx;
+}
+
+.checkout-summary__value {
+  color: #2b241d;
+  text-align: right;
+}
+
+.checkout-summary__value--em {
+  font-weight: 500;
+}
+
+.checkout-summary__row--total {
+  margin-top: 24rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid rgba(153, 57, 33, 0.12);
+}
+
+.checkout-summary__total {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #2b241d;
+}
+
+/* ---------- 出行人信息 ---------- */
+.checkout-travelers-block {
+  min-height: 200rpx;
+}
+.checkout-travelers {
+  display: flex;
+  flex-direction: column;
+  gap: 36rpx;
+}
+
+.checkout-traveler {
+  padding: 24rpx 0 0;
+  border-top: 1rpx solid rgba(153, 57, 33, 0.08);
+}
+
+.checkout-traveler:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.checkout-traveler__title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #2b241d;
+  margin-bottom: 16rpx;
+}
+
+.checkout-field {
+  margin-top: 16rpx;
+}
+
+.checkout-note {
+  width: 100%;
+  min-height: 140rpx;
+  margin-top: 16rpx;
+  padding: 20rpx 24rpx;
+  border: 1rpx solid rgba(189, 154, 95, 0.35);
+  border-radius: 16rpx;
+  background: rgba(255, 250, 241, 0.5);
+  color: #2b241d;
+  font-size: 26rpx;
+  box-sizing: border-box;
+}
+
+/* ---------- 协议确认 ---------- */
+.checkout-agreements {
+  padding-bottom: 24rpx;
+}
+
+.checkout-agreement-intro {
+  display: block;
+  font-size: 26rpx;
+  color: #2b241d;
+  margin-bottom: 16rpx;
+}
+
+.checkout-agreement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.checkout-agreement__label {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  font-size: 26rpx;
+  color: #2b241d;
+}
+
+.checkout-agreement__link-wrap {
+  flex: 0 0 auto;
+}
+
+.checkout-agreement__link {
+  color: #993921;
+  text-decoration: underline;
+  font-size: 26rpx;
+}
+
+/* ---------- 协议正文弹层 ---------- */
+.agreement-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.agreement-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.agreement-sheet__panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 75vh;
+  background: #f9f4ec;
+  border-radius: 32rpx 32rpx 0 0;
+  box-shadow: 0 -12rpx 40rpx rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.agreement-sheet__panel--active {
+  transform: translateY(0);
+}
+
+.agreement-sheet__handle {
+  width: 96rpx;
+  height: 10rpx;
+  border-radius: 999rpx;
+  background: rgba(0, 0, 0, 0.12);
+  margin: 8rpx auto 12rpx;
+}
+
+.agreement-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32rpx 16rpx;
+}
+
+.agreement-sheet__title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #2b241d;
+}
+
+.agreement-sheet__close {
+  width: 56rpx;
+  height: 56rpx;
+  flex: 0 0 56rpx;
+  font-size: 34rpx;
+  line-height: 52rpx;
+  text-align: center;
+  color: #6a5a4b;
+  background: rgba(43, 36, 29, 0.06);
+  border: 1rpx solid rgba(43, 36, 29, 0.08);
+  border-radius: 999rpx;
+  box-sizing: border-box;
+}
+
+.agreement-sheet__body {
+  flex: 1;
+  padding: 0 32rpx 32rpx;
+  max-height: 60vh;
+}
+
+.agreement-sheet__content {
+  display: block;
+  font-size: 26rpx;
+  line-height: 1.85;
+  color: #2b241d;
+  white-space: pre-line;
+}
+
+/* ---------- 底部栏：金额大号 + 按钮深棕圆角、约 60% ---------- */
+.checkout-page .checkout-bottom-bar.bottom-action-bar {
+  padding: 24rpx 28rpx 24rpx;
+  align-items: center;
+}
+
+.checkout-page .checkout-bottom-bar .bottom-action-bar__label {
+  font-size: 24rpx;
+  color: #6a5a4b;
+}
+
+.checkout-page .checkout-bottom-bar .bottom-action-bar__price {
+  font-size: 44rpx;
+  font-weight: 600;
+  color: #2b241d;
+  margin-top: 4rpx;
+}
+
+.checkout-page .checkout-bottom-bar .bottom-action-bar__button {
+  flex: 0 0 58%;
+  max-width: 58%;
+  min-width: 0;
+  min-height: 88rpx;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+  background-color: #5c4a3d;
+  background-image: none;
+  color: #f5efe6;
+}
+
+.checkout-page .checkout-bottom-bar .bottom-action-bar__button::after {
+  border: 0;
+}

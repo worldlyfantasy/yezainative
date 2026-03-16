@@ -9,26 +9,26 @@ function getHowItWorksPageConfig() {
       }
 
       return Object.assign({}, item, {
-        title: pickAuditText("托管支付", "报名确认"),
-        description: pickAuditText(item.description, "提交报名信息后，平台会与您确认名额、时间与后续安排。")
+        title: pickAuditText("报名确认", "报名确认"),
+        description: pickAuditText("提交报名信息后，平台会与您确认名额、时间与后续安排。", "提交报名信息后，平台会与您确认名额、时间与后续安排。")
       });
     }),
     introText: pickAuditText(
-      "野哉以托管支付与分账机制保障双方。当前 PHASE 1 只迁移页面与离线数据，不接支付、合同与云端履约。",
+      "野哉会在报名确认、行前沟通与旅程履约之间提供清晰的信息同步与协作安排。",
       "野哉会在报名确认、行前沟通与旅程履约之间提供清晰的信息同步与协作安排。"
     ),
-    ctaTitle: pickAuditText("后续阶段再接入下单链路", "下一步如何确认报名"),
-    ctaDesc: pickAuditText("当前小程序用于离线浏览与结构迁移验收。", "提交报名信息后，平台会统一跟进名额、时间与行前沟通安排，服务时间为工作日 10:00-18:00。"),
-    ctaButtonText: pickAuditText("离线模式说明", "查看咨询说明")
+    ctaTitle: pickAuditText("下一步如何确认报名", "下一步如何确认报名"),
+    ctaDesc: pickAuditText("提交报名信息后，平台会统一跟进名额、时间与行前沟通安排，服务时间为工作日 10:00-18:00。", "提交报名信息后，平台会统一跟进名额、时间与行前沟通安排，服务时间为工作日 10:00-18:00。"),
+    ctaButtonText: pickAuditText("查看咨询说明", "查看咨询说明")
   };
 }
 
 function getCheckoutPageConfig() {
   return {
-    summaryTitleText: pickAuditText("订单摘要", "报名摘要"),
-    refundAgreementTitle: pickAuditText("退订规则", "变更说明"),
-    amountLabelText: pickAuditText("应付金额", "参考金额"),
-    submitButtonText: pickAuditText("提交订单并支付", "提交报名信息"),
+    summaryTitleText: pickAuditText("报名摘要", "报名摘要"),
+    refundAgreementTitle: pickAuditText("变更说明", "变更说明"),
+    amountLabelText: pickAuditText("参考金额", "参考金额"),
+    submitButtonText: pickAuditText("提交报名信息", "提交报名信息"),
     agreements: {
       service: {
         title: "服务协议",
@@ -57,15 +57,15 @@ function getServiceDetailPageConfig() {
   return {
     consultWeChatQr: "https://picsum.photos/seed/yezai-wechat-qr/420/420",
     consultGroupQr: "https://picsum.photos/seed/yezai-group-qr/420/420",
-    consultSheetTitle: "微信意向群",
+    consultSheetTitle: "路线专属客服",
     consultCardLabel: "",
-    consultCardDesc: "扫码入群，咨询更多行程信息",
-    consultFollowupNote: "报名确认后，将为您同步带领者信息与行前准备",
-    timelineTitleText: pickAuditText("交付周期", "确认节奏"),
-    refundTitleText: pickAuditText("退款规则", "变更说明"),
-    serviceNoticeTitle: pickAuditText("离线提醒", "报名说明"),
+    consultCardDesc: "扫码添加，咨询更多行程信息",
+    consultFollowupNote: "报名确认后，将为您同步带领者信息、行前准备与后续付款方式说明",
+    timelineTitleText: pickAuditText("确认节奏", "确认节奏"),
+    refundTitleText: pickAuditText("变更说明", "变更说明"),
+    serviceNoticeTitle: pickAuditText("报名说明", "报名说明"),
     serviceNoticeBody: pickAuditText(
-      "当前阶段仅保留服务说明，不接支付、合同与分账。",
+      "当前页面展示行程信息与报名入口，提交后将由平台进一步确认。",
       "当前页面展示行程信息与报名入口，提交后将由平台进一步确认。"
     )
   };
@@ -73,27 +73,27 @@ function getServiceDetailPageConfig() {
 
 function getPaymentResultPageConfig() {
   return {
-    titleText: pickAuditText("模拟支付成功", "报名提交成功"),
+    titleText: pickAuditText("报名提交成功", "报名提交成功"),
     subtitleText: pickAuditText(
-      "当前仍是离线原型。这里模拟了支付成功状态，用于打通下单到订单详情的原型链路。",
-      "我们已收到你的报名信息，接下来会继续确认名额、时间与出行安排。"
+      "我们已收到你的报名信息，平台会在工作日 10:00-18:00 与你联系，确认名额、时间与后续付款方式。",
+      "我们已收到你的报名信息，平台会在工作日 10:00-18:00 与你联系，确认名额、时间与后续付款方式。"
     ),
-    detailButtonText: pickAuditText("查看订单详情", "查看报名详情"),
-    listButtonText: pickAuditText("返回订单列表", "返回报名列表")
+    detailButtonText: pickAuditText("查看报名详情", "查看报名详情"),
+    listButtonText: pickAuditText("返回报名列表", "返回报名列表")
   };
 }
 
 function getOrderDetailPageConfig() {
   return {
-    creatorContactText: pickAuditText("联系创作者：离线原型阶段暂不接入", "行前沟通：报名确认后同步创作者或带领者信息"),
-    serviceContactText: pickAuditText("联系客服：离线原型阶段暂不接入", "咨询入口：平台统一跟进，服务时间为工作日 10:00-18:00"),
-    statusTitleText: pickAuditText("订单状态", "报名状态"),
-    orderIdLabelText: pickAuditText("订单号", "报名编号"),
-    priceTitleText: pickAuditText("价格明细", "费用说明"),
-    payableLabelText: pickAuditText("已付", "参考金额"),
-    pendingPrimaryText: pickAuditText("立即支付", "确认报名"),
-    pendingSecondaryText: pickAuditText("取消订单", "取消报名"),
-    completedPrimaryText: pickAuditText("再次购买", "再次报名")
+    creatorContactText: pickAuditText("行前沟通：报名确认后同步创作者或带领者信息", "行前沟通：报名确认后同步创作者或带领者信息"),
+    serviceContactText: pickAuditText("平台跟进：工作日 10:00-18:00 联系你确认名额、时间与后续付款方式", "平台跟进：工作日 10:00-18:00 联系你确认名额、时间与后续付款方式"),
+    statusTitleText: pickAuditText("报名状态", "报名状态"),
+    orderIdLabelText: pickAuditText("报名编号", "报名编号"),
+    priceTitleText: pickAuditText("费用说明", "费用说明"),
+    payableLabelText: pickAuditText("参考金额", "参考金额"),
+    pendingPrimaryText: pickAuditText("查看咨询说明", "查看咨询说明"),
+    pendingSecondaryText: pickAuditText("取消报名", "取消报名"),
+    completedPrimaryText: pickAuditText("再次报名", "再次报名")
   };
 }
 

@@ -79,7 +79,7 @@
     <view class="section-block profile-trip-group">
       <view class="section-head profile-section-head">
         <view class="profile-section-head__body">
-          <text class="section-title">进行中的旅行</text>
+          <text class="section-title">我的旅行</text>
 
         </view>
       </view>
@@ -114,14 +114,14 @@
             <view class="active-trip-card__body">
               <view class="active-trip-card__top">
                 <text class="active-trip-card__title">{{item.serviceName}}</text>
-                <text class="active-trip-card__badge">{{item.statusText}}</text>
+                <text class="active-trip-card__phase">{{item.tripPhaseLabel}}</text>
               </view>
-              <text class="active-trip-card__desc">{{item.serviceSummary}}</text>
+              <text class="active-trip-card__desc">{{item.tripDateRange}}</text>
             </view>
           </view>
         </view>
       </view>
-      <view wx:else class="empty-state profile-empty-state">当前没有进行中的旅行，下一段山野还在路上。</view>
+      <view wx:else class="empty-state profile-empty-state">当前还没有待出发或在进行的旅行，下一段山野还在路上。</view>
     </view>
 
     <view class="profile-contact">

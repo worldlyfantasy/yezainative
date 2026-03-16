@@ -1,9 +1,18 @@
 const cloud = require("wx-server-sdk");
+const {
+  normalizeCreatorAssetFields,
+  normalizeDestinationAssetFields,
+  normalizeHeroSlides,
+  normalizeIdeaAssetFields,
+  normalizeServiceAssetFields
+} = require("./image-ref");
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const CONFIG_COLLECTION = "app_configs";
+const CONTENT_CACHE_TTL_MS = 5 * 60 * 1000;
+const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000;
 const COLLECTIONS = {
   creators: "creators",
   destinations: "destinations",
@@ -11,6 +20,9 @@ const COLLECTIONS = {
   ideas: "ideas"
 };
 const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+let contentDataCache = null;
+let contentDataPromise = null;
+const configValueCache = new Map();
 
 function parseIdeaBody(body) {
   if (!body) {
@@ -414,14 +426,28 @@ async function listCollection(name) {
 }
 
 async function getConfigValue(key) {
+  const cached = configValueCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
   try {
     const result = await db.collection(CONFIG_COLLECTION).where({ key }).limit(1).get();
     if (!result.data || !result.data.length) {
+      configValueCache.set(key, {
+        expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,
+        value: null
+      });
       return null;
     }
 
     const doc = result.data[0];
-    return doc.value && typeof doc.value === "object" ? doc.value : doc;
+    const value = doc.value && typeof doc.value === "object" ? doc.value : doc;
+    configValueCache.set(key, {
+      expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,
+      value
+    });
+    return value;
   } catch (error) {
     return null;
   }
@@ -486,16 +512,39 @@ function ensureContentCollections(payload) {
 }
 
 async function loadContentData() {
-  const [creators, destinations, services, ideas] = await Promise.all([
+  if (contentDataCache && contentDataCache.expiresAt > Date.now()) {
+    return contentDataCache.value;
+  }
+
+  if (contentDataPromise) {
+    return contentDataPromise;
+  }
+
+  contentDataPromise = Promise.all([
     listCollection(COLLECTIONS.creators),
     listCollection(COLLECTIONS.destinations),
     listCollection(COLLECTIONS.services),
     listCollection(COLLECTIONS.ideas)
-  ]);
+  ])
+    .then(([creators, destinations, services, ideas]) => {
+      const payload = {
+        creators: creators.map(normalizeCreatorAssetFields),
+        destinations: destinations.map(normalizeDestinationAssetFields),
+        services: services.map(normalizeServiceAssetFields),
+        ideas: ideas.map(normalizeIdeaAssetFields)
+      };
+      ensureContentCollections(payload);
+      contentDataCache = {
+        expiresAt: Date.now() + CONTENT_CACHE_TTL_MS,
+        value: payload
+      };
+      return payload;
+    })
+    .finally(() => {
+      contentDataPromise = null;
+    });
 
-  const payload = { creators, destinations, services, ideas };
-  ensureContentCollections(payload);
-  return payload;
+  return contentDataPromise;
 }
 
 async function getHomePageData() {
@@ -523,19 +572,21 @@ async function getHomePageData() {
   });
 
   return {
-    heroSlides: Array.isArray(homeConfig.heroSlides) && homeConfig.heroSlides.length
-      ? homeConfig.heroSlides
-      : (ideas[0]
-        ? [{
-            id: `hero-${ideas[0].slug}`,
-            variant: "photo",
-            image: ideas[0].cover || "",
-            mark: "野哉",
-            title: ideas[0].title || "",
-            desc: ideas[0].summary || "",
-            targetIdeaSlug: ideas[0].slug
-          }]
-        : []),
+    heroSlides: normalizeHeroSlides(
+      Array.isArray(homeConfig.heroSlides) && homeConfig.heroSlides.length
+        ? homeConfig.heroSlides
+        : (ideas[0]
+          ? [{
+              id: `hero-${ideas[0].slug}`,
+              variant: "photo",
+              image: ideas[0].cover || "",
+              mark: "野哉",
+              title: ideas[0].title || "",
+              desc: ideas[0].summary || "",
+              targetIdeaSlug: ideas[0].slug
+            }]
+          : [])
+    ),
     featuredCreators: featuredCreators.length ? featuredCreators : creators.slice(0, 3),
     featuredDestinations: featuredDestinations.length ? featuredDestinations : destinations.slice(0, 4),
     featuredIdeas: featuredIdeas.length
@@ -574,14 +625,12 @@ async function getCreatorDetailData(slug) {
   const relatedServices = services
     .filter((service) => (creator.serviceIds || []).includes(service.id))
     .map((service) => Object.assign({}, service, { creatorName: creator.name }));
-  const groupServices = relatedServices.filter((service) => (creator.groupIds || []).includes(service.id));
   const creatorIdeas = ideas.filter((idea) => idea.authorId === creator.id);
 
   return {
     creator: Object.assign({}, creator, { isFavorited: false }),
     creatorDestinations,
     relatedServices,
-    groupServices,
     creatorIdeas
   };
 }

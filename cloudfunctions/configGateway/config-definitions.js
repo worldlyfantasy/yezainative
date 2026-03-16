@@ -43,9 +43,9 @@ const defaultConfigs = {
   serviceDetailPage: {
     consultWeChatQr: "https://picsum.photos/seed/yezai-wechat-qr/420/420",
     consultGroupQr: "https://picsum.photos/seed/yezai-group-qr/420/420",
-    consultSheetTitle: "微信意向群",
+    consultSheetTitle: "路线专属客服",
     consultCardLabel: "",
-    consultCardDesc: "扫码入群，咨询更多行程信息",
+    consultCardDesc: "扫码添加，咨询更多行程信息",
     consultFollowupNote: "报名确认后，将为您同步带领者信息与行前准备",
     timelineTitleText: "确认节奏",
     refundTitleText: "变更说明",

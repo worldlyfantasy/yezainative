@@ -158,7 +158,6 @@
 
 .home-note {
   padding-bottom: 36rpx;
-  border-bottom: 1rpx solid rgba(153, 57, 33, 0.14);
 }
 
 .home-note__text {
@@ -166,4 +165,14 @@
   font-size: 30rpx;
   line-height: 2;
   color: #5e5145;
+}
+
+.home-page .section-block {
+  margin-top: 0;
+}
+
+.home-section-divider {
+  display: block;
+  width: 100%;
+  margin: 44rpx 0 52rpx;
 }

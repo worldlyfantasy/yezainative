@@ -2,12 +2,17 @@
 const SPLASH_HOLD_MS = 1000;
 const SPLASH_FADE_MS = 200;
 const HOME_PATH = "/pages/home/home";
+const ENABLE_SPLASH_DEBUG = false;
 // 优先使用本地 Logo，与文字同时显示无延迟；不存在则用云存储地址（需联网）
 const LOGO_LOCAL_PATH = "/images/splash-logo.png";
 const LOGO_CLOUD_ID =
   "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/野哉（纯白底）.png";
 
 function debugLog(location, message, data, hypothesisId) {
+  if (!ENABLE_SPLASH_DEBUG) {
+    return;
+  }
+
   const payload = { sessionId: "b47e01", location, message, data: data || {}, timestamp: Date.now(), hypothesisId };
   console.warn("[splash debug]", JSON.stringify(payload));
   wx.request({

@@ -5,7 +5,7 @@ Component({
   properties: {
     labelText: {
       type: String,
-      value: "应付金额"
+      value: "参考金额"
     },
     priceText: {
       type: String,

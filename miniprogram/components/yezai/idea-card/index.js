@@ -10,6 +10,10 @@ Component({
     authorName: {
       type: String,
       value: ""
+    },
+    showDivider: {
+      type: Boolean,
+      value: true
     }
   },
   methods: {

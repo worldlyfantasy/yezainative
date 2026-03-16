@@ -9,12 +9,33 @@ const {
   mapOrderDetailPageConfig,
   mapFavoritesPageConfig
 } = require("../mappers/config");
+const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000;
+const responseCache = new Map();
 
 function getRepository() {
   return getConfigDataSource() === DATA_SOURCE_TYPES.CLOUD ? cloudConfigApi : legacyConfigRepository;
 }
 
+function getCachedValue(methodName) {
+  const cached = responseCache.get(methodName);
+  if (!cached) {
+    return undefined;
+  }
+
+  if (cached.expiresAt <= Date.now()) {
+    responseCache.delete(methodName);
+    return undefined;
+  }
+
+  return cached.value;
+}
+
 async function invoke(methodName, mapper) {
+  const cachedValue = getCachedValue(methodName);
+  if (cachedValue !== undefined) {
+    return cachedValue;
+  }
+
   const repository = getRepository();
   let payload;
 
@@ -28,7 +49,12 @@ async function invoke(methodName, mapper) {
     }
   }
 
-  return mapper(payload);
+  const mapped = mapper(payload);
+  responseCache.set(methodName, {
+    expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,
+    value: mapped
+  });
+  return mapped;
 }
 
 function getHowItWorksPageConfig() {

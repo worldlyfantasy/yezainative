@@ -37,7 +37,6 @@ function mapCreatorDetailData(payload) {
     creator: source.creator || null,
     creatorDestinations: ensureArray(source.creatorDestinations),
     relatedServices: ensureArray(source.relatedServices),
-    groupServices: ensureArray(source.groupServices),
     creatorIdeas: ensureArray(source.creatorIdeas)
   };
 }

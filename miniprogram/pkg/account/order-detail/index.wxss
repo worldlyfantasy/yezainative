@@ -1,0 +1,192 @@
+.order-detail-page {
+  padding-bottom: 160rpx;
+}
+
+.order-detail__status {
+  margin-top: 4rpx;
+  font-size: 56rpx;
+}
+
+.order-detail__status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.order-detail__consult-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  width: auto;
+  height: auto;
+  line-height: 1.4;
+  padding: 0;
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: #993921;
+  font-size: 24rpx;
+  font-weight: 500;
+  text-align: right;
+}
+
+.order-detail__consult-button::after {
+  border: 0;
+}
+
+.order-product {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 20rpx;
+}
+
+.order-product__cover {
+  width: 160rpx;
+  height: 160rpx;
+  flex-shrink: 0;
+  border-radius: 24rpx;
+}
+
+.order-product__name {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #241b14;
+}
+
+.order-product__meta,
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #6b594d;
+}
+
+.price-row--strong {
+  margin-top: 16rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #241b14;
+}
+
+.order-actions {
+  position: fixed;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: calc(108rpx + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 16rpx;
+}
+
+.order-actions__button {
+  flex: 1;
+}
+
+.consult-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.consult-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.consult-sheet__panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #f9f4ec;
+  border-radius: 32rpx 32rpx 0 0;
+  box-shadow: 0 -12rpx 40rpx rgba(0, 0, 0, 0.18);
+  padding: 20rpx 32rpx 32rpx;
+  transform: translateY(100%);
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.consult-sheet__panel--active {
+  transform: translateY(0);
+}
+
+.consult-sheet__handle {
+  width: 96rpx;
+  height: 10rpx;
+  border-radius: 999rpx;
+  background: rgba(0, 0, 0, 0.12);
+  margin: 8rpx auto 16rpx;
+}
+
+.consult-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 16rpx;
+  padding: 0 92rpx;
+}
+
+.consult-sheet__title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #2b241d;
+  text-align: center;
+}
+
+.sheet-close {
+  position: absolute;
+  top: 50%;
+  right: 28rpx;
+  transform: translateY(-50%);
+  min-width: 44rpx;
+  height: 44rpx;
+  padding: 0 8rpx;
+  font-size: 44rpx;
+  line-height: 34rpx;
+  text-align: center;
+  color: rgba(106, 90, 75, 0.92);
+  background: transparent;
+  border: none;
+  box-sizing: border-box;
+}
+
+.consult-sheet__cards {
+  display: flex;
+  justify-content: center;
+}
+
+.consult-card {
+  width: 100%;
+  padding: 8rpx 0 0;
+  text-align: center;
+}
+
+.consult-card__qr {
+  width: 300rpx;
+  height: 300rpx;
+  margin: 0 auto 20rpx;
+  border-radius: 24rpx;
+}
+
+.consult-card__label {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #2b241d;
+  text-align: center;
+}
+
+.consult-card__desc {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.7;
+  color: #6a5a4b;
+  text-align: center;
+}

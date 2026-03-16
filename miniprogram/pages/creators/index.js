@@ -81,7 +81,7 @@ Page({
 
   onCreatorTap(event) {
     wx.navigateTo({
-      url: `/pages/creator-detail/index?slug=${event.detail.slug}`
+      url: `/pkg/explore/creator-detail/index?slug=${event.detail.slug}`
     });
   }
 });
