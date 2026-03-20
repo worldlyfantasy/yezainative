@@ -2,7 +2,7 @@ const { getDestinationDetailData } = require("../../../repositories/content-repo
 const { isFavorited, toggleFavorite } = require("../../../repositories/transaction-repository");
 const { setPendingCreatorFilter, goTopLevel, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
 const { getCurrentUser } = require("../../../services/user");
-const { clearFavoriteNotice, showFavoriteNotice } = require("../../../utils/favorite-notice");
+const { clearFavoriteNotice, showFavoriteNotice } = require("../utils/favorite-notice");
 
 Page({
   data: {
@@ -34,9 +34,10 @@ Page({
         return;
       }
 
+      const favorited = await isFavorited("destinations", payload.destination.slug);
       this.setData(Object.assign({}, payload, {
         loading: false,
-        "destination.isFavorited": await isFavorited("destinations", payload.destination.slug)
+        "destination.isFavorited": favorited
       }));
     } catch (error) {
       console.error("Failed to load destination detail", error);

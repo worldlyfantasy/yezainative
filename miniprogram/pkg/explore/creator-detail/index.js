@@ -2,7 +2,7 @@ const { getCreatorDetailData } = require("../../../repositories/content-reposito
 const { isFavorited, toggleFavorite } = require("../../../repositories/transaction-repository");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
 const { getCurrentUser } = require("../../../services/user");
-const { clearFavoriteNotice, showFavoriteNotice } = require("../../../utils/favorite-notice");
+const { clearFavoriteNotice, showFavoriteNotice } = require("../utils/favorite-notice");
 
 Page({
   data: {
@@ -36,10 +36,11 @@ Page({
       }
 
       const creatorIdeas = payload.creatorIdeas || [];
+      const favorited = await isFavorited("creators", payload.creator.slug);
       this.setData({
         ...payload,
         loading: false,
-        "creator.isFavorited": await isFavorited("creators", payload.creator.slug),
+        "creator.isFavorited": favorited,
         displayIdeas: creatorIdeas.slice(0, 2),
         hasMoreIdeas: creatorIdeas.length > 2
       });

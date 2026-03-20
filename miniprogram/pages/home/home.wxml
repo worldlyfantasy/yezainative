@@ -38,76 +38,84 @@
     <view class="home-note">
       <text class="home-note__text">看见那些沉淀着在地经验、有温度的路线\n为每一位奔赴山海的旅行者\n照亮一条通往真实旅途的路径</text>
     </view>
-    <image
-      class="home-section-divider"
-      src="cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/分割1-矢量.svg"
-      mode="widthFix"
-    ></image>
 
-    <view class="section-block">
-      <view class="section-head">
-        <view>
-          <text class="section-eyebrow">精选创作者</text>
-        </view>
-        <text class="section-link" bindtap="goCreators">查看全部 →</text>
-      </view>
-      <view class="card-stack">
-        <creator-card
-          wx:for="{{featuredCreators}}"
-          wx:key="id"
-          creator="{{item}}"
-          show-divider="{{false}}"
-          bind:cardtap="onCreatorTap"
-        ></creator-card>
-      </view>
+    <view wx:if="{{errorText}}" class="section-block paper-block page-feedback">
+      <text class="page-feedback__title">首页暂时不可用</text>
+      <text class="page-feedback__desc">{{errorText}}</text>
     </view>
-    <image
-      class="home-section-divider"
-      src="cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/分割1-矢量.svg"
-      mode="widthFix"
-    ></image>
+    <view wx:elif="{{loading}}" class="section-block empty-state">首页内容加载中...</view>
+    <block wx:else>
+      <image
+        class="home-section-divider"
+        src="cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/分割1-矢量.svg"
+        mode="widthFix"
+      ></image>
 
-    <view class="section-block">
-      <view class="section-head">
-        <view>
-          <text class="section-eyebrow">精选目的地</text>
+      <view class="section-block">
+        <view class="section-head">
+          <view>
+            <text class="section-eyebrow">精选创作者</text>
+          </view>
+          <text class="section-link" bindtap="goCreators">查看全部 →</text>
         </view>
-        <text class="section-link" bindtap="goDestinations">浏览目的地 →</text>
+        <view class="card-stack">
+          <creator-card
+            wx:for="{{featuredCreators}}"
+            wx:key="id"
+            creator="{{item}}"
+            show-divider="{{false}}"
+            bind:cardtap="onCreatorTap"
+          ></creator-card>
+        </view>
       </view>
-      <view class="card-stack">
-        <destination-card
-          wx:for="{{featuredDestinations}}"
-          wx:key="id"
-          destination="{{item}}"
-          show-divider="{{false}}"
-          bind:cardtap="onDestinationTap"
-        ></destination-card>
-      </view>
-    </view>
-    <image
-      class="home-section-divider"
-      src="cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/分割1-矢量.svg"
-      mode="widthFix"
-    ></image>
+      <image
+        class="home-section-divider"
+        src="cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/分割1-矢量.svg"
+        mode="widthFix"
+      ></image>
 
-    <view class="section-block">
-      <view class="section-head">
-        <view>
-          <text class="section-eyebrow">旅行文学</text>
+      <view class="section-block">
+        <view class="section-head">
+          <view>
+            <text class="section-eyebrow">精选目的地</text>
+          </view>
+          <text class="section-link" bindtap="goDestinations">浏览目的地 →</text>
         </view>
-        <text class="section-link" bindtap="goIdeas">阅读更多 →</text>
+        <view class="card-stack">
+          <destination-card
+            wx:for="{{featuredDestinations}}"
+            wx:key="id"
+            destination="{{item}}"
+            show-divider="{{false}}"
+            bind:cardtap="onDestinationTap"
+          ></destination-card>
+        </view>
       </view>
-      <view class="card-stack">
-        <idea-card
-          wx:for="{{featuredIdeas}}"
-          wx:key="id"
-          idea="{{item}}"
-          author-name="{{item.authorName}}"
-          show-divider="{{false}}"
-          bind:cardtap="onIdeaTap"
-        ></idea-card>
+      <image
+        class="home-section-divider"
+        src="cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/分割1-矢量.svg"
+        mode="widthFix"
+      ></image>
+
+      <view class="section-block">
+        <view class="section-head">
+          <view>
+            <text class="section-eyebrow">旅行文学</text>
+          </view>
+          <text class="section-link" bindtap="goIdeas">阅读更多 →</text>
+        </view>
+        <view class="card-stack">
+          <idea-card
+            wx:for="{{featuredIdeas}}"
+            wx:key="id"
+            idea="{{item}}"
+            author-name="{{item.authorName}}"
+            show-divider="{{false}}"
+            bind:cardtap="onIdeaTap"
+          ></idea-card>
+        </view>
       </view>
-    </view>
+    </block>
   </view>
 </view>
 

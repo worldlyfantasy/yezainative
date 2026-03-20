@@ -2,9 +2,19 @@
   <text class="back-link" bindtap="goBack">← 返回我的</text>
   <text class="page-eyebrow">收藏盒</text>
 
-  <view wx:if="{{!loggedIn}}" class="section-block paper-block">
+  <view wx:if="{{loading}}" class="section-block paper-block">
+    <text class="favorites-section__title">正在读取收藏</text>
+    <text class="page-subtitle favorites-empty__text">稍等片刻，正在同步你在云端的收藏内容。</text>
+  </view>
+
+  <view wx:elif="{{!loggedIn}}" class="section-block paper-block">
     <text class="favorites-section__title">登录后查看收藏</text>
     <text class="page-subtitle favorites-empty__text">{{loginHint}}</text>
+  </view>
+
+  <view wx:elif="{{errorText}}" class="section-block paper-block page-feedback">
+    <text class="page-feedback__title">加载失败</text>
+    <text class="page-feedback__desc">{{errorText}}</text>
   </view>
 
   <block wx:elif="{{hasFavorites}}">

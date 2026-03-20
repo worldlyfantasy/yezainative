@@ -9,33 +9,29 @@
 
 以及一套前端配置域链路：
 
-- `miniprogram/config/static-config.js`
 - `miniprogram/api/cloud/config.js`
 - `miniprogram/repositories/config-repository.js`
 
 当前策略：
 
-- 内容域：`cloud -> fallback 到前端 legacy mock`
-- 配置域：`cloud -> fallback 到前端 static config`
+- 内容域：`cloud`
+- 配置域：`cloud`
 
-因此即使云函数未部署、集合未初始化，当前页面仍可继续运行。
+当前页面不再保留本地 fallback，云函数与集合需要按部署清单准备完成。
 
 ## 2. 数据源策略
 
-当前默认数据源已切为 `CLOUD`，定义在：
-
-- `miniprogram/constants/data-source.js`
+当前数据源策略已经收敛为 cloud-only。
 
 实际运行逻辑：
 
-1. 前端优先请求云函数
-2. 云函数返回失败或未部署
-3. 仓储层自动回退到本地 legacy 数据
+1. 前端请求云函数
+2. 仓储层只保留映射与缓存，不再回退到本地 legacy 数据
 
 这意味着：
 
-- 本地开发不被阻塞
-- 云端一旦准备好，页面无需再次改造即可切换
+- 线上与本地调试链路保持一致
+- 需要尽早完成云函数部署与基础数据导入
 
 ## 3. 内容域集合约定
 
@@ -233,11 +229,11 @@
 本阶段已将以下页面的硬编码配置迁移到配置仓储：
 
 - `pages/how-it-works/index`
-- `pages/favorites/index`
-- `pages/checkout/index`
-- `pages/service-detail/index`
-- `pages/payment-result/index`
-- `pages/order-detail/index`
+- `pkg/account/favorites/index`
+- `pkg/explore/checkout/index`
+- `pkg/explore/service-detail/index`
+- `pkg/account/payment-result/index`
+- `pkg/account/order-detail/index`
 
 ## 8. 下一步建议
 

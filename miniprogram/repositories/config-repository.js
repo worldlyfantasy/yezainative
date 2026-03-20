@@ -1,6 +1,4 @@
-const { DATA_SOURCE_TYPES, getConfigDataSource, isCloudFallbackEnabled } = require("../constants/data-source");
 const cloudConfigApi = require("../api/cloud/config");
-const legacyConfigRepository = require("./legacy/config-repository");
 const {
   mapHowItWorksPageConfig,
   mapCheckoutPageConfig,
@@ -11,10 +9,6 @@ const {
 } = require("../mappers/config");
 const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000;
 const responseCache = new Map();
-
-function getRepository() {
-  return getConfigDataSource() === DATA_SOURCE_TYPES.CLOUD ? cloudConfigApi : legacyConfigRepository;
-}
 
 function getCachedValue(methodName) {
   const cached = responseCache.get(methodName);
@@ -36,19 +30,7 @@ async function invoke(methodName, mapper) {
     return cachedValue;
   }
 
-  const repository = getRepository();
-  let payload;
-
-  try {
-    payload = await repository[methodName].apply(repository);
-  } catch (error) {
-    if (repository !== legacyConfigRepository && isCloudFallbackEnabled()) {
-      payload = await legacyConfigRepository[methodName].apply(legacyConfigRepository);
-    } else {
-      throw error;
-    }
-  }
-
+  const payload = await cloudConfigApi[methodName].apply(cloudConfigApi);
   const mapped = mapper(payload);
   responseCache.set(methodName, {
     expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,

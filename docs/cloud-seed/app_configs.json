@@ -6,7 +6,7 @@
         {
           "id": "hero-aba-presence",
           "variant": "photo",
-          "image": "https://picsum.photos/seed/yezai-landing/1600/900",
+          "image": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/home/hero/hero-aba-presence.jpg",
           "mark": "野哉",
           "title": "山风缓下来，人才听见远处的路。",
           "desc": "先靠近一片土地，再靠近在那里生活的人。",
@@ -21,7 +21,8 @@
           "mark": "",
           "title": "",
           "desc": "",
-          "subDesc": ""
+          "subDesc": "",
+          "image": "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/hero2.png"
         }
       ],
       "featuredCreatorSlugs": [
@@ -95,11 +96,11 @@
   {
     "key": "serviceDetailPage",
     "value": {
-      "consultWeChatQr": "https://picsum.photos/seed/yezai-wechat-qr/420/420",
-      "consultGroupQr": "https://picsum.photos/seed/yezai-group-qr/420/420",
-      "consultSheetTitle": "微信意向群",
+      "consultWeChatQr": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/config/qrcode/consult-wechat.jpg",
+      "consultGroupQr": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/config/qrcode/consult-group.jpg",
+      "consultSheetTitle": "路线客服",
       "consultCardLabel": "",
-      "consultCardDesc": "扫码入群，咨询更多行程信息",
+      "consultCardDesc": "扫码添加，咨询更多行程信息",
       "consultFollowupNote": "报名确认后，将为您同步带领者信息与行前准备",
       "timelineTitleText": "确认节奏",
       "refundTitleText": "变更说明",

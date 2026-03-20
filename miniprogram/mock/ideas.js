@@ -8,7 +8,7 @@ const ideas = [
     title: "在阿坝听见雪线退后的呼吸",
     theme: "徒步与自然",
     summary: "沿着牧道缓慢上升，记录冰雪退缩后的溪声与人声混合。",
-    cover: "https://picsum.photos/seed/yezai-idea-01/1200/720",
+    cover: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/ideas/cover/aba-presence.jpg",
     authorId: "creator-linyue",
     destinationSlugs: ["aba-highlands"],
     body: long([
@@ -26,7 +26,7 @@ const ideas = [
     title: "黔东南的黄昏一步步抹开",
     theme: "慢旅行",
     summary: "跟随侗寨织娘完成夜行仪式，在漫长的谈话里重新理解时间。",
-    cover: "https://picsum.photos/seed/yezai-idea-02/1200/720",
+    cover: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/ideas/cover/miao-dusk.jpg",
     authorId: "creator-cengu",
     destinationSlugs: ["qiandong-valley"],
     body: long([
@@ -43,7 +43,7 @@ const ideas = [
     title: "松花江口的锈迹为何动人",
     theme: "城市漫游",
     summary: "在严寒里巡游旧码头，理解一座城市如何与水相处。",
-    cover: "https://picsum.photos/seed/yezai-idea-03/1200/720",
+    cover: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/ideas/cover/harbor-notes.jpg",
     authorId: "creator-dufan",
     destinationSlugs: ["songhua-river"],
     body: long([
@@ -60,7 +60,7 @@ const ideas = [
     title: "雨林晨雾里的呼吸练习",
     theme: "在场体验",
     summary: "清晨站在滇西南的雨林坡地，用嗅觉与叶片对话。",
-    cover: "https://picsum.photos/seed/yezai-idea-04/1200/720",
+    cover: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/ideas/cover/rainforest-dawn.jpg",
     authorId: "creator-menglu",
     destinationSlugs: ["yunnan-rainforest"],
     body: long([
@@ -77,7 +77,7 @@ const ideas = [
     title: "南疆沙丘的独处练习",
     theme: "疲惫与重置",
     summary: "让汽车停在沙丘边，让每个人拥有一段不被打扰的黄昏。",
-    cover: "https://picsum.photos/seed/yezai-idea-05/1200/720",
+    cover: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/ideas/cover/dune-solitude.jpg",
     authorId: "creator-shangli",
     destinationSlugs: ["nanjiang-dune"],
     body: long([
@@ -94,7 +94,7 @@ const ideas = [
     title: "盐田边的对话笔记",
     theme: "城市漫游",
     summary: "在琼北盐田记录潮汐，理解盐工的日常节奏。",
-    cover: "https://picsum.photos/seed/yezai-idea-06/1200/720",
+    cover: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/ideas/cover/salt-pan.jpg",
     authorId: "creator-dufan",
     destinationSlugs: ["qiongbay-salt"],
     body: long([
@@ -111,7 +111,7 @@ const ideas = [
     title: "青海湖的缓慢环线",
     theme: "徒步与自然",
     summary: "在湖岸驻扎四夜，观察水鸟与牧人的往来。",
-    cover: "https://picsum.photos/seed/yezai-idea-07/1200/720",
+    cover: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/ideas/cover/qinghai-loop.jpg",
     authorId: "creator-hechen",
     destinationSlugs: ["qinghai-lake"],
     body: long([
@@ -128,7 +128,7 @@ const ideas = [
     title: "在武夷古道写一封给自己的信",
     theme: "疲惫与重置",
     summary: "跟随苏夕沿古道行走，把疲惫摊开在茶香里。",
-    cover: "https://picsum.photos/seed/yezai-idea-08/1200/720",
+    cover: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/ideas/cover/wuyi-writing.jpg",
     authorId: "creator-suxi",
     destinationSlugs: ["wuyi-ancient"],
     body: long([
@@ -145,7 +145,7 @@ const ideas = [
     title: "在鄂西峡谷与一个家庭并肩",
     theme: "在场体验",
     summary: "参与家务、记录影像、与峡谷人一起生活几天。",
-    cover: "https://picsum.photos/seed/yezai-idea-09/1200/720",
+    cover: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/ideas/cover/enxi-family.jpg",
     authorId: "creator-yaoyao",
     destinationSlugs: ["enxi-gorge"],
     body: long([
@@ -162,7 +162,7 @@ const ideas = [
     title: "闽北溪谷的水声手稿",
     theme: "慢旅行",
     summary: "驻留溪谷三日，用录音与文字描绘不断变化的水声。",
-    cover: "https://picsum.photos/seed/yezai-idea-10/1200/720",
+    cover: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/ideas/cover/minbei-sound.jpg",
     authorId: "creator-menglu",
     destinationSlugs: ["minbei-creek"],
     body: long([

@@ -8,6 +8,14 @@ const LOGO_LOCAL_PATH = "/images/splash-logo.png";
 const LOGO_CLOUD_ID =
   "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/野哉（纯白底）.png";
 
+function restoreSplash(page, error) {
+  console.error("Failed to open home page from splash", error);
+  page.leaving = false;
+  page.setData({
+    isFading: false
+  });
+}
+
 function debugLog(location, message, data, hypothesisId) {
   if (!ENABLE_SPLASH_DEBUG) {
     return;
@@ -88,7 +96,16 @@ Page({
 
     this.redirectTimer = setTimeout(() => {
       wx.redirectTo({
-        url: HOME_PATH
+        url: HOME_PATH,
+        fail: (error) => {
+          restoreSplash(this, error);
+          wx.reLaunch({
+            url: HOME_PATH,
+            fail: (relaunchError) => {
+              console.error("Failed to relaunch home page from splash", relaunchError);
+            }
+          });
+        }
       });
     }, SPLASH_FADE_MS);
   },

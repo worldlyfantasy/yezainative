@@ -4,7 +4,7 @@
 
 - 微信云开发环境 ID 与 [app.js](/Users/lihaisen/Desktop/code/migrate/yezainative/miniprogram/app.js) 中配置一致
 - `creators/destinations/services/ideas/app_configs/users/orders/favorites` 八个集合已创建
-- 五个云函数 `login/userGateway/contentGateway/configGateway/transactionGateway` 已部署
+- 四个云函数 `userGateway/contentGateway/configGateway/transactionGateway` 已部署
 - 每个云函数依赖已安装，可用 `node scripts/install-cloudfunctions-deps.js` 统一安装
 - [cloud-seed](/Users/lihaisen/Desktop/code/migrate/yezainative/docs/cloud-seed) 初始化数据已导入内容与配置集合
 
@@ -27,13 +27,13 @@
 ## 4. 回退与异常验收
 
 - 云函数不可用时，内容、配置、交易、用户页面不会直接崩溃
-- 云函数恢复后，页面优先读取云端，不会被旧本地数据长期覆盖
+- 云函数恢复后，页面能重新读取云端数据，不出现脏缓存长期滞留
 - 集合为空或缺字段时，页面有空态或兜底文案，不出现白屏
 - 登录授权失败、报名提交失败、收藏失败时，页面有明确提示
 
 ## 5. 发布前清理
 
 - 不提交任何 `node_modules`
-- 仅在云端联调稳定后，再考虑继续清理 `miniprogram/services/orders.js` 与 `miniprogram/services/favorites.js`
+- legacy fallback 与本地订单/收藏旧实现已移除，不再保留离线数据回退
 - 保留 [phase-5-cutover-checklist.md](/Users/lihaisen/Desktop/code/migrate/yezainative/docs/phase-5-cutover-checklist.md) 作为切换执行手册
 - 保留 [export-cloud-seed.js](/Users/lihaisen/Desktop/code/migrate/yezainative/scripts/export-cloud-seed.js) 与 [install-cloudfunctions-deps.js](/Users/lihaisen/Desktop/code/migrate/yezainative/scripts/install-cloudfunctions-deps.js) 作为初始化脚本

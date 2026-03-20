@@ -3,7 +3,7 @@ const { getServiceDetailPageConfig } = require("../../../repositories/config-rep
 const { isFavorited, toggleFavorite } = require("../../../repositories/transaction-repository");
 const { getCurrentUser } = require("../../../services/user");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
-const { clearFavoriteNotice, showFavoriteNotice } = require("../../../utils/favorite-notice");
+const { clearFavoriteNotice, showFavoriteNotice } = require("../utils/favorite-notice");
 const { isAuditMode, pickAuditText } = require("../../../utils/audit");
 
 const SECTION_SCROLL_DURATION = 320;
@@ -213,8 +213,9 @@ Page({
         clickable: true
       };
       const mappedTags = [durationTag, consultationTag].filter(Boolean);
+      const favorited = await isFavorited("services", originalService.slug);
       const serviceWithTags = Object.assign({}, originalService, {
-        isFavorited: await isFavorited("services", originalService.slug),
+        isFavorited: favorited,
         tags: mappedTags
       });
 

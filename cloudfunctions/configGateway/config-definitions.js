@@ -41,8 +41,8 @@ const defaultConfigs = {
     }
   },
   serviceDetailPage: {
-    consultWeChatQr: "https://picsum.photos/seed/yezai-wechat-qr/420/420",
-    consultGroupQr: "https://picsum.photos/seed/yezai-group-qr/420/420",
+    consultWeChatQr: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/config/qrcode/consult-wechat.jpg",
+    consultGroupQr: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/config/qrcode/consult-group.jpg",
     consultSheetTitle: "路线客服",
     consultCardLabel: "",
     consultCardDesc: "扫码添加，咨询更多行程信息",
@@ -74,16 +74,6 @@ const defaultConfigs = {
   }
 };
 
-const editableConfigKeys = [
-  "checkoutPage",
-  "serviceDetailPage",
-  "paymentResultPage",
-  "orderDetailPage",
-  "favoritesPage",
-  "howItWorksPage"
-];
-
 module.exports = {
-  defaultConfigs,
-  editableConfigKeys
+  defaultConfigs
 };

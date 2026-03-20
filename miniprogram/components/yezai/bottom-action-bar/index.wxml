@@ -3,5 +3,12 @@
     <text class="bottom-action-bar__label">{{labelText}}</text>
     <text class="bottom-action-bar__price">{{priceText}}</text>
   </view>
-  <button class="primary-button bottom-action-bar__button" bindtap="handleTap">{{buttonText}}</button>
+  <button
+    class="primary-button bottom-action-bar__button {{disabled ? 'bottom-action-bar__button--disabled' : ''}}"
+    bindtap="handleTap"
+    disabled="{{disabled}}"
+    loading="{{loading}}"
+  >
+    {{loading && loadingText ? loadingText : buttonText}}
+  </button>
 </view>

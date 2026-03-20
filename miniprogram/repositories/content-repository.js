@@ -1,6 +1,4 @@
-const { DATA_SOURCE_TYPES, getContentDataSource, isCloudFallbackEnabled } = require("../constants/data-source");
 const cloudContentApi = require("../api/cloud/content");
-const legacyContentRepository = require("./legacy/content-repository");
 const {
   mapHomePageData,
   mapCreatorsPageData,
@@ -13,10 +11,6 @@ const {
 } = require("../mappers/content");
 const CONTENT_CACHE_TTL_MS = 60 * 1000;
 const responseCache = new Map();
-
-function getRepository() {
-  return getContentDataSource() === DATA_SOURCE_TYPES.CLOUD ? cloudContentApi : legacyContentRepository;
-}
 
 function buildCacheKey(methodName, args) {
   return `${methodName}:${JSON.stringify(args || [])}`;
@@ -43,19 +37,7 @@ async function invoke(methodName, mapper, args) {
     return cachedValue;
   }
 
-  const repository = getRepository();
-  let payload;
-
-  try {
-    payload = await repository[methodName].apply(repository, args || []);
-  } catch (error) {
-    if (repository !== legacyContentRepository && isCloudFallbackEnabled()) {
-      payload = await legacyContentRepository[methodName].apply(legacyContentRepository, args || []);
-    } else {
-      throw error;
-    }
-  }
-
+  const payload = await cloudContentApi[methodName].apply(cloudContentApi, args || []);
   const mapped = mapper(payload);
   responseCache.set(cacheKey, {
     expiresAt: Date.now() + CONTENT_CACHE_TTL_MS,

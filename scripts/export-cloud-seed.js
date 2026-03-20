@@ -5,7 +5,7 @@ const { creators } = require("../miniprogram/mock/creators");
 const { destinations } = require("../miniprogram/mock/destinations");
 const { services } = require("../miniprogram/mock/services");
 const { ideas } = require("../miniprogram/mock/ideas");
-const { getHomePageData } = require("../miniprogram/services/content");
+const { normalizeHeroSlides } = require("../miniprogram/services/image-ref");
 const { defaultConfigs } = require("../cloudfunctions/configGateway/config-definitions");
 
 const outputDir = path.join(__dirname, "..", "docs", "cloud-seed");
@@ -23,18 +23,43 @@ function writeJson(filename, data) {
   fs.writeFileSync(targetPath, JSON.stringify(cloneJson(data), null, 2) + "\n", "utf8");
 }
 
+function buildHomePageConfig() {
+  return {
+    heroSlides: normalizeHeroSlides([
+      {
+        id: "hero-aba-presence",
+        variant: "photo",
+        image: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/home/hero/hero-aba-presence.jpg",
+        mark: "野哉",
+        title: "山风缓下来，人才听见远处的路。",
+        desc: "先靠近一片土地，再靠近在那里生活的人。",
+        targetIdeaSlug: "aba-presence"
+      },
+      {
+        id: "hero-brand",
+        variant: "photo",
+        tone: "muted",
+        cloudFileID:
+          "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/hero2.png",
+        showMask: true,
+        mark: "",
+        title: "",
+        desc: "",
+        subDesc: ""
+      }
+    ]),
+    featuredCreatorSlugs: creators.slice(0, 3).map((item) => item.slug),
+    featuredDestinationSlugs: destinations.slice(0, 4).map((item) => item.slug),
+    featuredIdeaSlugs: ideas.slice(0, 3).map((item) => item.slug)
+  };
+}
+
 function buildAppConfigs() {
-  const homePageData = getHomePageData();
   const pageConfigKeys = Object.keys(defaultConfigs).filter((key) => key !== "homePage");
   return [
     {
       key: "homePage",
-      value: {
-        heroSlides: homePageData.heroSlides || [],
-        featuredCreatorSlugs: (homePageData.featuredCreators || []).map((item) => item.slug),
-        featuredDestinationSlugs: (homePageData.featuredDestinations || []).map((item) => item.slug),
-        featuredIdeaSlugs: (homePageData.featuredIdeas || []).map((item) => item.slug)
-      }
+      value: buildHomePageConfig()
     },
     ...pageConfigKeys.map((key) => ({
       key,

@@ -14,7 +14,12 @@
   </view>
 
   <view class="section-block">
-    <view wx:if="{{destinations.length}}" class="card-stack">
+    <view wx:if="{{errorText}}" class="paper-block page-feedback">
+      <text class="page-feedback__title">加载失败</text>
+      <text class="page-feedback__desc">{{errorText}}</text>
+    </view>
+    <view wx:elif="{{loading}}" class="empty-state">目的地列表加载中...</view>
+    <view wx:elif="{{destinations.length}}" class="card-stack">
       <destination-card wx:for="{{destinations}}" wx:key="id" destination="{{item}}" bind:cardtap="onDestinationTap"></destination-card>
     </view>
     <view wx:else class="empty-state">暂无匹配结果。</view>

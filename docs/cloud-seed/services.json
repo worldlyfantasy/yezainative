@@ -129,7 +129,7 @@
       "id": "travel-detail-ridge-journal",
       "title": "高原谷地徒步手帐",
       "overview": {
-        "coverImage": "https://picsum.photos/seed/yezai-ridge-journal-highlight-1a/1200/760",
+        "coverImage": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/ridge-journal/overview/cover.jpg",
         "whyJoinText": "把徒步从“走完”变成“看见”。这段行程会带你在牧场、寺院与峡谷的连续抬升中，用手绘地图与固定记录节奏把观察落到纸面，最终形成可复用的徒步手帐方法。",
         "suitableTitle": "这段旅程适合谁",
         "suitableText": "· 能适应海拔 3500 米以上\n· 想学习地形记录\n· 愿意分担公用装备\n\n这段旅程更适合愿意按团队节奏推进、能接受天气与路况带来弹性调整的旅人。行程中会有连续多日徒步与露营，早晚温差明显，部分路段对体能与耐心都有要求；如果你更在意慢下来观察、记录与在地体验，而不是追求打卡速度，会更容易融入这次行程的节奏。"
@@ -162,8 +162,8 @@
           "title": "从谷地牧场一路抬升到高原褶皱",
           "description": "沿溪谷、碎石坡和高山草甸连续行走，海拔梯度清晰，适合用脚去感受高原的空间层次。",
           "images": [
-            "https://picsum.photos/seed/yezai-ridge-journal-highlight-1a/1200/760",
-            "https://picsum.photos/seed/yezai-ridge-journal-highlight-1b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/ridge-journal/overview/cover.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/ridge-journal/highlights/highlight-alpine-ridge-02.jpg"
           ]
         },
         {
@@ -171,7 +171,7 @@
           "title": "边走边记录的徒步手帐方法",
           "description": "每天留出固定记录时段，创作者会带着大家整理地形、天气、步速与沿途观察，形成可复用的手帐模板。",
           "images": [
-            "https://picsum.photos/seed/yezai-ridge-journal-highlight-2a/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/ridge-journal/highlights/highlight-handbook-01.jpg"
           ]
         },
         {
@@ -179,8 +179,8 @@
           "title": "和寺院、村落、牧场建立真实连接",
           "description": "不是只看风景。路线把寺院停留、牧场午餐和在地家庭借宿串在一起，让行程里有稳定的人与土地关系。",
           "images": [
-            "https://picsum.photos/seed/yezai-ridge-journal-highlight-3a/1200/760",
-            "https://picsum.photos/seed/yezai-ridge-journal-highlight-3b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/ridge-journal/highlights/highlight-local-life-01.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/ridge-journal/highlights/highlight-local-life-02.jpg"
           ]
         }
       ],
@@ -519,11 +519,11 @@
         }
       ]
     },
-    "cover": "https://picsum.photos/seed/yezai-service-ridge-journal-cover/1200/900",
+    "cover": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/ridge-journal/cover.jpg",
     "gallery": [
-      "https://picsum.photos/seed/yezai-service-ridge-journal-detail-1/1200/900",
-      "https://picsum.photos/seed/yezai-service-ridge-journal-detail-2/1200/900",
-      "https://picsum.photos/seed/yezai-service-ridge-journal-detail-3/1200/900"
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/ridge-journal/gallery/01.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/ridge-journal/gallery/02.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/ridge-journal/gallery/03.jpg"
     ]
   },
   {
@@ -611,17 +611,17 @@
         "minGroup": 2
       }
     ],
-    "cover": "https://picsum.photos/seed/yezai-service-hexi-tracing-cover/1200/900",
+    "cover": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/hexi-tracing/cover.jpg",
     "gallery": [
-      "https://picsum.photos/seed/yezai-service-hexi-tracing-detail-1/1200/900",
-      "https://picsum.photos/seed/yezai-service-hexi-tracing-detail-2/1200/900",
-      "https://picsum.photos/seed/yezai-service-hexi-tracing-detail-3/1200/900"
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/hexi-tracing/gallery/01.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/hexi-tracing/gallery/02.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/hexi-tracing/gallery/03.jpg"
     ],
     "travelDetail": {
       "id": "travel-detail-hexi-tracing",
       "title": "河西走廊风声记录",
       "overview": {
-        "coverImage": "https://picsum.photos/seed/yezai-hexi-tracing-highlight-1a/1200/760",
+        "coverImage": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/hexi-tracing/overview/cover.jpg",
         "whyJoinText": "河西这一段我跑过很多次，烽燧和河谷的声景特别适合用录音留下来，节奏可以按你们体力来调。\n\n你将围绕行程方案 + 声景提示、必备装备清单、路书展开体验与练习。",
         "suitableTitle": "这段旅程适合谁",
         "suitableText": "· 喜欢慢慢感受高原的人\n· 愿意在戈壁驻扎\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
@@ -654,8 +654,8 @@
           "title": "河西走廊风声记录的核心体验",
           "description": "河西这一段我跑过很多次，烽燧和河谷的声景特别适合用录音留下来，节奏可以按你们体力来调。",
           "images": [
-            "https://picsum.photos/seed/yezai-hexi-tracing-highlight-1a/1200/760",
-            "https://picsum.photos/seed/yezai-hexi-tracing-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/hexi-tracing/overview/cover.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/hexi-tracing/highlights/hexi-tracing-highlight-core-02.jpg"
           ]
         },
         {
@@ -663,7 +663,7 @@
           "title": "围绕公路旅行建立可执行的行程节奏",
           "description": "本次内容会围绕行程方案 + 声景提示、必备装备清单、路书展开，让体验、记录与在地互动都能有明确承载。",
           "images": [
-            "https://picsum.photos/seed/yezai-hexi-tracing-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/hexi-tracing/highlights/hexi-tracing-highlight-core-02.jpg"
           ]
         },
         {
@@ -671,8 +671,8 @@
           "title": "敦煌市区指定酒店出发的完整在地安排",
           "description": "当前页面已经补齐 7 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
           "images": [
-            "https://picsum.photos/seed/yezai-hexi-tracing-highlight-3c/1200/760",
-            "https://picsum.photos/seed/yezai-hexi-tracing-highlight-4d/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/hexi-tracing/highlights/hexi-tracing-highlight-place-01.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/hexi-tracing/highlights/hexi-tracing-highlight-place-02.jpg"
           ]
         }
       ],
@@ -1021,17 +1021,17 @@
         "minGroup": 6
       }
     ],
-    "cover": "https://picsum.photos/seed/yezai-service-lancang-source-lab-cover/1200/900",
+    "cover": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/lancang-source-lab/cover.jpg",
     "gallery": [
-      "https://picsum.photos/seed/yezai-service-lancang-source-lab-detail-1/1200/900",
-      "https://picsum.photos/seed/yezai-service-lancang-source-lab-detail-2/1200/900",
-      "https://picsum.photos/seed/yezai-service-lancang-source-lab-detail-3/1200/900"
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/lancang-source-lab/gallery/01.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/lancang-source-lab/gallery/02.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/lancang-source-lab/gallery/03.jpg"
     ],
     "travelDetail": {
       "id": "travel-detail-lancang-source-lab",
       "title": "澜沧江源水系小实验",
       "overview": {
-        "coverImage": "https://picsum.photos/seed/yezai-lancang-source-lab-highlight-1a/1200/760",
+        "coverImage": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/lancang-source-lab/overview/cover.jpg",
         "whyJoinText": "澜沧江源区的水文小实验我做了好几年，带大家用简单仪器测水温、含沙量，能真正理解一条河是怎么诞生的。\n\n你将围绕水系观测讲义、采样工具包、共创展板展开体验与练习。",
         "suitableTitle": "这段旅程适合谁",
         "suitableText": "· 能适应帐篷住宿\n· 乐于动手\n· 对水文议题好奇\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
@@ -1064,8 +1064,8 @@
           "title": "澜沧江源水系小实验的核心体验",
           "description": "澜沧江源区的水文小实验我做了好几年，带大家用简单仪器测水温、含沙量，能真正理解一条河是怎么诞生的。",
           "images": [
-            "https://picsum.photos/seed/yezai-lancang-source-lab-highlight-1a/1200/760",
-            "https://picsum.photos/seed/yezai-lancang-source-lab-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/lancang-source-lab/overview/cover.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/lancang-source-lab/highlights/lancang-source-lab-highlight-core-02.jpg"
           ]
         },
         {
@@ -1073,7 +1073,7 @@
           "title": "围绕田野考察建立可执行的行程节奏",
           "description": "本次内容会围绕水系观测讲义、采样工具包、共创展板展开，让体验、记录与在地互动都能有明确承载。",
           "images": [
-            "https://picsum.photos/seed/yezai-lancang-source-lab-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/lancang-source-lab/highlights/lancang-source-lab-highlight-core-02.jpg"
           ]
         },
         {
@@ -1081,8 +1081,8 @@
           "title": "玉树市区集合出发的完整在地安排",
           "description": "当前页面已经补齐 7 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
           "images": [
-            "https://picsum.photos/seed/yezai-lancang-source-lab-highlight-3c/1200/760",
-            "https://picsum.photos/seed/yezai-lancang-source-lab-highlight-4d/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/lancang-source-lab/highlights/lancang-source-lab-highlight-place-01.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/lancang-source-lab/highlights/lancang-source-lab-highlight-place-02.jpg"
           ]
         }
       ],
@@ -1431,17 +1431,17 @@
         "minGroup": 4
       }
     ],
-    "cover": "https://picsum.photos/seed/yezai-service-miao-night-walk-cover/1200/900",
+    "cover": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/miao-night-walk/cover.jpg",
     "gallery": [
-      "https://picsum.photos/seed/yezai-service-miao-night-walk-detail-1/1200/900",
-      "https://picsum.photos/seed/yezai-service-miao-night-walk-detail-2/1200/900",
-      "https://picsum.photos/seed/yezai-service-miao-night-walk-detail-3/1200/900"
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/miao-night-walk/gallery/01.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/miao-night-walk/gallery/02.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/miao-night-walk/gallery/03.jpg"
     ],
     "travelDetail": {
       "id": "travel-detail-miao-night-walk",
       "title": "山谷夜步与寨子谈话",
       "overview": {
-        "coverImage": "https://picsum.photos/seed/yezai-miao-night-walk-highlight-1a/1200/760",
+        "coverImage": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/miao-night-walk/overview/cover.jpg",
         "whyJoinText": "侗寨的夜步我走了很多回，织娘和歌师愿意聊的话，会打开完全不同的世界。推荐给愿意慢下来听故事的人。\n\n你将围绕夜步线路、访谈提纲、访客礼物准备展开体验与练习。",
         "suitableTitle": "这段旅程适合谁",
         "suitableText": "· 乐于尊重寨子礼仪\n· 能步行 8 公里\n· 愿意共餐\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
@@ -1474,8 +1474,8 @@
           "title": "山谷夜步与寨子谈话的核心体验",
           "description": "侗寨的夜步我走了很多回，织娘和歌师愿意聊的话，会打开完全不同的世界。推荐给愿意慢下来听故事的人。",
           "images": [
-            "https://picsum.photos/seed/yezai-miao-night-walk-highlight-1a/1200/760",
-            "https://picsum.photos/seed/yezai-miao-night-walk-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/miao-night-walk/overview/cover.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/miao-night-walk/highlights/miao-night-walk-highlight-core-02.jpg"
           ]
         },
         {
@@ -1483,7 +1483,7 @@
           "title": "围绕慢旅行建立可执行的行程节奏",
           "description": "本次内容会围绕夜步线路、访谈提纲、访客礼物准备展开，让体验、记录与在地互动都能有明确承载。",
           "images": [
-            "https://picsum.photos/seed/yezai-miao-night-walk-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/miao-night-walk/highlights/miao-night-walk-highlight-core-02.jpg"
           ]
         },
         {
@@ -1491,8 +1491,8 @@
           "title": "黔东南肇兴侗寨出发的完整在地安排",
           "description": "当前页面已经补齐 4 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
           "images": [
-            "https://picsum.photos/seed/yezai-miao-night-walk-highlight-3c/1200/760",
-            "https://picsum.photos/seed/yezai-miao-night-walk-highlight-4d/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/miao-night-walk/highlights/miao-night-walk-highlight-place-01.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/miao-night-walk/highlights/miao-night-walk-highlight-place-02.jpg"
           ]
         }
       ],
@@ -1758,17 +1758,17 @@
         "minGroup": 1
       }
     ],
-    "cover": "https://picsum.photos/seed/yezai-service-salt-pan-diary-cover/1200/900",
+    "cover": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/salt-pan-diary/cover.jpg",
     "gallery": [
-      "https://picsum.photos/seed/yezai-service-salt-pan-diary-detail-1/1200/900",
-      "https://picsum.photos/seed/yezai-service-salt-pan-diary-detail-2/1200/900",
-      "https://picsum.photos/seed/yezai-service-salt-pan-diary-detail-3/1200/900"
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/salt-pan-diary/gallery/01.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/salt-pan-diary/gallery/02.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/salt-pan-diary/gallery/03.jpg"
     ],
     "travelDetail": {
       "id": "travel-detail-salt-pan-diary",
       "title": "盐田潮汐观测日志",
       "overview": {
-        "coverImage": "https://picsum.photos/seed/yezai-salt-pan-diary-highlight-1a/1200/760",
+        "coverImage": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/salt-pan-diary/overview/cover.jpg",
         "whyJoinText": "琼海盐田的潮汐和渔市我拍过很多次，三天刚好能把工序和居民作息摸清楚，适合想拍纪录片式旅行的人。\n\n你将围绕潮汐表与观察指引、访问名单、步行路线展开体验与练习。",
         "suitableTitle": "这段旅程适合谁",
         "suitableText": "· 喜欢纪录片式旅行\n· 愿意早起\n· 想拍摄手工劳动\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
@@ -1801,8 +1801,8 @@
           "title": "盐田潮汐观测日志的核心体验",
           "description": "琼海盐田的潮汐和渔市我拍过很多次，三天刚好能把工序和居民作息摸清楚，适合想拍纪录片式旅行的人。",
           "images": [
-            "https://picsum.photos/seed/yezai-salt-pan-diary-highlight-1a/1200/760",
-            "https://picsum.photos/seed/yezai-salt-pan-diary-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/salt-pan-diary/overview/cover.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/salt-pan-diary/highlights/salt-pan-diary-highlight-core-02.jpg"
           ]
         },
         {
@@ -1810,7 +1810,7 @@
           "title": "围绕城市漫游建立可执行的行程节奏",
           "description": "本次内容会围绕潮汐表与观察指引、访问名单、步行路线展开，让体验、记录与在地互动都能有明确承载。",
           "images": [
-            "https://picsum.photos/seed/yezai-salt-pan-diary-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/salt-pan-diary/highlights/salt-pan-diary-highlight-core-02.jpg"
           ]
         },
         {
@@ -1818,8 +1818,8 @@
           "title": "琼海市区出发的完整在地安排",
           "description": "当前页面已经补齐 3 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
           "images": [
-            "https://picsum.photos/seed/yezai-salt-pan-diary-highlight-3c/1200/760",
-            "https://picsum.photos/seed/yezai-salt-pan-diary-highlight-4d/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/salt-pan-diary/highlights/salt-pan-diary-highlight-place-01.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/salt-pan-diary/highlights/salt-pan-diary-highlight-place-02.jpg"
           ]
         }
       ],
@@ -2054,17 +2054,17 @@
         "minGroup": 3
       }
     ],
-    "cover": "https://picsum.photos/seed/yezai-service-songhua-dock-cover/1200/900",
+    "cover": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/songhua-dock/cover.jpg",
     "gallery": [
-      "https://picsum.photos/seed/yezai-service-songhua-dock-detail-1/1200/900",
-      "https://picsum.photos/seed/yezai-service-songhua-dock-detail-2/1200/900",
-      "https://picsum.photos/seed/yezai-service-songhua-dock-detail-3/1200/900"
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/songhua-dock/gallery/01.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/songhua-dock/gallery/02.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/songhua-dock/gallery/03.jpg"
     ],
     "travelDetail": {
       "id": "travel-detail-songhua-dock",
       "title": "松花江口码头漫步",
       "overview": {
-        "coverImage": "https://picsum.photos/seed/yezai-songhua-dock-highlight-1a/1200/760",
+        "coverImage": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/songhua-dock/overview/cover.jpg",
         "whyJoinText": "松花江口的老码头和厂区我画过很多线稿，工人愿意讲的话，一条线能串起几十年。适合能扛冻、喜欢手绘的人。\n\n你将围绕导览手册、声音播放清单、线稿练习纸展开体验与练习。",
         "suitableTitle": "这段旅程适合谁",
         "suitableText": "· 能在低温下步行\n· 喜欢手绘\n· 对工业遗产感兴趣\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
@@ -2097,8 +2097,8 @@
           "title": "松花江口码头漫步的核心体验",
           "description": "松花江口的老码头和厂区我画过很多线稿，工人愿意讲的话，一条线能串起几十年。适合能扛冻、喜欢手绘的人。",
           "images": [
-            "https://picsum.photos/seed/yezai-songhua-dock-highlight-1a/1200/760",
-            "https://picsum.photos/seed/yezai-songhua-dock-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/songhua-dock/overview/cover.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/songhua-dock/highlights/songhua-dock-highlight-core-02.jpg"
           ]
         },
         {
@@ -2106,7 +2106,7 @@
           "title": "围绕城市漫游建立可执行的行程节奏",
           "description": "本次内容会围绕导览手册、声音播放清单、线稿练习纸展开，让体验、记录与在地互动都能有明确承载。",
           "images": [
-            "https://picsum.photos/seed/yezai-songhua-dock-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/songhua-dock/highlights/songhua-dock-highlight-core-02.jpg"
           ]
         },
         {
@@ -2114,8 +2114,8 @@
           "title": "哈尔滨市区出发的完整在地安排",
           "description": "当前页面已经补齐 3 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
           "images": [
-            "https://picsum.photos/seed/yezai-songhua-dock-highlight-3c/1200/760",
-            "https://picsum.photos/seed/yezai-songhua-dock-highlight-4d/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/songhua-dock/highlights/songhua-dock-highlight-place-01.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/songhua-dock/highlights/songhua-dock-highlight-place-02.jpg"
           ]
         }
       ],
@@ -2351,17 +2351,17 @@
         "minGroup": 2
       }
     ],
-    "cover": "https://picsum.photos/seed/yezai-service-enxi-residency-cover/1200/900",
+    "cover": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/enxi-residency/cover.jpg",
     "gallery": [
-      "https://picsum.photos/seed/yezai-service-enxi-residency-detail-1/1200/900",
-      "https://picsum.photos/seed/yezai-service-enxi-residency-detail-2/1200/900",
-      "https://picsum.photos/seed/yezai-service-enxi-residency-detail-3/1200/900"
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/enxi-residency/gallery/01.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/enxi-residency/gallery/02.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/enxi-residency/gallery/03.jpg"
     ],
     "travelDetail": {
       "id": "travel-detail-enxi-residency",
       "title": "鄂西峡谷共居计划",
       "overview": {
-        "coverImage": "https://picsum.photos/seed/yezai-enxi-residency-highlight-1a/1200/760",
+        "coverImage": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/enxi-residency/overview/cover.jpg",
         "whyJoinText": "鄂西峡谷这几户人家我合作很久了，住进去三晚能拍出一组很扎实的纪实。适合愿意做家务、尊重拍摄对象的人。\n\n你将围绕家庭介绍档案、拍摄许可模板、共居日程展开体验与练习。",
         "suitableTitle": "这段旅程适合谁",
         "suitableText": "· 能主动做家务\n· 尊重拍摄对象\n· 喜欢慢节奏\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
@@ -2394,8 +2394,8 @@
           "title": "鄂西峡谷共居计划的核心体验",
           "description": "鄂西峡谷这几户人家我合作很久了，住进去三晚能拍出一组很扎实的纪实。适合愿意做家务、尊重拍摄对象的人。",
           "images": [
-            "https://picsum.photos/seed/yezai-enxi-residency-highlight-1a/1200/760",
-            "https://picsum.photos/seed/yezai-enxi-residency-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/enxi-residency/overview/cover.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/enxi-residency/highlights/enxi-residency-highlight-core-02.jpg"
           ]
         },
         {
@@ -2403,7 +2403,7 @@
           "title": "围绕人文在地建立可执行的行程节奏",
           "description": "本次内容会围绕家庭介绍档案、拍摄许可模板、共居日程展开，让体验、记录与在地互动都能有明确承载。",
           "images": [
-            "https://picsum.photos/seed/yezai-enxi-residency-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/enxi-residency/highlights/enxi-residency-highlight-core-02.jpg"
           ]
         },
         {
@@ -2411,8 +2411,8 @@
           "title": "恩施市区出发的完整在地安排",
           "description": "当前页面已经补齐 5 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
           "images": [
-            "https://picsum.photos/seed/yezai-enxi-residency-highlight-3c/1200/760",
-            "https://picsum.photos/seed/yezai-enxi-residency-highlight-4d/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/enxi-residency/highlights/enxi-residency-highlight-place-01.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/enxi-residency/highlights/enxi-residency-highlight-place-02.jpg"
           ]
         }
       ],
@@ -2706,17 +2706,17 @@
         "minGroup": 4
       }
     ],
-    "cover": "https://picsum.photos/seed/yezai-service-dune-sunset-cover/1200/900",
+    "cover": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/dune-sunset/cover.jpg",
     "gallery": [
-      "https://picsum.photos/seed/yezai-service-dune-sunset-detail-1/1200/900",
-      "https://picsum.photos/seed/yezai-service-dune-sunset-detail-2/1200/900",
-      "https://picsum.photos/seed/yezai-service-dune-sunset-detail-3/1200/900"
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/dune-sunset/gallery/01.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/dune-sunset/gallery/02.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/dune-sunset/gallery/03.jpg"
     ],
     "travelDetail": {
       "id": "travel-detail-dune-sunset",
       "title": "沙丘黄昏聆听",
       "overview": {
-        "coverImage": "https://picsum.photos/seed/yezai-dune-sunset-highlight-1a/1200/760",
+        "coverImage": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/dune-sunset/overview/cover.jpg",
         "whyJoinText": "南疆沙丘的黄昏我录过很多次，开车穿过去、停下来录音的那一段，特别适合想独处又喜欢公路的人。\n\n你将围绕公路停靠点表、录音指南、沙丘安全提示展开体验与练习。",
         "suitableTitle": "这段旅程适合谁",
         "suitableText": "· 喜欢公路\n· 能忍受风沙\n· 乐于独处\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
@@ -2749,8 +2749,8 @@
           "title": "沙丘黄昏聆听的核心体验",
           "description": "南疆沙丘的黄昏我录过很多次，开车穿过去、停下来录音的那一段，特别适合想独处又喜欢公路的人。",
           "images": [
-            "https://picsum.photos/seed/yezai-dune-sunset-highlight-1a/1200/760",
-            "https://picsum.photos/seed/yezai-dune-sunset-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/dune-sunset/overview/cover.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/dune-sunset/highlights/dune-sunset-highlight-core-02.jpg"
           ]
         },
         {
@@ -2758,7 +2758,7 @@
           "title": "围绕公路旅行建立可执行的行程节奏",
           "description": "本次内容会围绕公路停靠点表、录音指南、沙丘安全提示展开，让体验、记录与在地互动都能有明确承载。",
           "images": [
-            "https://picsum.photos/seed/yezai-dune-sunset-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/dune-sunset/highlights/dune-sunset-highlight-core-02.jpg"
           ]
         },
         {
@@ -2766,8 +2766,8 @@
           "title": "喀什市区出发的完整在地安排",
           "description": "当前页面已经补齐 5 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
           "images": [
-            "https://picsum.photos/seed/yezai-dune-sunset-highlight-3c/1200/760",
-            "https://picsum.photos/seed/yezai-dune-sunset-highlight-4d/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/dune-sunset/highlights/dune-sunset-highlight-place-01.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/dune-sunset/highlights/dune-sunset-highlight-place-02.jpg"
           ]
         }
       ],
@@ -3060,17 +3060,17 @@
         "minGroup": 2
       }
     ],
-    "cover": "https://picsum.photos/seed/yezai-service-qinghai-loop-cover/1200/900",
+    "cover": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/qinghai-loop/cover.jpg",
     "gallery": [
-      "https://picsum.photos/seed/yezai-service-qinghai-loop-detail-1/1200/900",
-      "https://picsum.photos/seed/yezai-service-qinghai-loop-detail-2/1200/900",
-      "https://picsum.photos/seed/yezai-service-qinghai-loop-detail-3/1200/900"
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/qinghai-loop/gallery/01.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/qinghai-loop/gallery/02.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/qinghai-loop/gallery/03.jpg"
     ],
     "travelDetail": {
       "id": "travel-detail-qinghai-loop",
       "title": "湖岸环线体感",
       "overview": {
-        "coverImage": "https://picsum.photos/seed/yezai-qinghai-loop-highlight-1a/1200/760",
+        "coverImage": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/qinghai-loop/overview/cover.jpg",
         "whyJoinText": "青海湖岸环线我跑过很多趟，观星和牧场交流的节点都摸熟了，可以根据你的时间帮你设计一版。\n\n你将围绕环线路书、露营点位推荐、观测指引展开体验与练习。",
         "suitableTitle": "这段旅程适合谁",
         "suitableText": "· 喜欢自驾或骑行\n· 想理解湖岸生态\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
@@ -3103,8 +3103,8 @@
           "title": "湖岸环线体感的核心体验",
           "description": "青海湖岸环线我跑过很多趟，观星和牧场交流的节点都摸熟了，可以根据你的时间帮你设计一版。",
           "images": [
-            "https://picsum.photos/seed/yezai-qinghai-loop-highlight-1a/1200/760",
-            "https://picsum.photos/seed/yezai-qinghai-loop-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/qinghai-loop/overview/cover.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/qinghai-loop/highlights/qinghai-loop-highlight-core-02.jpg"
           ]
         },
         {
@@ -3112,7 +3112,7 @@
           "title": "围绕公路旅行建立可执行的行程节奏",
           "description": "本次内容会围绕环线路书、露营点位推荐、观测指引展开，让体验、记录与在地互动都能有明确承载。",
           "images": [
-            "https://picsum.photos/seed/yezai-qinghai-loop-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/qinghai-loop/highlights/qinghai-loop-highlight-core-02.jpg"
           ]
         },
         {
@@ -3120,8 +3120,8 @@
           "title": "西宁市区出发的完整在地安排",
           "description": "当前页面已经补齐 5 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
           "images": [
-            "https://picsum.photos/seed/yezai-qinghai-loop-highlight-3c/1200/760",
-            "https://picsum.photos/seed/yezai-qinghai-loop-highlight-4d/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/qinghai-loop/highlights/qinghai-loop-highlight-place-01.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/qinghai-loop/highlights/qinghai-loop-highlight-place-02.jpg"
           ]
         }
       ],
@@ -3409,17 +3409,17 @@
         "minGroup": 4
       }
     ],
-    "cover": "https://picsum.photos/seed/yezai-service-rainforest-dawn-cover/1200/900",
+    "cover": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/rainforest-dawn/cover.jpg",
     "gallery": [
-      "https://picsum.photos/seed/yezai-service-rainforest-dawn-detail-1/1200/900",
-      "https://picsum.photos/seed/yezai-service-rainforest-dawn-detail-2/1200/900",
-      "https://picsum.photos/seed/yezai-service-rainforest-dawn-detail-3/1200/900"
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/rainforest-dawn/gallery/01.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/rainforest-dawn/gallery/02.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/rainforest-dawn/gallery/03.jpg"
     ],
     "travelDetail": {
       "id": "travel-detail-rainforest-dawn",
       "title": "雨林晨雾观察",
       "overview": {
-        "coverImage": "https://picsum.photos/seed/yezai-rainforest-dawn-highlight-1a/1200/760",
+        "coverImage": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/rainforest-dawn/overview/cover.jpg",
         "whyJoinText": "雨林晨雾和茶树的气味我记了很多本，跟着植物学者走几趟，用嗅觉认茶会变成习惯。推荐给愿意早起、能静下来观察的人。\n\n你将围绕植物观察册、气味练习卡、村民共餐展开体验与练习。",
         "suitableTitle": "这段旅程适合谁",
         "suitableText": "· 愿意早起\n· 能静坐观察\n· 喜欢手写\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
@@ -3452,8 +3452,8 @@
           "title": "雨林晨雾观察的核心体验",
           "description": "雨林晨雾和茶树的气味我记了很多本，跟着植物学者走几趟，用嗅觉认茶会变成习惯。推荐给愿意早起、能静下来观察的人。",
           "images": [
-            "https://picsum.photos/seed/yezai-rainforest-dawn-highlight-1a/1200/760",
-            "https://picsum.photos/seed/yezai-rainforest-dawn-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/rainforest-dawn/overview/cover.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/rainforest-dawn/highlights/rainforest-dawn-highlight-core-02.jpg"
           ]
         },
         {
@@ -3461,7 +3461,7 @@
           "title": "围绕徒步自然建立可执行的行程节奏",
           "description": "本次内容会围绕植物观察册、气味练习卡、村民共餐展开，让体验、记录与在地互动都能有明确承载。",
           "images": [
-            "https://picsum.photos/seed/yezai-rainforest-dawn-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/rainforest-dawn/highlights/rainforest-dawn-highlight-core-02.jpg"
           ]
         },
         {
@@ -3469,8 +3469,8 @@
           "title": "西双版纳景洪出发的完整在地安排",
           "description": "当前页面已经补齐 5 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
           "images": [
-            "https://picsum.photos/seed/yezai-rainforest-dawn-highlight-3c/1200/760",
-            "https://picsum.photos/seed/yezai-rainforest-dawn-highlight-4d/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/rainforest-dawn/highlights/rainforest-dawn-highlight-place-01.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/rainforest-dawn/highlights/rainforest-dawn-highlight-place-02.jpg"
           ]
         }
       ],
@@ -3760,17 +3760,17 @@
         "minGroup": 4
       }
     ],
-    "cover": "https://picsum.photos/seed/yezai-service-wuyi-ink-trail-cover/1200/900",
+    "cover": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/wuyi-ink-trail/cover.jpg",
     "gallery": [
-      "https://picsum.photos/seed/yezai-service-wuyi-ink-trail-detail-1/1200/900",
-      "https://picsum.photos/seed/yezai-service-wuyi-ink-trail-detail-2/1200/900",
-      "https://picsum.photos/seed/yezai-service-wuyi-ink-trail-detail-3/1200/900"
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/wuyi-ink-trail/gallery/01.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/wuyi-ink-trail/gallery/02.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/wuyi-ink-trail/gallery/03.jpg"
     ],
     "travelDetail": {
       "id": "travel-detail-wuyi-ink-trail",
       "title": "武夷古道静心行",
       "overview": {
-        "coverImage": "https://picsum.photos/seed/yezai-wuyi-ink-trail-highlight-1a/1200/760",
+        "coverImage": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/wuyi-ink-trail/overview/cover.jpg",
         "whyJoinText": "武夷古道和茶农做青茶我走了很多年，体感写作这条线特别适合想慢下来、愿意动手、不怕淋雨的人。\n\n你将围绕古道行走笔记、茶叶制作体验、呼吸练习展开体验与练习。",
         "suitableTitle": "这段旅程适合谁",
         "suitableText": "· 渴望慢下来\n· 愿意实作\n· 不介意淋雨\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
@@ -3803,8 +3803,8 @@
           "title": "武夷古道静心行的核心体验",
           "description": "武夷古道和茶农做青茶我走了很多年，体感写作这条线特别适合想慢下来、愿意动手、不怕淋雨的人。",
           "images": [
-            "https://picsum.photos/seed/yezai-wuyi-ink-trail-highlight-1a/1200/760",
-            "https://picsum.photos/seed/yezai-wuyi-ink-trail-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/wuyi-ink-trail/overview/cover.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/wuyi-ink-trail/highlights/wuyi-ink-trail-highlight-core-02.jpg"
           ]
         },
         {
@@ -3812,7 +3812,7 @@
           "title": "围绕慢旅行建立可执行的行程节奏",
           "description": "本次内容会围绕古道行走笔记、茶叶制作体验、呼吸练习展开，让体验、记录与在地互动都能有明确承载。",
           "images": [
-            "https://picsum.photos/seed/yezai-wuyi-ink-trail-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/wuyi-ink-trail/highlights/wuyi-ink-trail-highlight-core-02.jpg"
           ]
         },
         {
@@ -3820,8 +3820,8 @@
           "title": "武夷山景区入口出发的完整在地安排",
           "description": "当前页面已经补齐 4 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
           "images": [
-            "https://picsum.photos/seed/yezai-wuyi-ink-trail-highlight-3c/1200/760",
-            "https://picsum.photos/seed/yezai-wuyi-ink-trail-highlight-4d/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/wuyi-ink-trail/highlights/wuyi-ink-trail-highlight-place-01.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/wuyi-ink-trail/highlights/wuyi-ink-trail-highlight-place-02.jpg"
           ]
         }
       ],
@@ -4085,17 +4085,17 @@
         "minGroup": 1
       }
     ],
-    "cover": "https://picsum.photos/seed/yezai-service-minbei-creek-study-cover/1200/900",
+    "cover": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/minbei-creek-study/cover.jpg",
     "gallery": [
-      "https://picsum.photos/seed/yezai-service-minbei-creek-study-detail-1/1200/900",
-      "https://picsum.photos/seed/yezai-service-minbei-creek-study-detail-2/1200/900",
-      "https://picsum.photos/seed/yezai-service-minbei-creek-study-detail-3/1200/900"
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/minbei-creek-study/gallery/01.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/minbei-creek-study/gallery/02.jpg",
+      "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/minbei-creek-study/gallery/03.jpg"
     ],
     "travelDetail": {
       "id": "travel-detail-minbei-creek-study",
       "title": "溪谷水声研究",
       "overview": {
-        "coverImage": "https://picsum.photos/seed/yezai-minbei-creek-study-highlight-1a/1200/760",
+        "coverImage": "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/minbei-creek-study/overview/cover.jpg",
         "whyJoinText": "闽北溪谷的水声我录了很多段，按你的驻留天数可以帮你设计一条采集路线，适合自带设备、喜欢林间走的人。\n\n你将围绕驻留日程、录音节点图、村落联系人展开体验与练习。",
         "suitableTitle": "这段旅程适合谁",
         "suitableText": "· 自带录音设备\n· 喜欢林间漫步\n\n这段旅程更适合愿意按现场节奏推进、接受留白与微调的旅人。行程中会把内容体验、在地接触和实际推进放在同一条节奏线上，如果你更在意真实感受而不是密集打卡，会更容易融入。"
@@ -4128,8 +4128,8 @@
           "title": "溪谷水声研究的核心体验",
           "description": "闽北溪谷的水声我录了很多段，按你的驻留天数可以帮你设计一条采集路线，适合自带设备、喜欢林间走的人。",
           "images": [
-            "https://picsum.photos/seed/yezai-minbei-creek-study-highlight-1a/1200/760",
-            "https://picsum.photos/seed/yezai-minbei-creek-study-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/minbei-creek-study/overview/cover.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/minbei-creek-study/highlights/minbei-creek-study-highlight-core-02.jpg"
           ]
         },
         {
@@ -4137,7 +4137,7 @@
           "title": "围绕慢旅行建立可执行的行程节奏",
           "description": "本次内容会围绕驻留日程、录音节点图、村落联系人展开，让体验、记录与在地互动都能有明确承载。",
           "images": [
-            "https://picsum.photos/seed/yezai-minbei-creek-study-highlight-2b/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/minbei-creek-study/highlights/minbei-creek-study-highlight-core-02.jpg"
           ]
         },
         {
@@ -4145,8 +4145,8 @@
           "title": "闽北溪谷入口出发的完整在地安排",
           "description": "当前页面已经补齐 3 天结构的亮点、行程、费用与须知，后续可以继续替换成更细的运营内容。",
           "images": [
-            "https://picsum.photos/seed/yezai-minbei-creek-study-highlight-3c/1200/760",
-            "https://picsum.photos/seed/yezai-minbei-creek-study-highlight-4d/1200/760"
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/minbei-creek-study/highlights/minbei-creek-study-highlight-place-01.jpg",
+            "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/minbei-creek-study/highlights/minbei-creek-study-highlight-place-02.jpg"
           ]
         }
       ],

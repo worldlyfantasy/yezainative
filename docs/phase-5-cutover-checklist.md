@@ -12,7 +12,6 @@
 - 配置网关：`cloudfunctions/configGateway`
 - 交易网关：`cloudfunctions/transactionGateway`
 - 用户网关：`cloudfunctions/userGateway`
-- 登录初始化函数：`cloudfunctions/login`
 
 以及一个种子数据导出脚本：
 
@@ -74,11 +73,10 @@ node scripts/export-cloud-seed.js
 
 建议顺序：
 
-1. `login`
-2. `userGateway`
-3. `contentGateway`
-4. `configGateway`
-5. `transactionGateway`
+1. `userGateway`
+2. `contentGateway`
+3. `configGateway`
+4. `transactionGateway`
 
 ### 当前仓库内已完成
 
@@ -136,11 +134,4 @@ node scripts/export-cloud-seed.js
 
 ## 9. 清理建议
 
-当云端链路稳定后，再做下面的清理：
-
-1. 清理旧的 `services/orders.js` 本地实现
-2. 清理旧的 `services/favorites.js` 本地实现
-3. 收缩 `services/content.js` 中仅用于 legacy fallback 的逻辑
-4. 统一把页面层残留的 legacy 依赖进一步收口
-
-不要在云端未联调稳定前就删 legacy fallback。
+当前轮清理已完成 legacy fallback 与本地订单/收藏旧实现移除。后续只需要继续关注页面兜底与云端数据完整性，不再保留离线 fallback。

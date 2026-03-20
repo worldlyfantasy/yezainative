@@ -418,8 +418,22 @@ function buildServiceTravelDetail(service, tags, photoBaseList) {
 
 async function listCollection(name) {
   try {
-    const result = await db.collection(name).limit(100).get();
-    return (result.data || []).filter((item) => item.status !== "inactive");
+    const rows = [];
+    let offset = 0;
+
+    while (true) {
+      const result = await db.collection(name).skip(offset).limit(100).get();
+      const batch = result.data || [];
+      rows.push(...batch);
+
+      if (batch.length < 100) {
+        break;
+      }
+
+      offset += batch.length;
+    }
+
+    return rows.filter((item) => item.status !== "inactive");
   } catch (error) {
     return [];
   }

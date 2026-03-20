@@ -17,7 +17,12 @@
   </scroll-view>
 
   <view class="section-block idea-list-block">
-    <view wx:if="{{ideas.length}}" class="idea-list">
+    <view wx:if="{{errorText}}" class="paper-block page-feedback">
+      <text class="page-feedback__title">加载失败</text>
+      <text class="page-feedback__desc">{{errorText}}</text>
+    </view>
+    <view wx:elif="{{loading}}" class="empty-state">故事列表加载中...</view>
+    <view wx:elif="{{ideas.length}}" class="idea-list">
       <view
         wx:for="{{ideas}}"
         wx:key="id"

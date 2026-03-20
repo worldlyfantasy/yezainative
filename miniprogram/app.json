@@ -1,7 +1,7 @@
 {
   "pages": [
-    "pages/splash/splash",
     "pages/home/home",
+    "pages/splash/splash",
     "pages/creators/index",
     "pages/destinations/index",
     "pages/profile/index",

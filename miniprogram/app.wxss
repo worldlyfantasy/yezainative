@@ -251,6 +251,26 @@ button::after {
   line-height: 1.9;
 }
 
+.page-feedback {
+  padding-top: 8rpx;
+}
+
+.page-feedback__title {
+  display: block;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 34rpx;
+  line-height: 1.5;
+  color: #2b241d;
+}
+
+.page-feedback__desc {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.9;
+  color: #6a5a4b;
+}
+
 .back-link {
   display: inline-block;
   font-size: 24rpx;

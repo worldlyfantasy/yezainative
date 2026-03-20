@@ -2,6 +2,7 @@
   "navigationBarTitleText": "",
   "usingComponents": {
     "creator-card": "/components/yezai/creator-card/index",
+    "favorite-star": "/components/yezai/favorite-star/index",
     "service-card": "/components/yezai/service-card/index"
   }
 }

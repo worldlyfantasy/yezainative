@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": ""
+  "navigationBarTitleText": "",
+  "usingComponents": {
+    "favorite-star": "/components/yezai/favorite-star/index"
+  }
 }

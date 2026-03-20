@@ -7,6 +7,8 @@ const { isAuditMode } = require("../../../utils/audit");
 Page({
   data: {
     auditMode: isAuditMode(),
+    loading: true,
+    errorText: "",
     loginHint: "",
     loggedIn: false,
     favoriteDestinations: [],
@@ -17,7 +19,11 @@ Page({
   },
 
   async onLoad() {
-    this.setData(await getFavoritesPageConfig());
+    try {
+      this.setData(await getFavoritesPageConfig());
+    } catch (error) {
+      console.error("Failed to load favorites page config", error);
+    }
   },
 
   onShow() {
@@ -25,34 +31,51 @@ Page({
   },
 
   async refresh() {
-    const loggedIn = Boolean(await getCurrentUser());
+    this.setData({
+      loading: true,
+      errorText: ""
+    });
 
-    if (!loggedIn) {
+    try {
+      const loggedIn = Boolean(await getCurrentUser());
+
+      if (!loggedIn) {
+        this.setData({
+          loading: false,
+          errorText: "",
+          loggedIn: false,
+          favoriteDestinations: [],
+          favoriteCreators: [],
+          favoriteServices: [],
+          favoriteIdeas: [],
+          hasFavorites: false
+        });
+        return;
+      }
+
+      const payload = await getFavoritesPageData();
+      const hasFavorites = Boolean(
+        payload.favoriteDestinations.length ||
+          payload.favoriteCreators.length ||
+          payload.favoriteServices.length ||
+          payload.favoriteIdeas.length
+      );
+
+      this.setData(
+        Object.assign({}, payload, {
+          loading: false,
+          errorText: "",
+          loggedIn: true,
+          hasFavorites
+        })
+      );
+    } catch (error) {
+      console.error("Failed to refresh favorites", error);
       this.setData({
-        loggedIn: false,
-        favoriteDestinations: [],
-        favoriteCreators: [],
-        favoriteServices: [],
-        favoriteIdeas: [],
-        hasFavorites: false
+        loading: false,
+        errorText: "收藏内容加载失败，请稍后重试。"
       });
-      return;
     }
-
-    const payload = await getFavoritesPageData();
-    const hasFavorites = Boolean(
-      payload.favoriteDestinations.length ||
-        payload.favoriteCreators.length ||
-        payload.favoriteServices.length ||
-        payload.favoriteIdeas.length
-    );
-
-    this.setData(
-      Object.assign({}, payload, {
-        loggedIn: true,
-        hasFavorites
-      })
-    );
   },
 
   goBack() {

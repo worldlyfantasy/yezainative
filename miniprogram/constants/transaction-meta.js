@@ -1,17 +1,5 @@
-const { isAuditMode } = require("../utils/audit");
-const { services = [] } = require("../mock/services");
-
-function getServiceBySlug(serviceSlug) {
-  return services.find((item) => item.slug === serviceSlug) || null;
-}
-
-function findServicePeriod(order) {
-  const service = getServiceBySlug(order && order.serviceSlug);
-  if (!service || !Array.isArray(service.groupPeriods)) {
-    return null;
-  }
-
-  return service.groupPeriods.find((period) => String(period.dateStart || "") === String(order && order.travelDate ? order.travelDate : ""));
+function isPlainObject(value) {
+  return Boolean(value) && Object.prototype.toString.call(value) === "[object Object]";
 }
 
 function parseDateOnly(dateValue) {
@@ -23,8 +11,24 @@ function parseDateOnly(dateValue) {
   return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }
 
+function getOrderTravelPeriod(order) {
+  if (isPlainObject(order && order.travelPeriod)) {
+    return order.travelPeriod;
+  }
+
+  const travelDate = String(order && order.travelDate ? order.travelDate : "").trim();
+  if (!travelDate) {
+    return null;
+  }
+
+  return {
+    dateStart: travelDate,
+    dateEnd: travelDate
+  };
+}
+
 function getTripPhaseKey(order) {
-  const period = findServicePeriod(order);
+  const period = getOrderTravelPeriod(order);
   const startDate = parseDateOnly(period && period.dateStart ? period.dateStart : order && order.travelDate);
   const endDate = parseDateOnly(period && period.dateEnd ? period.dateEnd : period && period.dateStart ? period.dateStart : order && order.travelDate);
 
@@ -44,6 +48,22 @@ function getTripPhaseKey(order) {
   }
 
   return "ongoing";
+}
+
+function buildTripDateRange(order) {
+  const period = getOrderTravelPeriod(order);
+  const startDate = String(period && period.dateStart ? period.dateStart : order && order.travelDate ? order.travelDate : "").trim();
+  const endDate = String(period && period.dateEnd ? period.dateEnd : startDate).trim();
+
+  if (!startDate) {
+    return "出行时间待确认";
+  }
+
+  if (!endDate || endDate === startDate) {
+    return startDate;
+  }
+
+  return `${startDate} ～ ${endDate}`;
 }
 
 function getDisplayStatusKey(order) {
@@ -96,17 +116,6 @@ function filterOrdersByDisplayStatus(orders, statusKey) {
 }
 
 function getStatusMeta() {
-  if (isAuditMode()) {
-    return {
-      all: { key: "all", label: "全部" },
-      pending: { key: "pending", label: "待确认" },
-      paid: { key: "paid", label: "已确认" },
-      traveling: { key: "traveling", label: "进行中" },
-      completed: { key: "completed", label: "已完成" },
-      canceled: { key: "canceled", label: "已取消" }
-    };
-  }
-
   return {
     all: { key: "all", label: "全部" },
     pending: { key: "pending", label: "待确认" },
@@ -118,15 +127,6 @@ function getStatusMeta() {
 }
 
 function getOrderTabsMeta() {
-  if (isAuditMode()) {
-    return [
-      { key: "all", label: "全部" },
-      { key: "pending", label: "待确认" },
-      { key: "not_departed", label: "已确认" },
-      { key: "completed", label: "已完成" }
-    ];
-  }
-
   return [
     { key: "all", label: "全部" },
     { key: "pending", label: "待确认" },
@@ -152,8 +152,10 @@ function buildOrderCard(order) {
 }
 
 module.exports = {
+  buildTripDateRange,
   getStatusMeta,
   getOrderTabsMeta,
+  getTripPhaseKey,
   buildOrderCard,
   filterOrdersByDisplayStatus
 };

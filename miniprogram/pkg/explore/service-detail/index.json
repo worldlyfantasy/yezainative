@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "",
   "usingComponents": {
+    "favorite-star": "/components/yezai/favorite-star/index",
     "section-tabs": "/components/yezai/section-tabs/index",
     "itinerary-block": "/components/yezai/itinerary-block/index",
     "cost-table": "/components/yezai/cost-table/index"

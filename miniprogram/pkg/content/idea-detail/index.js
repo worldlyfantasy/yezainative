@@ -2,7 +2,7 @@ const { getIdeaDetailData } = require("../../../repositories/content-repository"
 const { isFavorited, toggleFavorite } = require("../../../repositories/transaction-repository");
 const { getCurrentUser } = require("../../../services/user");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
-const { clearFavoriteNotice, showFavoriteNotice } = require("../../../utils/favorite-notice");
+const { clearFavoriteNotice, showFavoriteNotice } = require("../utils/favorite-notice");
 
 Page({
   data: {
@@ -33,9 +33,10 @@ Page({
         return;
       }
 
+      const favorited = await isFavorited("ideas", payload.idea.slug);
       this.setData(Object.assign({}, payload, {
         loading: false,
-        "idea.isFavorited": await isFavorited("ideas", payload.idea.slug)
+        "idea.isFavorited": favorited
       }));
     } catch (error) {
       console.error("Failed to load idea detail", error);

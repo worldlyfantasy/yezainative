@@ -1,8 +1,6 @@
 const { getOrderTabsMeta, filterOrdersByDisplayStatus } = require("../constants/transaction-meta");
-const { DATA_SOURCE_TYPES, getTransactionDataSource, isCloudFallbackEnabled } = require("../constants/data-source");
 const cloudTransactionApi = require("../api/cloud/transaction");
-const legacyTransactionRepository = require("./legacy/transaction-repository");
-const legacyUserRepository = require("./legacy/user-repository");
+const userSessionStore = require("./local/user-session-store");
 const {
   mapOrders,
   mapOrder,
@@ -11,28 +9,12 @@ const {
   mapFavoritesPageData
 } = require("../mappers/transaction");
 
-function getRepository() {
-  return getTransactionDataSource() === DATA_SOURCE_TYPES.CLOUD ? cloudTransactionApi : legacyTransactionRepository;
-}
-
 function hasActiveUserSession() {
-  return legacyUserRepository.isSessionActive();
+  return userSessionStore.isSessionActive();
 }
 
 async function invoke(methodName, mapper, args) {
-  const repository = getRepository();
-  let payload;
-
-  try {
-    payload = await repository[methodName].apply(repository, args || []);
-  } catch (error) {
-    if (repository !== legacyTransactionRepository && isCloudFallbackEnabled()) {
-      payload = await legacyTransactionRepository[methodName].apply(legacyTransactionRepository, args || []);
-    } else {
-      throw error;
-    }
-  }
-
+  const payload = await cloudTransactionApi[methodName].apply(cloudTransactionApi, args || []);
   return mapper(payload);
 }
 
@@ -93,7 +75,11 @@ function isFavorited(type, slug) {
   if (!hasActiveUserSession()) {
     return Promise.resolve(false);
   }
-  return invoke("isFavorited", mapFavoriteStatus, [type, slug]);
+
+  return invoke("isFavorited", mapFavoriteStatus, [type, slug]).catch((error) => {
+    console.error("Failed to resolve favorite status", error);
+    return false;
+  });
 }
 
 function toggleFavorite(type, slug) {

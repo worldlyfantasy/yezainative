@@ -5,6 +5,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const ORDERS_COLLECTION = "orders";
 const FAVORITES_COLLECTION = "favorites";
+const QUERY_BATCH_SIZE = 100;
 const CONTENT_COLLECTIONS = {
   creators: "creators",
   destinations: "destinations",
@@ -31,8 +32,22 @@ function formatDateTime(timestamp) {
 
 async function listCollection(name) {
   try {
-    const result = await db.collection(name).limit(100).get();
-    return result.data || [];
+    const rows = [];
+    let offset = 0;
+
+    while (true) {
+      const result = await db.collection(name).skip(offset).limit(QUERY_BATCH_SIZE).get();
+      const batch = result.data || [];
+      rows.push(...batch);
+
+      if (batch.length < QUERY_BATCH_SIZE) {
+        break;
+      }
+
+      offset += batch.length;
+    }
+
+    return rows;
   } catch (error) {
     return [];
   }
@@ -73,8 +88,22 @@ function filterOrdersByStatus(orders, statusKey) {
 
 async function queryOrders(openid) {
   try {
-    const result = await db.collection(ORDERS_COLLECTION).where({ openid }).limit(100).get();
-    return (result.data || []).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+    const orders = [];
+    let offset = 0;
+
+    while (true) {
+      const result = await db.collection(ORDERS_COLLECTION).where({ openid }).skip(offset).limit(QUERY_BATCH_SIZE).get();
+      const batch = result.data || [];
+      orders.push(...batch);
+
+      if (batch.length < QUERY_BATCH_SIZE) {
+        break;
+      }
+
+      offset += batch.length;
+    }
+
+    return orders.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
   } catch (error) {
     return [];
   }
@@ -97,24 +126,74 @@ async function getOrderById(orderId) {
 }
 
 async function createOrder(payload) {
+  payload = payload || {};
   const openid = await getOpenId();
+  const clientRequestId = String(payload.clientRequestId || "").trim();
+
+  if (!payload || !payload.serviceSlug) {
+    throw new Error("serviceSlug is required");
+  }
+
+  if (!payload.travelDate) {
+    throw new Error("travelDate is required");
+  }
+
+  if (!Number.isFinite(Number(payload.amount)) || Number(payload.amount) <= 0) {
+    throw new Error("amount must be a positive number");
+  }
+
+  if (!Number.isInteger(Number(payload.peopleCount)) || Number(payload.peopleCount) <= 0) {
+    throw new Error("peopleCount must be a positive integer");
+  }
+
+  if (clientRequestId) {
+    const existingResult = await db.collection(ORDERS_COLLECTION).where({
+      openid,
+      clientRequestId
+    }).limit(1).get();
+
+    if (existingResult.data && existingResult.data.length) {
+      return existingResult.data[0];
+    }
+  }
+
   const timestamp = Date.now();
   const orderNo = createOrderNo(timestamp);
   const snapshot = payload.serviceSnapshot || {};
+  const creatorSnapshot = payload.creatorSnapshot || {};
+  const travelPeriod = payload.travelPeriod || {};
   const order = {
     id: orderNo,
     orderNo,
     shortId: String(orderNo).slice(-4),
     openid,
+    clientRequestId,
     serviceSlug: payload.serviceSlug,
     serviceName: snapshot.serviceName || payload.serviceName || "",
     cover: snapshot.cover || payload.cover || "",
     serviceType: snapshot.serviceType || payload.serviceType || "",
+    serviceSnapshot: {
+      serviceName: snapshot.serviceName || payload.serviceName || "",
+      serviceType: snapshot.serviceType || payload.serviceType || "",
+      cover: snapshot.cover || payload.cover || "",
+      creatorRoles: Array.isArray(snapshot.creatorRoles) ? snapshot.creatorRoles : []
+    },
+    creatorSnapshot: {
+      id: creatorSnapshot.id || "",
+      slug: creatorSnapshot.slug || "",
+      name: creatorSnapshot.name || "",
+      avatar: creatorSnapshot.avatar || "",
+      stance: creatorSnapshot.stance || ""
+    },
     amount: payload.amount,
     discount: payload.discount || 0,
     payable: payload.amount,
     peopleCount: payload.peopleCount,
     travelDate: payload.travelDate,
+    travelPeriod: {
+      dateStart: travelPeriod.dateStart || payload.travelDate,
+      dateEnd: travelPeriod.dateEnd || travelPeriod.dateStart || payload.travelDate
+    },
     traveler: payload.traveler || null,
     travelers: Array.isArray(payload.travelers) ? payload.travelers : [],
     note: payload.note || "",
@@ -151,8 +230,22 @@ async function updateOrderStatus(orderId, nextStatus) {
 
 async function getFavoriteDocs(openid) {
   try {
-    const result = await db.collection(FAVORITES_COLLECTION).where({ openid }).limit(200).get();
-    return result.data || [];
+    const rows = [];
+    let offset = 0;
+
+    while (true) {
+      const result = await db.collection(FAVORITES_COLLECTION).where({ openid }).skip(offset).limit(QUERY_BATCH_SIZE).get();
+      const batch = result.data || [];
+      rows.push(...batch);
+
+      if (batch.length < QUERY_BATCH_SIZE) {
+        break;
+      }
+
+      offset += batch.length;
+    }
+
+    return rows;
   } catch (error) {
     return [];
   }

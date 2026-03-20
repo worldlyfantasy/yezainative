@@ -3,6 +3,8 @@ const { consumePendingCreatorFilter } = require("../../services/navigation");
 
 Page({
   data: {
+    loading: true,
+    errorText: "",
     destinationOptions: [],
     styleOptions: [],
     destinationLabels: [],
@@ -13,16 +15,38 @@ Page({
   },
 
   async onLoad(options) {
-    const payload = await getCreatorsPageData();
-    const destinationIndex = this.findIndexByValue(payload.destinationOptions, options.destination);
-    const styleIndex = this.findIndexByValue(payload.styleOptions, options.style);
-    this.setData(
-      Object.assign({}, payload, {
-        destinationIndex,
-        styleIndex
-      }),
-      () => this.applyFilters()
-    );
+    this.setData({
+      loading: true,
+      errorText: ""
+    });
+
+    try {
+      const payload = await getCreatorsPageData();
+      const destinationIndex = this.findIndexByValue(payload.destinationOptions, options.destination);
+      const styleIndex = this.findIndexByValue(payload.styleOptions, options.style);
+      const hasPresetFilters = Boolean(options.destination || options.style);
+
+      this.setData(
+        Object.assign({}, payload, {
+          loading: false,
+          errorText: "",
+          destinationIndex,
+          styleIndex,
+          creators: hasPresetFilters ? [] : payload.creators
+        }),
+        () => {
+          if (hasPresetFilters) {
+            this.applyFilters();
+          }
+        }
+      );
+    } catch (error) {
+      console.error("Failed to load creators page", error);
+      this.setData({
+        loading: false,
+        errorText: "创作者列表加载失败，请稍后重试。"
+      });
+    }
   },
 
   onShow() {
@@ -50,15 +74,30 @@ Page({
   },
 
   async applyFilters() {
+    this.setData({
+      loading: true,
+      errorText: ""
+    });
+
     const destination = this.data.destinationOptions[this.data.destinationIndex] ? this.data.destinationOptions[this.data.destinationIndex].value : "";
     const style = this.data.styleOptions[this.data.styleIndex] ? this.data.styleOptions[this.data.styleIndex].value : "";
-    const payload = await getCreatorsPageData({
-      destination,
-      style
-    });
-    this.setData({
-      creators: payload.creators
-    });
+    try {
+      const payload = await getCreatorsPageData({
+        destination,
+        style
+      });
+      this.setData({
+        loading: false,
+        errorText: "",
+        creators: payload.creators
+      });
+    } catch (error) {
+      console.error("Failed to filter creators", error);
+      this.setData({
+        loading: false,
+        errorText: "筛选结果加载失败，请稍后重试。"
+      });
+    }
   },
 
   onDestinationChange(event) {

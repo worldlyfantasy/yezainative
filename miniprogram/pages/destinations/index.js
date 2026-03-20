@@ -2,6 +2,8 @@ const { getDestinationsPageData } = require("../../repositories/content-reposito
 
 Page({
   data: {
+    loading: true,
+    errorText: "",
     searchValue: "",
     destinations: []
   },
@@ -19,15 +21,31 @@ Page({
   },
 
   async applySearch(value) {
-    const payload = await getDestinationsPageData(value);
-    this.setData(
-      Object.assign(
-        {
-          searchValue: value
-        },
-        payload
-      )
-    );
+    this.setData({
+      loading: true,
+      errorText: ""
+    });
+
+    try {
+      const payload = await getDestinationsPageData(value);
+      this.setData(
+        Object.assign(
+          {
+            loading: false,
+            errorText: "",
+            searchValue: value
+          },
+          payload
+        )
+      );
+    } catch (error) {
+      console.error("Failed to load destinations", error);
+      this.setData({
+        loading: false,
+        errorText: "目的地列表加载失败，请稍后重试。",
+        searchValue: value
+      });
+    }
   },
 
   onDestinationTap(event) {

@@ -1,15 +1,10 @@
-const { DATA_SOURCE_TYPES, getUserDataSource, isCloudFallbackEnabled } = require("../constants/data-source");
 const cloudUserApi = require("../api/cloud/user");
-const legacyUserRepository = require("./legacy/user-repository");
+const userSessionStore = require("./local/user-session-store");
 const { mapUser } = require("../mappers/user");
 
-function getRepository() {
-  return getUserDataSource() === DATA_SOURCE_TYPES.CLOUD ? cloudUserApi : legacyUserRepository;
-}
-
 function getSessionSnapshot() {
-  const sessionActive = legacyUserRepository.isSessionActive();
-  const cachedUser = legacyUserRepository.getCachedUser();
+  const sessionActive = userSessionStore.isSessionActive();
+  const cachedUser = userSessionStore.getCachedUser();
   const user = sessionActive ? mapUser(cachedUser || {}) : null;
 
   return {
@@ -19,63 +14,40 @@ function getSessionSnapshot() {
 }
 
 async function getCurrentUser() {
-  if (!legacyUserRepository.isSessionActive()) {
+  if (!userSessionStore.isSessionActive()) {
     return null;
   }
 
-  const repository = getRepository();
-
   try {
-    const payload = await repository.getCurrentUser();
+    const payload = await cloudUserApi.getCurrentUser();
     const user = mapUser(payload);
     if (user) {
-      legacyUserRepository.setCachedUser(user);
+      userSessionStore.setCachedUser(user);
     }
     return user;
   } catch (error) {
-    return legacyUserRepository.getCachedUser();
+    return userSessionStore.getCachedUser();
   }
 }
 
 async function login() {
-  const repository = getRepository();
-
-  try {
-    const payload = await repository.login();
-    const user = mapUser(payload);
-    legacyUserRepository.setSessionActive(true);
-    legacyUserRepository.setCachedUser(user);
-    return user;
-  } catch (error) {
-    if (!isCloudFallbackEnabled()) {
-      throw error;
-    }
-    const fallbackUser = await legacyUserRepository.login();
-    return mapUser(fallbackUser);
-  }
+  const payload = await cloudUserApi.login();
+  const user = mapUser(payload);
+  userSessionStore.setSessionActive(true);
+  userSessionStore.setCachedUser(user);
+  return user;
 }
 
 async function updateProfile(profile) {
-  const repository = getRepository();
-
-  try {
-    const payload = await repository.updateProfile(profile);
-    const user = mapUser(payload);
-    legacyUserRepository.setCachedUser(user);
-    return user;
-  } catch (error) {
-    if (!isCloudFallbackEnabled()) {
-      throw error;
-    }
-
-    const fallbackUser = await legacyUserRepository.updateProfile(profile);
-    return mapUser(fallbackUser);
-  }
+  const payload = await cloudUserApi.updateProfile(profile);
+  const user = mapUser(payload);
+  userSessionStore.setCachedUser(user);
+  return user;
 }
 
 async function logout() {
-  legacyUserRepository.setSessionActive(false);
-  legacyUserRepository.setCachedUser(null);
+  userSessionStore.setSessionActive(false);
+  userSessionStore.setCachedUser(null);
 }
 
 module.exports = {

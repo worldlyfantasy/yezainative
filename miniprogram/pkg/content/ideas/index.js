@@ -2,6 +2,8 @@ const { getIdeasPageData } = require("../../../repositories/content-repository")
 
 Page({
   data: {
+    loading: true,
+    errorText: "",
     creatorSlug: "",
     pageTitle: "旅行故事",
     themes: [],
@@ -11,16 +13,32 @@ Page({
 
   async onLoad(options) {
     const creatorSlug = (options && options.creatorSlug) || "";
-    const payload = await getIdeasPageData("", creatorSlug);
-    this.setData(
-      {
-        creatorSlug,
-        pageTitle: payload.pageTitle,
-        themes: payload.themes,
-        currentTheme: "",
-        ideas: payload.ideas
-      }
-    );
+    this.setData({
+      loading: true,
+      errorText: ""
+    });
+
+    try {
+      const payload = await getIdeasPageData("", creatorSlug);
+      this.setData(
+        {
+          loading: false,
+          errorText: "",
+          creatorSlug,
+          pageTitle: payload.pageTitle,
+          themes: payload.themes,
+          currentTheme: "",
+          ideas: payload.ideas
+        }
+      );
+    } catch (error) {
+      console.error("Failed to load ideas", error);
+      this.setData({
+        loading: false,
+        errorText: "故事列表加载失败，请稍后重试。",
+        creatorSlug
+      });
+    }
   },
 
   toggleTheme(event) {
@@ -35,10 +53,25 @@ Page({
 
   async applyFilter() {
     const { currentTheme, creatorSlug } = this.data;
-    const payload = await getIdeasPageData(currentTheme, creatorSlug);
     this.setData({
-      ideas: payload.ideas
+      loading: true,
+      errorText: ""
     });
+
+    try {
+      const payload = await getIdeasPageData(currentTheme, creatorSlug);
+      this.setData({
+        loading: false,
+        errorText: "",
+        ideas: payload.ideas
+      });
+    } catch (error) {
+      console.error("Failed to filter ideas", error);
+      this.setData({
+        loading: false,
+        errorText: "故事列表加载失败，请稍后重试。"
+      });
+    }
   },
 
   onIdeaTap(event) {

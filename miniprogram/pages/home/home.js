@@ -3,6 +3,8 @@ const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
 
 Page({
   data: {
+    loading: true,
+    errorText: "",
     heroSlides: [],
     featuredCreators: [],
     featuredDestinations: [],
@@ -10,9 +12,25 @@ Page({
   },
 
   async onLoad() {
-    const homePageData = await getHomePageData();
-    this.setData(homePageData);
-    this.resolveHeroSlides(homePageData.heroSlides);
+    this.setData({
+      loading: true,
+      errorText: ""
+    });
+
+    try {
+      const homePageData = await getHomePageData();
+      this.setData(Object.assign({}, homePageData, {
+        loading: false,
+        errorText: ""
+      }));
+      this.resolveHeroSlides(homePageData.heroSlides);
+    } catch (error) {
+      console.error("Failed to load home page", error);
+      this.setData({
+        loading: false,
+        errorText: "首页内容加载失败，请稍后重试。"
+      });
+    }
   },
 
   resolveHeroSlides(heroSlides) {

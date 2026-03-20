@@ -37,6 +37,20 @@ function uploadAvatarToCloud(filePath) {
   });
 }
 
+function deleteCloudFile(fileID) {
+  return new Promise((resolve) => {
+    if (!fileID || !wx.cloud || typeof wx.cloud.deleteFile !== "function") {
+      resolve();
+      return;
+    }
+
+    wx.cloud.deleteFile({
+      fileList: [fileID],
+      complete: resolve
+    });
+  });
+}
+
 Page({
   data: Object.assign(
     {
@@ -194,12 +208,15 @@ Page({
       profileSaving: true
     });
 
+    let uploadedAvatarFileId = "";
+
     try {
       const avatarUrl = !selectedAvatarUrl
         ? ""
         : selectedAvatarUrl.startsWith("cloud://") || /^https?:\/\//.test(selectedAvatarUrl)
           ? selectedAvatarUrl
           : await uploadAvatarToCloud(selectedAvatarUrl);
+      uploadedAvatarFileId = avatarUrl !== selectedAvatarUrl ? avatarUrl : "";
       const nextUser = await updateProfile({
         nickname,
         avatarUrl
@@ -220,6 +237,7 @@ Page({
         icon: "none"
       });
     } catch (error) {
+      await deleteCloudFile(uploadedAvatarFileId);
       console.error("Failed to save profile", {
         error,
         selectedAvatarUrl,

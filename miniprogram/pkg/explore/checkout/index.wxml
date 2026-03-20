@@ -79,7 +79,16 @@
     </checkbox-group>
   </view>
 
-  <bottom-action-bar label-text="{{amountLabelText}}" price-text="{{payableText}}" button-text="{{submitButtonText}}" bind:actiontap="submitOrder" class="checkout-bottom-bar"></bottom-action-bar>
+  <bottom-action-bar
+    label-text="{{amountLabelText}}"
+    price-text="{{payableText}}"
+    button-text="{{submitButtonText}}"
+    loading-text="提交中..."
+    disabled="{{submitting}}"
+    loading="{{submitting}}"
+    bind:actiontap="submitOrder"
+    class="checkout-bottom-bar"
+  ></bottom-action-bar>
 </view>
 
 <!-- 协议正文弹层 -->

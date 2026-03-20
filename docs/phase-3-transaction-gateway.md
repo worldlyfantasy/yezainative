@@ -25,14 +25,14 @@
 
 已切换到 `transaction-repository` 的页面：
 
-- `pages/checkout/index`
-- `pages/orders/index`
-- `pages/order-detail/index`
-- `pages/favorites/index`
-- `pages/creator-detail/index`
-- `pages/destination-detail/index`
-- `pages/idea-detail/index`
-- `pages/service-detail/index`
+- `pkg/explore/checkout/index`
+- `pkg/account/orders/index`
+- `pkg/account/order-detail/index`
+- `pkg/account/favorites/index`
+- `pkg/explore/creator-detail/index`
+- `pkg/explore/destination-detail/index`
+- `pkg/content/idea-detail/index`
+- `pkg/explore/service-detail/index`
 - `pages/profile/index`
 
 ## 3. 交易集合约定

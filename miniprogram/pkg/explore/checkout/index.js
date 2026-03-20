@@ -31,6 +31,10 @@ function buildTravelPersons(count) {
   return list;
 }
 
+function createSubmissionToken() {
+  return `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 Page({
   data: {
     auditMode: isAuditMode(),
@@ -43,6 +47,7 @@ Page({
     selectedDate: "",
     selectedPrice: 0,
     selectedCount: 1,
+    groupPeriods: [],
     unitPrice: 0,
     subtotal: 0,
     total: 0,
@@ -57,6 +62,8 @@ Page({
     agreedService: false,
     agreedRisk: false,
     agreedRefund: false,
+    submitting: false,
+    submissionToken: "",
     agreements: {},
     agreementSheetVisible: false,
     agreementSheetAnimating: false,
@@ -80,6 +87,7 @@ Page({
     }
 
     const service = payload.service;
+    const groupPeriods = Array.isArray(payload.groupPeriods) ? payload.groupPeriods : [];
     const travelDate = String(options.travelDate || "").trim();
     const peopleCount = Math.max(1, parseInt(options.peopleCount, 10) || 1);
     const unitPrice = getBasePrice(service, options.unitPrice);
@@ -92,10 +100,12 @@ Page({
 
     this.setData({
       travelDetail: payload.travelDetail || null,
+      creator: payload.creator || null,
       selectedVersion: versionName,
       selectedDate: travelDate,
       selectedPrice: unitPrice,
       selectedCount: peopleCount,
+      groupPeriods,
       unitPrice,
       subtotal,
       total,
@@ -106,6 +116,8 @@ Page({
       payableText: `¥${subtotal}`,
       travelPersons,
       service,
+      submitting: false,
+      submissionToken: createSubmissionToken(),
       agreements: pageConfig.agreements || {},
       contactName: "",
       contactPhone: "",
@@ -175,67 +187,116 @@ Page({
   },
 
   async submitOrder() {
-    const { travelPersons, contactName, contactPhone, agreedService, agreedRisk, agreedRefund } = this.data;
-    const user = await ensureLoggedIn({
-      toastTitle: "登录后才可提交报名"
-    });
-    if (!user) {
+    if (this.data.submitting) {
       return;
     }
 
-    if (!agreedService || !agreedRisk || !agreedRefund) {
-      wx.showToast({
-        title: "请先阅读并同意全部协议",
-        icon: "none"
+    this.setData({
+      submitting: true
+    });
+
+    const { travelPersons, contactName, contactPhone, agreedService, agreedRisk, agreedRefund } = this.data;
+
+    try {
+      const user = await ensureLoggedIn({
+        toastTitle: "登录后才可提交报名"
       });
-      return;
-    }
-    for (let i = 0; i < travelPersons.length; i++) {
-      const p = travelPersons[i];
-      if (!p.name || !p.idCard || !p.phone) {
+      if (!user) {
+        return;
+      }
+
+      if (!agreedService || !agreedRisk || !agreedRefund) {
         wx.showToast({
-          title: `请完善出行人${i + 1}的姓名、证件号与手机号`,
+          title: "请先阅读并同意全部协议",
           icon: "none"
         });
         return;
       }
-    }
-    if (!contactName || !contactPhone) {
+
+      for (let i = 0; i < travelPersons.length; i += 1) {
+        const p = travelPersons[i];
+        if (!p.name || !p.idCard || !p.phone) {
+          wx.showToast({
+            title: `请完善出行人${i + 1}的姓名、证件号与手机号`,
+            icon: "none"
+          });
+          return;
+        }
+      }
+
+      if (!contactName || !contactPhone) {
+        wx.showToast({
+          title: "请填写联系人姓名与联系电话",
+          icon: "none"
+        });
+        return;
+      }
+
+      const selectedPeriod = (this.data.groupPeriods || []).find(
+        (item) => String(item.dateStart || "") === String(this.data.selectedDate)
+      );
+      const payable = this.data.total;
+      const order = await createOrder({
+        clientRequestId: this.data.submissionToken,
+        serviceSlug: this.data.service.slug,
+        travelDate: this.data.selectedDate,
+        peopleCount: this.data.selectedCount,
+        amount: payable,
+        travelPeriod: selectedPeriod
+          ? {
+              dateStart: selectedPeriod.dateStart,
+              dateEnd: selectedPeriod.dateEnd || selectedPeriod.dateStart
+            }
+          : {
+              dateStart: this.data.selectedDate,
+              dateEnd: this.data.selectedDate
+            },
+        serviceSnapshot: {
+          serviceName: this.data.service.name,
+          serviceType: this.data.service.type,
+          cover: this.data.service.cover || "",
+          creatorRoles: Array.isArray(this.data.service.creatorRoles) ? this.data.service.creatorRoles : []
+        },
+        creatorSnapshot: this.data.creator
+          ? {
+              id: this.data.creator.id || "",
+              slug: this.data.creator.slug || "",
+              name: this.data.creator.name || "",
+              avatar: this.data.creator.avatar || "",
+              stance: this.data.creator.stance || ""
+            }
+          : {},
+        traveler: {
+          name: contactName,
+          idCard: travelPersons[0] ? travelPersons[0].idCard : "",
+          phone: contactPhone
+        },
+        travelers: travelPersons.map((p) => ({
+          name: p.name,
+          idCard: p.idCard,
+          phone: p.phone,
+          wechat: p.wechat,
+          note: p.note
+        })),
+        note: travelPersons[0] ? travelPersons[0].note : ""
+      });
+
+      wx.redirectTo({
+        url: `/pkg/account/payment-result/index?id=${order.id}`
+      });
+    } catch (error) {
+      console.error("Failed to submit order", error);
+      this.setData({
+        submissionToken: createSubmissionToken()
+      });
       wx.showToast({
-        title: "请填写联系人姓名与联系电话",
+        title: "提交失败，请稍后重试",
         icon: "none"
       });
-      return;
+    } finally {
+      this.setData({
+        submitting: false
+      });
     }
-
-    const payable = this.data.total;
-    const order = await createOrder({
-      serviceSlug: this.data.service.slug,
-      travelDate: this.data.selectedDate,
-      peopleCount: this.data.selectedCount,
-      amount: payable,
-      serviceSnapshot: {
-        serviceName: this.data.service.name,
-        serviceType: this.data.service.type,
-        cover: this.data.service.cover || ""
-      },
-      traveler: {
-        name: contactName,
-        idCard: travelPersons[0] ? travelPersons[0].idCard : "",
-        phone: contactPhone
-      },
-      travelers: travelPersons.map((p) => ({
-        name: p.name,
-        idCard: p.idCard,
-        phone: p.phone,
-        wechat: p.wechat,
-        note: p.note
-      })),
-      note: travelPersons[0] ? travelPersons[0].note : ""
-    });
-
-    wx.redirectTo({
-      url: `/pkg/account/payment-result/index?id=${order.id}`
-    });
   }
 });

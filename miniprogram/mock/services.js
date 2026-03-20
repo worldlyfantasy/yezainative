@@ -1,5 +1,16 @@
+const cloudImageUrlMap = require("../config/cloud-image-map");
+
+const CLOUD_MEDIA_FALLBACK =
+  cloudImageUrlMap["https://picsum.photos/seed/yezai-order-fallback/1200/800"] || "";
+
 function buildServiceMockImage(seed, width, height) {
-  return `https://picsum.photos/seed/${seed}/${width}/${height}`;
+  const legacyUrl = `https://picsum.photos/seed/${seed}/${width}/${height}`;
+  if (cloudImageUrlMap[legacyUrl]) {
+    return cloudImageUrlMap[legacyUrl];
+  }
+
+  console.warn(`[mock/services] Missing cloud image mapping for ${legacyUrl}`);
+  return CLOUD_MEDIA_FALLBACK;
 }
 
 function buildServiceMedia(slug) {

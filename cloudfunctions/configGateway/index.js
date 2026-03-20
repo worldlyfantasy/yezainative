@@ -1,5 +1,5 @@
 const cloud = require("wx-server-sdk");
-const { defaultConfigs, editableConfigKeys } = require("./config-definitions");
+const { defaultConfigs } = require("./config-definitions");
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -88,20 +88,7 @@ async function readConfig(key) {
   return deepMerge(defaults || {}, stored || {});
 }
 
-async function getEditableConfigs() {
-  const pairs = await Promise.all(
-    editableConfigKeys.map(async (key) => [key, await readConfig(key)])
-  );
-
-  return pairs.reduce((result, pair) => {
-    result[pair[0]] = pair[1];
-    return result;
-  }, {});
-}
-
 const handlers = {
-  getConfigByKey: (payload) => readConfig(payload && payload.key),
-  getEditableConfigs: () => getEditableConfigs(),
   getHowItWorksPageConfig: () => readConfig("howItWorksPage"),
   getCheckoutPageConfig: () => readConfig("checkoutPage"),
   getServiceDetailPageConfig: () => readConfig("serviceDetailPage"),
@@ -112,6 +99,7 @@ const handlers = {
 
 exports.main = async (event) => {
   const action = event && event.action;
+  const payload = event && event.payload ? event.payload : {};
   const handler = handlers[action];
 
   if (!handler) {
@@ -122,7 +110,7 @@ exports.main = async (event) => {
   }
 
   try {
-    const data = await handler();
+    const data = await handler(payload);
     return {
       ok: true,
       data

@@ -1,9 +1,12 @@
 const { getCurrentUser, getSessionSnapshot, login, updateProfile, logout } = require("../repositories/user-repository");
 const { getRecentOrders } = require("../repositories/transaction-repository");
+const { buildTripDateRange, getTripPhaseKey } = require("../constants/transaction-meta");
 const { getServiceCreatorRoles, getServiceCreatorRoleText } = require("./service-roles");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("./navigation");
-const { services = [] } = require("../mock/services");
-const { creators = [] } = require("../mock/creators");
+
+function isPlainObject(value) {
+  return Boolean(value) && Object.prototype.toString.call(value) === "[object Object]";
+}
 
 const PROFILE_SHORTCUTS = [
   {
@@ -26,101 +29,45 @@ const PROFILE_SHORTCUTS = [
   }
 ];
 
-function getServiceBySlug(slug) {
-  return services.find((item) => item.slug === slug) || null;
+const TRIP_PHASE_LABELS = {
+  upcoming: "待出发",
+  ongoing: "在进行",
+  completed: "已完成"
+};
+
+function getOrderServiceSnapshot(order) {
+  return isPlainObject(order && order.serviceSnapshot) ? order.serviceSnapshot : {};
 }
 
-function getCreatorById(creatorId) {
-  return creators.find((item) => item.id === creatorId) || null;
-}
-
-function findServicePeriod(service, travelDate) {
-  if (!service || !Array.isArray(service.groupPeriods) || !travelDate) {
-    return null;
-  }
-
-  return service.groupPeriods.find((period) => String(period.dateStart || "") === String(travelDate));
-}
-
-function buildTripDateRange(order, service) {
-  const period = findServicePeriod(service, order && order.travelDate);
-  const startDate = String(period && period.dateStart ? period.dateStart : order && order.travelDate ? order.travelDate : "").trim();
-  const endDate = String(period && period.dateEnd ? period.dateEnd : startDate).trim();
-
-  if (!startDate) {
-    return "出行时间待确认";
-  }
-
-  if (!endDate || endDate === startDate) {
-    return startDate;
-  }
-
-  return `${startDate} ～ ${endDate}`;
-}
-
-function parseDateOnly(dateValue) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateValue || "").trim());
-  if (!match) {
-    return null;
-  }
-
-  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-}
-
-function getTripPhaseMeta(order, service) {
-  const period = findServicePeriod(service, order && order.travelDate);
-  const startDate = parseDateOnly(period && period.dateStart ? period.dateStart : order && order.travelDate);
-  const endDate = parseDateOnly(period && period.dateEnd ? period.dateEnd : period && period.dateStart ? period.dateStart : order && order.travelDate);
-  const today = new Date();
-  const currentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-  if (!startDate || !endDate) {
-    return {
-      key: "upcoming",
-      label: "待出发"
-    };
-  }
-
-  if (currentDate < startDate) {
-    return {
-      key: "upcoming",
-      label: "待出发"
-    };
-  }
-
-  if (currentDate > endDate) {
-    return {
-      key: "completed",
-      label: "已完成"
-    };
-  }
-
-  return {
-    key: "ongoing",
-    label: "在进行"
-  };
+function getOrderCreatorSnapshot(order) {
+  return isPlainObject(order && order.creatorSnapshot) ? order.creatorSnapshot : {};
 }
 
 function buildActiveTrips(orders) {
   return orders
-    .filter((order) => order.status === "paid")
+    .filter((order) => order.status === "paid" || order.status === "traveling")
     .map((order) => {
-      const service = getServiceBySlug(order.serviceSlug);
-      const creator = service ? getCreatorById(service.creatorId) : null;
-      const tripPhase = getTripPhaseMeta(order, service);
+      const serviceSnapshot = getOrderServiceSnapshot(order);
+      const creatorSnapshot = getOrderCreatorSnapshot(order);
+      const tripPhaseKey = getTripPhaseKey(order);
+      const creatorRoleSource = {
+        type: serviceSnapshot.serviceType || order.serviceType || "",
+        creatorRoles: Array.isArray(serviceSnapshot.creatorRoles) ? serviceSnapshot.creatorRoles : []
+      };
 
       return Object.assign({}, order, {
-        serviceSlug: service ? service.slug : order.serviceSlug,
-        tripDateRange: buildTripDateRange(order, service),
-        tripPhaseKey: tripPhase.key,
-        tripPhaseLabel: tripPhase.label,
-        serviceCover: service ? service.cover : order.cover,
-        creatorName: creator ? creator.name : "野哉创作者",
-        creatorSlug: creator ? creator.slug : "",
-        creatorAvatar: creator ? creator.avatar : "",
-        creatorRoles: service ? getServiceCreatorRoles(service) : ["创作者"],
-        creatorRoleText: service ? getServiceCreatorRoleText(service) : "创作者",
-        creatorStance: creator ? creator.stance : ""
+        serviceSlug: order.serviceSlug,
+        tripDateRange: buildTripDateRange(order),
+        tripPhaseKey,
+        tripPhaseLabel: TRIP_PHASE_LABELS[tripPhaseKey] || TRIP_PHASE_LABELS.upcoming,
+        serviceName: serviceSnapshot.serviceName || order.serviceName || "",
+        serviceCover: serviceSnapshot.cover || order.cover || "",
+        creatorName: creatorSnapshot.name || order.creatorName || "野哉创作者",
+        creatorSlug: creatorSnapshot.slug || "",
+        creatorAvatar: creatorSnapshot.avatar || "",
+        creatorRoles: getServiceCreatorRoles(creatorRoleSource),
+        creatorRoleText: getServiceCreatorRoleText(creatorRoleSource),
+        creatorStance: creatorSnapshot.stance || ""
       });
     })
     .filter((order) => order.tripPhaseKey === "upcoming" || order.tripPhaseKey === "ongoing");
