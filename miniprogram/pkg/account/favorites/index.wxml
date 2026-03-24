@@ -80,7 +80,7 @@
       <view class="favorites-idea-list">
         <view
           wx:for="{{favoriteIdeas}}"
-          wx:key="id"
+          wx:key="slug"
           class="favorites-idea-card"
           data-slug="{{item.slug}}"
           bindtap="onIdeaTap"

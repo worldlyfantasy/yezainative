@@ -8,7 +8,7 @@ function getBasePrice(service, unitPriceFromQuery) {
   if (unitPriceFromQuery != null && !isNaN(Number(unitPriceFromQuery))) {
     return Number(unitPriceFromQuery);
   }
-  const matched = String(service.price || "").match(/\d+/);
+  const matched = String(service && service.priceLabel ? service.priceLabel : "").match(/\d+/);
   return matched ? Number(matched[0]) : 0;
 }
 
@@ -35,6 +35,21 @@ function createSubmissionToken() {
   return `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function formatTravelDateText(dateStart, dateEnd) {
+  const start = String(dateStart || "").trim();
+  const end = String(dateEnd || dateStart || "").trim();
+
+  if (!start) {
+    return "";
+  }
+
+  if (!end || end === start) {
+    return start;
+  }
+
+  return `${start} ～ ${end}`;
+}
+
 Page({
   data: {
     auditMode: isAuditMode(),
@@ -44,7 +59,9 @@ Page({
     refundAgreementTitle: "",
     travelDetail: null,
     selectedVersion: "",
-    selectedDate: "",
+    selectedDateText: "",
+    selectedDateStart: "",
+    selectedDateEnd: "",
     selectedPrice: 0,
     selectedCount: 1,
     groupPeriods: [],
@@ -56,6 +73,7 @@ Page({
     summarySubtotal: "0",
     summaryTotal: "0",
     payableText: "¥0",
+    periodCode: "",
     travelPersons: [],
     contactName: "",
     contactPhone: "",
@@ -88,7 +106,9 @@ Page({
 
     const service = payload.service;
     const groupPeriods = Array.isArray(payload.groupPeriods) ? payload.groupPeriods : [];
-    const travelDate = String(options.travelDate || "").trim();
+    const travelDateStart = String(options.travelDateStart || options.travelDate || "").trim();
+    const travelDateEnd = String(options.travelDateEnd || options.travelDateStart || options.travelDate || "").trim();
+    const periodCode = String(options.periodCode || "").trim();
     const peopleCount = Math.max(1, parseInt(options.peopleCount, 10) || 1);
     const unitPrice = getBasePrice(service, options.unitPrice);
     const subtotal = unitPrice * peopleCount;
@@ -102,7 +122,9 @@ Page({
       travelDetail: payload.travelDetail || null,
       creator: payload.creator || null,
       selectedVersion: versionName,
-      selectedDate: travelDate,
+      selectedDateText: formatTravelDateText(travelDateStart, travelDateEnd),
+      selectedDateStart: travelDateStart,
+      selectedDateEnd: travelDateEnd,
       selectedPrice: unitPrice,
       selectedCount: peopleCount,
       groupPeriods,
@@ -114,6 +136,7 @@ Page({
       summarySubtotal: String(subtotal),
       summaryTotal: String(total),
       payableText: `¥${subtotal}`,
+      periodCode,
       travelPersons,
       service,
       submitting: false,
@@ -232,25 +255,28 @@ Page({
         return;
       }
 
-      const selectedPeriod = (this.data.groupPeriods || []).find(
-        (item) => String(item.dateStart || "") === String(this.data.selectedDate)
-      );
-      const payable = this.data.total;
+      const selectedPeriod = (this.data.groupPeriods || []).find((item) => {
+        if (this.data.periodCode) {
+          return String(item.periodCode || item.id || "") === String(this.data.periodCode);
+        }
+        return String(item.dateStart || "") === String(this.data.selectedDateStart);
+      });
+      const travelDateStart = selectedPeriod ? selectedPeriod.dateStart : this.data.selectedDateStart;
+      const travelDateEnd = selectedPeriod
+        ? (selectedPeriod.dateEnd || selectedPeriod.dateStart)
+        : (this.data.selectedDateEnd || this.data.selectedDateStart);
       const order = await createOrder({
         clientRequestId: this.data.submissionToken,
         serviceSlug: this.data.service.slug,
-        travelDate: this.data.selectedDate,
+        periodCode: selectedPeriod ? selectedPeriod.periodCode || selectedPeriod.id || "" : this.data.periodCode,
+        versionName: selectedPeriod ? selectedPeriod.versionName || this.data.selectedVersion : this.data.selectedVersion,
+        travelDateStart,
+        travelDateEnd,
         peopleCount: this.data.selectedCount,
-        amount: payable,
-        travelPeriod: selectedPeriod
-          ? {
-              dateStart: selectedPeriod.dateStart,
-              dateEnd: selectedPeriod.dateEnd || selectedPeriod.dateStart
-            }
-          : {
-              dateStart: this.data.selectedDate,
-              dateEnd: this.data.selectedDate
-            },
+        travelPeriod: {
+          dateStart: travelDateStart,
+          dateEnd: travelDateEnd
+        },
         serviceSnapshot: {
           serviceName: this.data.service.name,
           serviceType: this.data.service.type,
@@ -266,19 +292,15 @@ Page({
               stance: this.data.creator.stance || ""
             }
           : {},
-        traveler: {
-          name: contactName,
-          idCard: travelPersons[0] ? travelPersons[0].idCard : "",
-          phone: contactPhone
-        },
+        contactName,
+        contactPhone,
         travelers: travelPersons.map((p) => ({
           name: p.name,
           idCard: p.idCard,
           phone: p.phone,
           wechat: p.wechat,
           note: p.note
-        })),
-        note: travelPersons[0] ? travelPersons[0].note : ""
+        }))
       });
 
       wx.redirectTo({

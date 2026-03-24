@@ -36,4 +36,4 @@
 - 不提交任何 `node_modules`
 - legacy fallback 与本地订单/收藏旧实现已移除，不再保留离线数据回退
 - 保留 [phase-5-cutover-checklist.md](/Users/lihaisen/Desktop/code/migrate/yezainative/docs/phase-5-cutover-checklist.md) 作为切换执行手册
-- 保留 [export-cloud-seed.js](/Users/lihaisen/Desktop/code/migrate/yezainative/scripts/export-cloud-seed.js) 与 [install-cloudfunctions-deps.js](/Users/lihaisen/Desktop/code/migrate/yezainative/scripts/install-cloudfunctions-deps.js) 作为初始化脚本
+- 保留 [install-cloudfunctions-deps.js](/Users/lihaisen/Desktop/code/migrate/yezainative/scripts/install-cloudfunctions-deps.js) 作为依赖安装脚本，初始化数据使用 [cloud-seed](/Users/lihaisen/Desktop/code/migrate/yezainative/docs/cloud-seed)

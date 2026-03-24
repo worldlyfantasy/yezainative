@@ -73,6 +73,30 @@
   color: #241b14;
 }
 
+.order-travelers {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.order-traveler {
+  padding-top: 8rpx;
+  border-top: 1rpx solid rgba(107, 89, 77, 0.12);
+}
+
+.order-traveler:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.order-traveler__title {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #241b14;
+}
+
 .order-actions {
   position: fixed;
   left: 24rpx;

@@ -25,7 +25,7 @@
     <view wx:elif="{{ideas.length}}" class="idea-list">
       <view
         wx:for="{{ideas}}"
-        wx:key="id"
+        wx:key="slug"
         class="idea-list-item"
         data-slug="{{item.slug}}"
         bindtap="onIdeaTap"

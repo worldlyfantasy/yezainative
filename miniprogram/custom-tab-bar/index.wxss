@@ -6,7 +6,7 @@
   z-index: 999;
   display: flex;
   align-items: stretch;
-  padding: 10rpx 20rpx calc(10rpx + env(safe-area-inset-bottom));
+  padding: 8rpx 20rpx calc(12rpx + env(safe-area-inset-bottom));
   background: rgba(242, 230, 201, 0.96);
   border-top: 1rpx solid rgba(153, 57, 33, 0.14);
   box-shadow: none;
@@ -14,9 +14,14 @@
 
 .custom-tab-bar__item {
   flex: 1;
-  min-height: 84rpx;
+  min-height: 110rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
   border-radius: 0;
-  border-bottom: 4rpx solid transparent;
+  border-bottom: 3rpx solid transparent;
 }
 
 .custom-tab-bar__item--active {
@@ -24,13 +29,21 @@
   border-bottom-color: rgba(153, 57, 33, 0.52);
 }
 
+.custom-tab-bar__icon {
+  width: 52rpx;
+  height: 52rpx;
+  display: block;
+}
+
 .custom-tab-bar__text {
-  font-size: 24rpx;
-  line-height: 80rpx;
-  color: #6a5a4b;
+  font-size: 44rpx;
+  line-height: 1;
+  color: #b79b63;
+  transform: scale(0.5);
+  transform-origin: center center;
+  font-weight: 500;
 }
 
 .custom-tab-bar__item--active .custom-tab-bar__text {
-  color: #993921;
-  font-weight: 500;
+  color: #d15e14;
 }

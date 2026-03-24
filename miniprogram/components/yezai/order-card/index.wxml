@@ -1,10 +1,10 @@
 <view class="order-card">
   <view class="order-card__head">
-    <text class="order-card__id">{{order.idPrefixText || "订单"}} #{{order.shortId}}</text>
+    <text class="order-card__id">{{order.idPrefixText || "订单"}} #{{order.displayOrderNo}}</text>
   </view>
   <text class="order-card__name">{{order.serviceName}}</text>
   <view class="order-card__meta">
-    <text>出行日期 {{order.travelDate}}</text>
+    <text>出行日期 {{order.travelDateText}}</text>
     <text>金额 {{order.payableText}}</text>
   </view>
   <view class="order-card__actions">

@@ -98,7 +98,7 @@
                   >{{item}}</text>
                 </view>
               </view>
-              <text class="creator-card__stance">"{{service.creatorQuote || service.summary}}"</text>
+              <text class="creator-card__stance">"{{creatorQuoteText || service.summary}}"</text>
             </view>
           </view>
         </view>
@@ -271,58 +271,6 @@
       </view>
     </block>
   </view>
-  <block wx:else>
-    <view class="section-block detail-grid">
-      <view class="paper-block">
-        <text class="section-title detail-card__title">适合谁</text>
-        <view class="detail-list">
-          <text wx:for="{{service.suitable}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
-        </view>
-      </view>
-      <view class="paper-block">
-        <text class="section-title detail-card__title">不适合谁</text>
-        <view class="detail-list">
-          <text wx:for="{{service.notSuitable}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="section-block detail-grid">
-      <view class="paper-block">
-        <text class="section-title detail-card__title">交付物</text>
-        <view class="detail-list">
-          <text wx:for="{{service.deliverables}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
-        </view>
-      </view>
-      <view class="paper-block">
-        <text class="section-title detail-card__title">不包含</text>
-        <view class="detail-list">
-          <text wx:for="{{service.exclusions}}" wx:key="*this" class="detail-list-item">· {{item}}</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="section-block detail-grid">
-      <view class="paper-block">
-        <text class="section-title service-info__title">{{timelineTitleText}}</text>
-        <text class="service-info__body">{{service.timelineDisplay || service.timeline}}</text>
-      </view>
-      <view class="paper-block">
-        <text class="section-title service-info__title">修改规则</text>
-        <text class="service-info__body">{{service.revision}}</text>
-      </view>
-      <view class="paper-block">
-        <text class="section-title service-info__title">{{serviceNoticeTitle}}</text>
-        <text class="service-info__body">{{serviceNoticeBody}}</text>
-      </view>
-    </view>
-
-    <view class="section-block paper-block">
-      <text class="section-title detail-card__title">{{refundTitleText}}</text>
-      <text class="service-info__body service-info__body--top">{{service.refundDisplay || service.refund}}</text>
-    </view>
-  </block>
-
   <view wx:if="{{periodSheetVisible}}" class="period-sheet">
     <view class="period-sheet__backdrop" bindtap="closePeriodSheet"></view>
     <view class="period-sheet__panel {{periodSheetAnimating ? 'period-sheet__panel--active' : ''}}">

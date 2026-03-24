@@ -75,7 +75,7 @@
     <view class="destination-story-list">
       <view
         wx:for="{{relatedIdeas}}"
-        wx:key="id"
+        wx:key="slug"
         class="destination-story-item"
         data-slug="{{item.slug}}"
         bindtap="onStoryTap"

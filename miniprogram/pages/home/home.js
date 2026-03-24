@@ -1,5 +1,10 @@
 const { getHomePageData } = require("../../repositories/content-repository");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
+const SERVICE_TABS = [
+  { key: "featured", label: "野哉精选" },
+  { key: "recent", label: "近期出行" },
+  { key: "special", label: "特别企划" }
+];
 
 Page({
   data: {
@@ -8,7 +13,15 @@ Page({
     heroSlides: [],
     featuredCreators: [],
     featuredDestinations: [],
-    featuredIdeas: []
+    featuredIdeas: [],
+    serviceTabs: SERVICE_TABS,
+    activeServiceTab: "featured",
+    featuredServicesByTab: {
+      featured: [],
+      recent: [],
+      special: []
+    },
+    activeServices: []
   },
 
   async onLoad() {
@@ -19,10 +32,17 @@ Page({
 
     try {
       const homePageData = await getHomePageData();
-      this.setData(Object.assign({}, homePageData, {
-        loading: false,
-        errorText: ""
-      }));
+      const featuredServicesByTab = this.normalizeServicesByTab(homePageData && homePageData.featuredServicesByTab);
+      const activeServiceTab = this.resolveDefaultServiceTab(featuredServicesByTab);
+      this.setData(
+        Object.assign({}, homePageData, {
+          loading: false,
+          errorText: "",
+          featuredServicesByTab,
+          activeServiceTab,
+          activeServices: this.getServicesByTab(featuredServicesByTab, activeServiceTab)
+        })
+      );
       this.resolveHeroSlides(homePageData.heroSlides);
     } catch (error) {
       console.error("Failed to load home page", error);
@@ -79,7 +99,7 @@ Page({
     goTopLevel(TOP_LEVEL_ROUTES.creators);
   },
 
-  goDestinations() {
+  goServices() {
     goTopLevel(TOP_LEVEL_ROUTES.destinations);
   },
 
@@ -114,9 +134,28 @@ Page({
     });
   },
 
-  onDestinationTap(event) {
+  onServiceTabChange(event) {
+    const { tab } = event.currentTarget.dataset;
+    if (!tab || tab === this.data.activeServiceTab) {
+      return;
+    }
+
+    this.setData({
+      activeServiceTab: tab,
+      activeServices: this.getServicesByTab(this.data.featuredServicesByTab, tab)
+    });
+  },
+
+  onServiceTap(event) {
+    const slug = (event.currentTarget && event.currentTarget.dataset && event.currentTarget.dataset.slug)
+      || (event.detail && event.detail.slug)
+      || "";
+    if (!slug) {
+      return;
+    }
+
     wx.navigateTo({
-      url: `/pkg/explore/destination-detail/index?slug=${event.detail.slug}`
+      url: `/pkg/explore/service-detail/index?slug=${slug}`
     });
   },
 
@@ -124,5 +163,36 @@ Page({
     wx.navigateTo({
       url: `/pkg/content/idea-detail/index?slug=${event.detail.slug}`
     });
+  },
+
+  resolveDefaultServiceTab(featuredServicesByTab) {
+    const serviceTabs = this.data.serviceTabs || [];
+    for (let index = 0; index < serviceTabs.length; index += 1) {
+      const key = serviceTabs[index].key;
+      if (this.getServicesByTab(featuredServicesByTab, key).length) {
+        return key;
+      }
+    }
+
+    return serviceTabs.length ? serviceTabs[0].key : "featured";
+  },
+
+  getServicesByTab(featuredServicesByTab, tabKey) {
+    if (!featuredServicesByTab || !tabKey) {
+      return [];
+    }
+    const services = featuredServicesByTab[tabKey];
+    return Array.isArray(services) ? services.slice(0, 3) : [];
+  },
+
+  normalizeServicesByTab(featuredServicesByTab) {
+    const source = featuredServicesByTab && typeof featuredServicesByTab === "object"
+      ? featuredServicesByTab
+      : {};
+    return {
+      featured: Array.isArray(source.featured) ? source.featured : [],
+      recent: Array.isArray(source.recent) ? source.recent : [],
+      special: Array.isArray(source.special) ? source.special : []
+    };
   }
 });

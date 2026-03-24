@@ -25,7 +25,7 @@ Component({
   },
   observers: {
     "service, hideDurationInPrice"(service, hideDurationInPrice) {
-      const rawPrice = service && service.price ? service.price : "";
+      const rawPrice = service && service.priceLabel ? service.priceLabel : "";
       const resolvedPrice = hideDurationInPrice
         ? rawPrice.replace(/\s*\/\s*\S+\s*$/, "")
         : rawPrice;

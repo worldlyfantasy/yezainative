@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "cloudbase": {
+      "command": "npx",
+      "args": [
+        "npm-global-exec@latest",
+        "@cloudbase/cloudbase-mcp@latest"
+      ],
+      "env": {
+        "INTEGRATION_IDE": "Cursor"
+      }
+    },
+    "insforge": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@insforge/mcp@latest"
+      ],
+      "env": {
+        "API_KEY": "ik_76992e7869f3f0bd7f394dfac0bdacd1",
+        "API_BASE_URL": "https://zj32q7j7.ap-southeast.insforge.app"
+      }
+    },
+    "pencil": {
+      "name": "pencil",
+      "transport": "stdio",
+      "command": "/Users/lihaisen/.cursor/extensions/highagency.pencildev-0.6.33-universal/out/mcp-server-darwin-arm64",
+      "args": [
+        "--app",
+        "cursor"
+      ],
+      "env": {}
+    }
+  }
+}

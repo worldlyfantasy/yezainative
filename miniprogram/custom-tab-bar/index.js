@@ -6,19 +6,27 @@ Component({
     list: [
       {
         pagePath: TOP_LEVEL_ROUTES.home,
-        text: "首页"
+        text: "首页",
+        icon: "/images/panel/tab-home-inactive.svg",
+        activeIcon: "/images/panel/tab-home-active.svg"
       },
       {
         pagePath: TOP_LEVEL_ROUTES.creators,
-        text: "人物"
+        text: "人物",
+        icon: "/images/panel/tab-creators-inactive.svg",
+        activeIcon: "/images/panel/tab-creators-active.svg"
       },
       {
         pagePath: TOP_LEVEL_ROUTES.destinations,
-        text: "土地"
+        text: "土地",
+        icon: "/images/panel/tab-destinations-inactive.svg",
+        activeIcon: "/images/panel/tab-destinations-active.svg"
       },
       {
         pagePath: TOP_LEVEL_ROUTES.profile,
-        text: "我的"
+        text: "我的",
+        icon: "/images/panel/tab-profile-inactive.svg",
+        activeIcon: "/images/panel/tab-profile-active.svg"
       }
     ]
   },

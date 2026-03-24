@@ -6,6 +6,12 @@
     data-path="{{item.pagePath}}"
     bindtap="onSwitchTab"
   >
+    <image
+      class="custom-tab-bar__icon"
+      src="{{selectedPath === item.pagePath ? item.activeIcon : item.icon}}"
+      mode="aspectFit"
+      lazy-load="{{true}}"
+    ></image>
     <text class="custom-tab-bar__text">{{item.text}}</text>
   </button>
 </view>

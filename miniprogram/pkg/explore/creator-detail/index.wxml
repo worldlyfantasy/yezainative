@@ -92,7 +92,7 @@
     <view class="creator-story-list">
       <view
         wx:for="{{displayIdeas}}"
-        wx:key="id"
+        wx:key="slug"
         class="creator-story-item"
         data-slug="{{item.slug}}"
         bindtap="onStoryTap"

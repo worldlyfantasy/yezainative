@@ -13,21 +13,19 @@
 - 交易网关：`cloudfunctions/transactionGateway`
 - 用户网关：`cloudfunctions/userGateway`
 
-以及一个种子数据导出脚本：
+以及一个云函数依赖安装脚本：
 
-- `scripts/export-cloud-seed.js`
 - `scripts/install-cloudfunctions-deps.js`
 
-## 3. 生成初始化数据
+## 3. 初始化数据准备
 
 在仓库根目录执行：
 
 ```bash
 node scripts/install-cloudfunctions-deps.js
-node scripts/export-cloud-seed.js
 ```
 
-执行后会生成：
+初始化数据直接使用仓库内已维护的 `docs/cloud-seed`：
 
 - `docs/cloud-seed/creators.json`
 - `docs/cloud-seed/destinations.json`

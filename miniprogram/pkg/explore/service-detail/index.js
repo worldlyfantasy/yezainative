@@ -116,6 +116,18 @@ function buildTravelDetailState(travelDetail) {
   };
 }
 
+function getCreatorQuoteText(service, travelDetail) {
+  const source = travelDetail && travelDetail.overview && travelDetail.overview.whyJoinText
+    ? String(travelDetail.overview.whyJoinText)
+    : "";
+  const firstParagraph = source.split(/\n\s*\n/)[0].trim();
+  if (firstParagraph) {
+    return firstParagraph;
+  }
+
+  return String(service && service.summary ? service.summary : "").trim();
+}
+
 Page({
   data: {
     loading: true,
@@ -140,6 +152,7 @@ Page({
     checkoutNoticeMode: "warning",
     checkoutNoticeActionType: "login",
     creator: null,
+    creatorQuoteText: "",
     relatedDestinations: [],
     heroCover: "",
     photoGallery: [],
@@ -225,6 +238,7 @@ Page({
             loading: false,
             service: serviceWithTags,
             creator: payload.creator,
+            creatorQuoteText: getCreatorQuoteText(originalService, detailState.travelDetail),
             relatedDestinations: payload.relatedDestinations || [],
             heroCover: payload.heroCover || "",
             photoGallery: payload.photoGallery || [],
@@ -491,23 +505,20 @@ Page({
     }
   },
 
-  buildSuitableSheetContent(service) {
-    if (service && service.suitableDetail) {
-      return service.suitableDetail;
+  buildSuitableSheetContent(service, travelDetail) {
+    const overviewText = travelDetail && travelDetail.overview && travelDetail.overview.suitableText
+      ? String(travelDetail.overview.suitableText).trim()
+      : "";
+    if (overviewText) {
+      return overviewText;
     }
-    const list = Array.isArray(service && service.suitable) ? service.suitable : [];
-    const bulletLine =
-      list.length > 0 ? "· " + list.join("\n· ") + "\n\n" : "";
-    const mockParagraph1 =
-      "这条路线适合能适应海拔 3500 米以上、想学习地形记录、愿意分担公用装备的旅人。行程中有连续多日徒步与露营，适合体能中等偏上、喜欢用脚步和手帐感受高原层次的人。推荐给想慢慢感受高原、不追求打卡节奏的参与者。";
-    const mockParagraph2 =
-      "如果你愿意在牧场与寺院之间慢下来，用手绘地图串联所见，并接受天气与路况带来的弹性调整，会更容易融入本次行程的节奏。";
-    return bulletLine + mockParagraph1 + "\n\n" + mockParagraph2;
+
+    return String(service && service.summary ? service.summary : "这段旅程的适配说明待补充。").trim();
   },
 
   openSuitableSheet() {
     if (this.data.suitableSheetVisible) return;
-    const content = this.buildSuitableSheetContent(this.data.service);
+    const content = this.buildSuitableSheetContent(this.data.service, this.data.travelDetail);
     this.setData(
       {
         suitableSheetVisible: true,
@@ -669,12 +680,16 @@ Page({
 
     this.closePeriodSheet();
     const slug = this.data.service.slug;
-    const travelDate = selected.dateStart;
+    const travelDateStart = selected.dateStart;
+    const travelDateEnd = selected.dateEnd || selected.dateStart;
     const peopleCount = this.data.periodSheetPeople;
     const unitPrice = selected.price;
     const versionName = selected.versionName ? encodeURIComponent(selected.versionName) : "";
+    const periodCode = selected.periodCode || selected.id || "";
     wx.navigateTo({
-      url: `/pkg/explore/checkout/index?slug=${slug}&travelDate=${travelDate}&peopleCount=${peopleCount}&unitPrice=${unitPrice}&versionName=${versionName}`
+      url:
+        `/pkg/explore/checkout/index?slug=${slug}&travelDateStart=${travelDateStart}&travelDateEnd=${travelDateEnd}&peopleCount=${peopleCount}` +
+        `&unitPrice=${unitPrice}&versionName=${versionName}&periodCode=${periodCode}`
     });
   },
 

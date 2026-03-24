@@ -1,4 +1,5 @@
 const cloud = require("wx-server-sdk");
+const cloudbase = require("@cloudbase/node-sdk");
 const {
   normalizeCreatorAssetFields,
   normalizeDestinationAssetFields,
@@ -10,6 +11,11 @@ const {
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
+const sqlApp = cloudbase.init({
+  env: process.env.TCB_ENV || "yezai-3gr73wd48057512e"
+});
+const models = sqlApp.models;
+const runSQL = models.$runSQL || models.runSQL;
 const CONFIG_COLLECTION = "app_configs";
 const CONTENT_CACHE_TTL_MS = 5 * 60 * 1000;
 const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -23,6 +29,37 @@ const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五
 let contentDataCache = null;
 let contentDataPromise = null;
 const configValueCache = new Map();
+
+function getSQLRows(result) {
+  const data = result && result.data ? result.data : {};
+  return Array.isArray(data.executeResultList) ? data.executeResultList : [];
+}
+
+async function listSqlServicePeriods(serviceSlug) {
+  if (!serviceSlug) {
+    return [];
+  }
+
+  try {
+    if (typeof runSQL !== "function") {
+      throw new Error("models.$runSQL unavailable");
+    }
+
+    const result = await runSQL(
+      "SELECT `serviceName`, `versionName`, `serviceSlug`, `periodCode`, `dateStart`, `dateEnd`, `price`, `minGroup`, `remainingSeats`, `status`, `creatorId`, `createdAt`, `updatedAt`, `_id`, `owner`, `_mainDep`, `_openid`, `createBy`, `updateBy` FROM `ServicePeriod` WHERE `serviceSlug` = {{serviceSlug}} ORDER BY `dateStart` ASC",
+      {
+        serviceSlug: String(serviceSlug).trim()
+      }
+    );
+    return getSQLRows(result);
+  } catch (error) {
+    console.error("Failed to list SQL service periods", {
+      serviceSlug,
+      error
+    });
+    return [];
+  }
+}
 
 function parseIdeaBody(body) {
   if (!body) {
@@ -68,7 +105,15 @@ function buildGroupPeriodDisplay(period) {
   const startDateLabel = formatPeriodDate(period.dateStart);
   const endDateLabel = formatPeriodDate(period.dateEnd);
   const dateLabel = period.dateStart === period.dateEnd ? startDateLabel : `${startDateLabel} - ${endDateLabel}`;
-  const statusText = period.status === "confirmed" ? "确定成行" : "可报名";
+  let statusText = "可报名";
+
+  if (period.status === "confirmed") {
+    statusText = "确定成行";
+  } else if (period.status === "soldout") {
+    statusText = "名额已满";
+  } else if (period.status === "closed") {
+    statusText = "已截止";
+  }
 
   return Object.assign({}, period, {
     dateLabel,
@@ -111,6 +156,82 @@ function getServiceTimelineDisplayText(timelineText) {
 function getServiceAdjustmentDisplayText(refundText) {
   const normalized = String(refundText || "").trim();
   return normalized || "如需调整或取消，请尽快联系平台确认当次行程的可调整空间与处理方式，具体以行前确认结果为准。";
+}
+
+function getServicePriceLabel(service) {
+  return String(service && service.priceLabel ? service.priceLabel : "").trim();
+}
+
+function normalizeServiceContentDoc(service) {
+  const normalized = normalizeServiceAssetFields(service);
+  return Object.assign({}, normalized, {
+    priceLabel: getServicePriceLabel(normalized)
+  });
+}
+
+function buildPublicService(service, overrides) {
+  const source = service && typeof service === "object" ? service : {};
+  const { groupPeriods, ...rest } = source;
+
+  return Object.assign({}, rest, {
+    priceLabel: getServicePriceLabel(source)
+  }, overrides || {});
+}
+
+function listCreatorRefCandidates(creator) {
+  const candidates = [];
+  const creatorId = String(creator && creator.id ? creator.id : "").trim();
+  const creatorSlug = String(creator && creator.slug ? creator.slug : "").trim();
+
+  if (creatorId) {
+    candidates.push(creatorId);
+  }
+  if (creatorSlug) {
+    candidates.push(creatorSlug);
+    const slugRef = `creator-${creatorSlug}`;
+    if (!candidates.includes(slugRef)) {
+      candidates.push(slugRef);
+    }
+  }
+
+  return candidates;
+}
+
+function matchesCreatorRef(creator, ref) {
+  const normalizedRef = String(ref || "").trim();
+  return normalizedRef ? listCreatorRefCandidates(creator).includes(normalizedRef) : false;
+}
+
+function findCreatorByRef(creators, ref) {
+  return (creators || []).find((creator) => matchesCreatorRef(creator, ref)) || null;
+}
+
+function listCreatorServiceIds(services, creator) {
+  return (services || [])
+    .filter((service) => service && matchesCreatorRef(creator, service.creatorId) && service.id)
+    .map((service) => service.id);
+}
+
+function enrichCreatorDoc(creator, services) {
+  return Object.assign({}, creator, {
+    serviceIds: listCreatorServiceIds(services, creator)
+  });
+}
+
+function enrichDestinationDoc(destination, creators, services) {
+  const destinationSlug = destination && destination.slug ? destination.slug : "";
+  const relatedServices = (services || []).filter((service) =>
+    Array.isArray(service && service.destinationSlugs) && service.destinationSlugs.includes(destinationSlug)
+  );
+  const relatedCreators = (creators || []).filter((creator) =>
+    Array.isArray(creator && creator.destinationSlugs) && creator.destinationSlugs.includes(destinationSlug)
+  );
+
+  return Object.assign({}, destination, {
+    serviceIds: relatedServices.map((service) => service.id).filter(Boolean),
+    creatorCount: relatedCreators.length,
+    routeCount: relatedServices.length
+  });
 }
 
 function getItineraryDayCount(service) {
@@ -519,6 +640,45 @@ function filterServices(services, options) {
   });
 }
 
+function listBySlugOrder(items, slugs, limit) {
+  const sourceItems = Array.isArray(items) ? items : [];
+  const sourceSlugs = Array.isArray(slugs) ? slugs : [];
+  const slugMap = sourceItems.reduce((map, item) => {
+    if (item && item.slug) {
+      map[item.slug] = item;
+    }
+    return map;
+  }, {});
+  const ordered = sourceSlugs
+    .map((slug) => slugMap[String(slug || "").trim()])
+    .filter(Boolean);
+  return typeof limit === "number" ? ordered.slice(0, limit) : ordered;
+}
+
+function buildHomeServicesTab(services, slugs, fallbackStartIndex) {
+  const limit = 3;
+  const picked = listBySlugOrder(services, slugs, limit);
+  if (picked.length >= limit) {
+    return picked;
+  }
+
+  const existing = new Set(picked.map((service) => service.slug));
+  const sourceServices = Array.isArray(services) ? services : [];
+  const offset = Number.isFinite(fallbackStartIndex) ? Math.max(fallbackStartIndex, 0) : 0;
+  const fallbackPool = sourceServices.slice(offset).concat(sourceServices.slice(0, offset));
+
+  for (let index = 0; index < fallbackPool.length && picked.length < limit; index += 1) {
+    const service = fallbackPool[index];
+    if (!service || !service.slug || existing.has(service.slug)) {
+      continue;
+    }
+    existing.add(service.slug);
+    picked.push(service);
+  }
+
+  return picked;
+}
+
 function ensureContentCollections(payload) {
   if (!payload.creators.length || !payload.destinations.length || !payload.services.length || !payload.ideas.length) {
     throw new Error("Cloud content collections are empty");
@@ -540,12 +700,18 @@ async function loadContentData() {
     listCollection(COLLECTIONS.services),
     listCollection(COLLECTIONS.ideas)
   ])
-    .then(([creators, destinations, services, ideas]) => {
+    .then(([rawCreators, rawDestinations, rawServices, rawIdeas]) => {
+      const services = rawServices.map(normalizeServiceContentDoc);
+      const creators = rawCreators.map(normalizeCreatorAssetFields).map((creator) => enrichCreatorDoc(creator, services));
+      const destinations = rawDestinations
+        .map(normalizeDestinationAssetFields)
+        .map((destination) => enrichDestinationDoc(destination, creators, services));
+      const ideas = rawIdeas.map(normalizeIdeaAssetFields);
       const payload = {
-        creators: creators.map(normalizeCreatorAssetFields),
-        destinations: destinations.map(normalizeDestinationAssetFields),
-        services: services.map(normalizeServiceAssetFields),
-        ideas: ideas.map(normalizeIdeaAssetFields)
+        creators,
+        destinations,
+        services,
+        ideas
       };
       ensureContentCollections(payload);
       contentDataCache = {
@@ -562,12 +728,15 @@ async function loadContentData() {
 }
 
 async function getHomePageData() {
-  const { creators, destinations, ideas } = await loadContentData();
+  const { creators, destinations, services, ideas } = await loadContentData();
   const homeConfig = (await getConfigValue("homePage")) || {};
 
   const featuredCreatorSlugs = homeConfig.featuredCreatorSlugs || [];
   const featuredDestinationSlugs = homeConfig.featuredDestinationSlugs || [];
   const featuredIdeaSlugs = homeConfig.featuredIdeaSlugs || [];
+  const featuredServiceSlugs = homeConfig.featuredServiceSlugs || [];
+  const recentServiceSlugs = homeConfig.recentServiceSlugs || [];
+  const specialProjectServiceSlugs = homeConfig.specialProjectServiceSlugs || [];
 
   const featuredCreators = featuredCreatorSlugs.length
     ? creators.filter((creator) => featuredCreatorSlugs.includes(creator.slug))
@@ -579,9 +748,23 @@ async function getHomePageData() {
     ? ideas.filter((idea) => featuredIdeaSlugs.includes(idea.slug))
     : ideas.slice(0, 3)
   ).map((idea) => {
-    const author = creators.find((creator) => creator.id === idea.authorId);
+    const author = findCreatorByRef(creators, idea.authorId);
     return Object.assign({}, idea, {
       authorName: author ? author.name : ""
+    });
+  });
+
+  const featuredServicesByTab = {
+    featured: buildHomeServicesTab(services, featuredServiceSlugs, 0),
+    recent: buildHomeServicesTab(services, recentServiceSlugs, 3),
+    special: buildHomeServicesTab(services, specialProjectServiceSlugs, 6)
+  };
+  Object.keys(featuredServicesByTab).forEach((key) => {
+    featuredServicesByTab[key] = featuredServicesByTab[key].map((service) => {
+      const creator = findCreatorByRef(creators, service.creatorId);
+      return buildPublicService(service, {
+        creatorName: creator ? creator.name : ""
+      });
     });
   });
 
@@ -603,10 +786,11 @@ async function getHomePageData() {
     ),
     featuredCreators: featuredCreators.length ? featuredCreators : creators.slice(0, 3),
     featuredDestinations: featuredDestinations.length ? featuredDestinations : destinations.slice(0, 4),
+    featuredServicesByTab,
     featuredIdeas: featuredIdeas.length
       ? featuredIdeas
       : ideas.slice(0, 3).map((idea) => {
-          const author = creators.find((creator) => creator.id === idea.authorId);
+          const author = findCreatorByRef(creators, idea.authorId);
           return Object.assign({}, idea, {
             authorName: author ? author.name : ""
           });
@@ -637,9 +821,9 @@ async function getCreatorDetailData(slug) {
 
   const creatorDestinations = destinations.filter((destination) => (creator.destinationSlugs || []).includes(destination.slug));
   const relatedServices = services
-    .filter((service) => (creator.serviceIds || []).includes(service.id))
-    .map((service) => Object.assign({}, service, { creatorName: creator.name }));
-  const creatorIdeas = ideas.filter((idea) => idea.authorId === creator.id);
+    .filter((service) => matchesCreatorRef(creator, service.creatorId))
+    .map((service) => buildPublicService(service, { creatorName: creator.name }));
+  const creatorIdeas = ideas.filter((idea) => matchesCreatorRef(creator, idea.authorId));
 
   return {
     creator: Object.assign({}, creator, { isFavorited: false }),
@@ -671,7 +855,7 @@ async function getDestinationDetailData(slug, filters) {
   const relatedIdeas = ideas
     .filter((idea) => Array.isArray(idea.destinationSlugs) && idea.destinationSlugs.includes(destination.slug))
     .map((idea) => {
-      const author = creators.find((creator) => creator.id === idea.authorId);
+      const author = findCreatorByRef(creators, idea.authorId);
       return Object.assign({}, idea, {
         authorName: author ? author.name : ""
       });
@@ -685,8 +869,8 @@ async function getDestinationDetailData(slug, filters) {
       filters || {}
     )
   ).map((service) => {
-    const creator = creators.find((item) => item.id === service.creatorId);
-    return Object.assign({}, service, {
+    const creator = findCreatorByRef(creators, service.creatorId);
+    return buildPublicService(service, {
       creatorName: creator ? creator.name : ""
     });
   });
@@ -711,7 +895,7 @@ async function getIdeasPageData(theme, creatorSlug) {
   if (creatorSlug) {
     const creator = creators.find((item) => item.slug === creatorSlug);
     if (creator) {
-      sourceIdeas = sourceIdeas.filter((idea) => idea.authorId === creator.id);
+      sourceIdeas = sourceIdeas.filter((idea) => matchesCreatorRef(creator, idea.authorId));
       pageTitle = `${creator.name}的故事`;
     }
   }
@@ -737,7 +921,7 @@ async function getIdeaDetailData(slug) {
     return null;
   }
 
-  const author = creators.find((creator) => creator.id === idea.authorId) || null;
+  const author = findCreatorByRef(creators, idea.authorId);
   return {
     idea: Object.assign({}, idea, { isFavorited: false }),
     author,
@@ -752,13 +936,13 @@ async function getServiceDetailData(slug) {
     return null;
   }
 
-  const creator = creators.find((item) => item.id === service.creatorId) || null;
+  const creator = findCreatorByRef(creators, service.creatorId);
   const relatedDestinations = destinations.filter((item) => (service.destinationSlugs || []).includes(item.slug));
   const heroCover = service.cover || (relatedDestinations[0] ? relatedDestinations[0].cover : "");
   const photoGallery = Array.isArray(service.gallery) && service.gallery.length ? service.gallery : heroCover ? [heroCover] : [];
   const photoBaseList = heroCover ? [heroCover].concat(photoGallery) : photoGallery;
   const photoTotal = photoBaseList.length;
-  const tags = Array.isArray(service.tags) ? service.tags : [];
+  const sqlPeriods = await listSqlServicePeriods(service.slug);
   const mediaTabs = [
     {
       key: "landscape",
@@ -778,21 +962,31 @@ async function getServiceDetailData(slug) {
   ];
 
   return {
-    service: Object.assign({}, service, {
+    service: buildPublicService(service, {
       isFavorited: false,
-      tags,
-      creatorRoles: getServiceCreatorRoles(service),
-      timelineDisplay: getServiceTimelineDisplayText(service.timeline),
-      refundDisplay: getServiceAdjustmentDisplayText(service.refund)
+      creatorRoles: getServiceCreatorRoles(service)
     }),
-    travelDetail: service.travelDetail || buildServiceTravelDetail(service, tags, photoBaseList),
+    travelDetail: service.travelDetail || buildServiceTravelDetail(service, [], photoBaseList),
     creator,
     relatedDestinations,
     heroCover,
     photoGallery,
     photoTotal,
     mediaTabs,
-    groupPeriods: Array.isArray(service.groupPeriods) ? service.groupPeriods.map(buildGroupPeriodDisplay) : []
+    groupPeriods: sqlPeriods
+      .map((period) =>
+        buildGroupPeriodDisplay({
+          id: period.periodCode || period.id,
+          periodCode: period.periodCode || period.id || "",
+          versionName: period.versionName || "",
+          dateStart: period.dateStart || "",
+          dateEnd: period.dateEnd || period.dateStart || "",
+          price: Number(period.price) || 0,
+          status: period.status || "available",
+          remainingSeats: Number(period.remainingSeats) || 0,
+          minGroup: Number(period.minGroup) || 1
+        })
+      )
   };
 }
 

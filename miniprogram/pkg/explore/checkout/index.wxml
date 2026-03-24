@@ -12,7 +12,7 @@
     </view>
     <view class="checkout-summary__row">
       <text class="checkout-summary__label">出发日期</text>
-      <text class="checkout-summary__value">{{selectedDate}}</text>
+      <text class="checkout-summary__value">{{selectedDateText}}</text>
     </view>
     <view class="checkout-summary__row">
       <text class="checkout-summary__label">单价</text>

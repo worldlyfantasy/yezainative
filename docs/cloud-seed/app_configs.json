@@ -36,6 +36,21 @@
         "minbei-creek",
         "hexicorridor"
       ],
+      "featuredServiceSlugs": [
+        "ridge-journal",
+        "lancang-source-lab",
+        "qinghai-loop"
+      ],
+      "recentServiceSlugs": [
+        "miao-night-walk",
+        "minbei-creek-study",
+        "rainforest-dawn"
+      ],
+      "specialProjectServiceSlugs": [
+        "hexi-tracing",
+        "salt-pan-diary",
+        "wuyi-ink-trail"
+      ],
       "featuredIdeaSlugs": [
         "aba-presence",
         "miao-dusk",

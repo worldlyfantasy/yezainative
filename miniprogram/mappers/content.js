@@ -8,10 +8,16 @@ function ensureObject(value) {
 
 function mapHomePageData(payload) {
   const source = ensureObject(payload);
+  const servicesByTab = ensureObject(source.featuredServicesByTab);
   return {
     heroSlides: ensureArray(source.heroSlides),
     featuredCreators: ensureArray(source.featuredCreators),
     featuredDestinations: ensureArray(source.featuredDestinations),
+    featuredServicesByTab: {
+      featured: ensureArray(servicesByTab.featured),
+      recent: ensureArray(servicesByTab.recent),
+      special: ensureArray(servicesByTab.special)
+    },
     featuredIdeas: ensureArray(source.featuredIdeas)
   };
 }

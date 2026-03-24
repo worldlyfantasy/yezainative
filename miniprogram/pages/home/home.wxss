@@ -8,6 +8,17 @@
   overflow: hidden;
 }
 
+.hero__transition {
+  width: 100%;
+  background: #ede2c8;
+}
+
+.hero__transition-fade {
+  width: 100%;
+  height: 34rpx;
+  background: linear-gradient(180deg, rgba(32, 23, 17, 0.12) 0%, rgba(32, 23, 17, 0.04) 56%, rgba(32, 23, 17, 0) 100%);
+}
+
 .hero__swiper,
 .hero__slide {
   width: 100%;
@@ -157,22 +168,202 @@
 }
 
 .home-note {
-  padding-bottom: 36rpx;
+  padding-top: 10rpx;
+  padding-bottom: 46rpx;
 }
 
 .home-note__text {
   display: block;
-  font-size: 30rpx;
-  line-height: 2;
-  color: #5e5145;
+  font-family: "OPPOSans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 26rpx;
+  line-height: 1.7;
+  letter-spacing: 0.4rpx;
+  text-align: center;
+  color: #5f5750;
 }
 
 .home-page .section-block {
   margin-top: 0;
 }
 
+.section-head--trip {
+  margin-bottom: 26rpx;
+}
+
+.trip-scroll {
+  width: 100%;
+}
+
+.trip-scroll__track {
+  display: flex;
+  gap: 20rpx;
+  width: max-content;
+  padding-right: 20rpx;
+}
+
+.trip-card {
+  width: 540rpx;
+  height: 404rpx;
+  padding-top: 18rpx;
+  padding-bottom: 16rpx;
+  border: none;
+  border-radius: 18rpx;
+  background: #fbf7ec;
+  box-shadow:
+    0 4rpx 10rpx rgba(82, 62, 40, 0.08),
+    0 14rpx 28rpx rgba(82, 62, 40, 0.06);
+  box-sizing: border-box;
+}
+
+.trip-card__cover-wrap {
+  position: relative;
+  width: 502rpx;
+  height: 280rpx;
+  margin: 0 auto;
+  border-radius: 18rpx;
+  overflow: hidden;
+}
+
+.trip-card__cover {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.trip-card__mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 132rpx;
+  background: linear-gradient(180deg, rgba(23, 17, 13, 0) 0%, rgba(23, 17, 13, 0.82) 100%);
+}
+
+.trip-card__cover-meta {
+  position: absolute;
+  right: 16rpx;
+  bottom: 12rpx;
+  left: 16rpx;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.trip-card__title {
+  flex: 1;
+  min-width: 0;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 32rpx;
+  font-weight: 500;
+  line-height: 1.22;
+  color: #f6f2e8;
+}
+
+.trip-card__price {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  line-height: 1.25;
+  color: rgba(246, 242, 232, 0.94);
+}
+
+.trip-card__summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  width: 502rpx;
+  margin: 18rpx auto 0;
+  min-height: 72rpx;
+  font-family: "OPPOSans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 24rpx;
+  font-weight: 400;
+  line-height: 1.58;
+  letter-spacing: 0.4rpx;
+  text-align: left;
+  color: #7f776d;
+}
+
+.service-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20rpx;
+  margin-bottom: 24rpx;
+  width: 100%;
+}
+
+.service-tabs--bottom {
+  margin-top: 24rpx;
+  margin-bottom: 2rpx;
+}
+
+.service-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 158rpx;
+  height: 52rpx;
+  min-width: 158rpx;
+  padding: 0;
+  border: 2rpx solid #d8b893;
+  border-radius: 26rpx;
+  font-family: "OPPOSans Medium", "OPPOSans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 24rpx;
+  line-height: 1.2;
+  font-weight: 500;
+  text-align: center;
+  color: #fff8ee;
+  background: #d9b77d;
+  box-sizing: border-box;
+}
+
+.service-tab--active {
+  color: #fff8ee;
+  border-color: #c76334;
+  background: #c76334;
+}
+
 .home-section-divider {
   display: block;
   width: 100%;
-  margin: 44rpx 0 52rpx;
+}
+
+.divider--mountain {
+  margin: 40rpx 0 100rpx;
+}
+
+.divider--human {
+  margin: 100rpx 0 120rpx;
+}
+
+.divider--pack {
+  margin: 80rpx 0 120rpx;
+}
+
+/* 首页文案字体统一：标题 Songti，说明 OPPOSans */
+.home-page .creator-card__name {
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+}
+
+.home-page .creator-card__stance {
+  font-family: "OPPOSans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 26rpx;
+  font-weight: 400;
+}
+
+.home-page .idea-card__title {
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+}
+
+.home-page .idea-card__summary {
+  font-family: "OPPOSans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 26rpx;
+  font-weight: 400;
+}
+
+.home-page .idea-card__author {
+  font-family: "OPPOSans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 26rpx;
+  font-weight: 500;
 }

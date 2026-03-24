@@ -11,7 +11,7 @@
         咨询入口 ›
       </button>
     </view>
-    <text class="page-subtitle">{{orderIdLabelText}}：#{{order.shortId}} · 创建时间：{{order.createdAt}}</text>
+    <text class="page-subtitle">{{orderIdLabelText}}：#{{order.displayOrderNo}} · 创建时间：{{order.createdAt}}</text>
   </view>
 
   <view class="section-block paper-block">
@@ -20,7 +20,7 @@
       <image class="order-product__cover" src="{{order.cover}}" mode="aspectFill"></image>
       <view class="order-product__body">
         <text class="order-product__name">{{order.serviceName}}</text>
-        <text class="order-product__meta">日期 {{order.travelDate}} · {{order.peopleCount}} 人 · {{order.serviceType}}</text>
+        <text class="order-product__meta">日期 {{order.travelDateText}} · {{order.peopleCount}} 人 · {{order.serviceType}}</text>
       </view>
     </view>
   </view>
@@ -33,11 +33,29 @@
   </view>
 
   <view class="section-block paper-block">
-    <text class="section-title">出行人信息</text>
+    <text class="section-title">联系人信息</text>
     <view class="detail-list">
-      <text class="detail-list-item">姓名：{{order.traveler.name}}</text>
-      <text class="detail-list-item">证件：{{order.traveler.idCard}}</text>
-      <text class="detail-list-item">手机：{{order.traveler.phone}}</text>
+      <text class="detail-list-item">姓名：{{order.contact.name || "未填写"}}</text>
+      <text class="detail-list-item">手机：{{order.contact.phone || "未填写"}}</text>
+    </view>
+  </view>
+
+  <view class="section-block paper-block">
+    <text class="section-title">出行人信息</text>
+    <view wx:if="{{order.travelers.length}}" class="order-travelers">
+      <view wx:for="{{order.travelers}}" wx:key="index" class="order-traveler">
+        <text class="order-traveler__title">出行人 {{index + 1}}</text>
+        <view class="detail-list">
+          <text class="detail-list-item">姓名：{{item.name || "未填写"}}</text>
+          <text class="detail-list-item">证件：{{item.idCard || "未填写"}}</text>
+          <text class="detail-list-item">手机：{{item.phone || "未填写"}}</text>
+          <text wx:if="{{item.wechat}}" class="detail-list-item">微信：{{item.wechat}}</text>
+          <text wx:if="{{item.note}}" class="detail-list-item">备注：{{item.note}}</text>
+        </view>
+      </view>
+    </view>
+    <view wx:else class="detail-list">
+      <text class="detail-list-item">当前没有可展示的出行人信息</text>
     </view>
   </view>
 

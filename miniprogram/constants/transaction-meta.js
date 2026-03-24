@@ -16,21 +16,27 @@ function getOrderTravelPeriod(order) {
     return order.travelPeriod;
   }
 
-  const travelDate = String(order && order.travelDate ? order.travelDate : "").trim();
-  if (!travelDate) {
+  const dateStart = String(order && order.travelDateStart ? order.travelDateStart : "").trim();
+  const dateEnd = String(
+    order && (order.travelDateEnd || order.travelDateStart)
+      ? (order.travelDateEnd || order.travelDateStart)
+      : ""
+  ).trim();
+
+  if (!dateStart) {
     return null;
   }
 
   return {
-    dateStart: travelDate,
-    dateEnd: travelDate
+    dateStart,
+    dateEnd: dateEnd || dateStart
   };
 }
 
 function getTripPhaseKey(order) {
   const period = getOrderTravelPeriod(order);
-  const startDate = parseDateOnly(period && period.dateStart ? period.dateStart : order && order.travelDate);
-  const endDate = parseDateOnly(period && period.dateEnd ? period.dateEnd : period && period.dateStart ? period.dateStart : order && order.travelDate);
+  const startDate = parseDateOnly(period && period.dateStart ? period.dateStart : "");
+  const endDate = parseDateOnly(period && period.dateEnd ? period.dateEnd : period && period.dateStart ? period.dateStart : "");
 
   if (!startDate || !endDate) {
     return "upcoming";
@@ -52,7 +58,7 @@ function getTripPhaseKey(order) {
 
 function buildTripDateRange(order) {
   const period = getOrderTravelPeriod(order);
-  const startDate = String(period && period.dateStart ? period.dateStart : order && order.travelDate ? order.travelDate : "").trim();
+  const startDate = String(period && period.dateStart ? period.dateStart : "").trim();
   const endDate = String(period && period.dateEnd ? period.dateEnd : startDate).trim();
 
   if (!startDate) {
@@ -135,17 +141,28 @@ function getOrderTabsMeta() {
   ];
 }
 
+function buildOrderDisplayNo(order) {
+  const orderNo = String(order && order.orderNo ? order.orderNo : "").trim();
+  if (!orderNo) {
+    return "--";
+  }
+
+  return orderNo.slice(-4);
+}
+
 function buildOrderCard(order) {
   const statusMeta = getStatusMeta();
   const displayStatusKey = getDisplayStatusKey(order);
   const displayStatus = statusMeta[displayStatusKey] || statusMeta[order.status];
   return Object.assign({}, order, {
-    createdAt: order.createdAtText || order.createdAt,
+    createdAt: order.createdAt,
+    displayOrderNo: buildOrderDisplayNo(order),
     idPrefixText: "报名",
     statusText: displayStatus ? displayStatus.label : order.statusText,
     displayStatusKey,
     amountText: `¥${order.amount}`,
     payableText: `¥${order.payable}`,
+    travelDateText: buildTripDateRange(order),
     canContinuePay: false,
     primaryActionText: "查看详情"
   });
