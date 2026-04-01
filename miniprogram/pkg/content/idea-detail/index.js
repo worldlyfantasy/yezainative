@@ -3,6 +3,7 @@ const { isFavorited, toggleFavorite } = require("../../../repositories/transacti
 const { getCurrentUser } = require("../../../services/user");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../utils/favorite-notice");
+const { renderIdeaBodyRichText } = require("../../../utils/content");
 
 Page({
   data: {
@@ -14,6 +15,7 @@ Page({
     favoriteNoticeMode: "success",
     favoriteNoticeActionType: "favorites",
     blocks: [],
+    richTextHtml: "",
     author: null
   },
 
@@ -36,6 +38,7 @@ Page({
       const favorited = await isFavorited("ideas", payload.idea.slug);
       this.setData(Object.assign({}, payload, {
         loading: false,
+        richTextHtml: renderIdeaBodyRichText(payload.idea && payload.idea.body),
         "idea.isFavorited": favorited
       }));
     } catch (error) {

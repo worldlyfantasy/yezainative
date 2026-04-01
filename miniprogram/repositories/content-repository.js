@@ -30,19 +30,24 @@ function getCachedValue(cacheKey) {
   return cached.value;
 }
 
-async function invoke(methodName, mapper, args) {
+async function invoke(methodName, mapper, args, options) {
+  const useCache = !(options && options.cache === false);
   const cacheKey = buildCacheKey(methodName, args);
-  const cachedValue = getCachedValue(cacheKey);
-  if (cachedValue !== undefined) {
-    return cachedValue;
+  if (useCache) {
+    const cachedValue = getCachedValue(cacheKey);
+    if (cachedValue !== undefined) {
+      return cachedValue;
+    }
   }
 
   const payload = await cloudContentApi[methodName].apply(cloudContentApi, args || []);
   const mapped = mapper(payload);
-  responseCache.set(cacheKey, {
-    expiresAt: Date.now() + CONTENT_CACHE_TTL_MS,
-    value: mapped
-  });
+  if (useCache) {
+    responseCache.set(cacheKey, {
+      expiresAt: Date.now() + CONTENT_CACHE_TTL_MS,
+      value: mapped
+    });
+  }
   return mapped;
 }
 
@@ -58,8 +63,8 @@ function getCreatorDetailData(slug) {
   return invoke("getCreatorDetailData", mapCreatorDetailData, [slug]);
 }
 
-function getDestinationsPageData(search) {
-  return invoke("getDestinationsPageData", mapDestinationsPageData, [search]);
+function getDestinationsPageData(search, filters) {
+  return invoke("getDestinationsPageData", mapDestinationsPageData, [search, filters, "destination-region-v1"]);
 }
 
 function getDestinationDetailData(slug, filters) {
@@ -75,7 +80,7 @@ function getIdeaDetailData(slug) {
 }
 
 function getServiceDetailData(slug) {
-  return invoke("getServiceDetailData", mapServiceDetailData, [slug]);
+  return invoke("getServiceDetailData", mapServiceDetailData, [slug], { cache: false });
 }
 
 module.exports = {

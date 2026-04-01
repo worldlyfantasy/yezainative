@@ -21,24 +21,21 @@ Page({
     });
 
     try {
-      const payload = await getCreatorsPageData();
-      const destinationIndex = this.findIndexByValue(payload.destinationOptions, options.destination);
-      const styleIndex = this.findIndexByValue(payload.styleOptions, options.style);
-      const hasPresetFilters = Boolean(options.destination || options.style);
+      const initialFilters = {
+        destination: options.destination || "",
+        style: options.style || ""
+      };
+      const payload = await getCreatorsPageData(initialFilters);
+      const destinationIndex = this.findIndexByValue(payload.destinationOptions, initialFilters.destination);
+      const styleIndex = this.findIndexByValue(payload.styleOptions, initialFilters.style);
 
       this.setData(
         Object.assign({}, payload, {
           loading: false,
           errorText: "",
           destinationIndex,
-          styleIndex,
-          creators: hasPresetFilters ? [] : payload.creators
-        }),
-        () => {
-          if (hasPresetFilters) {
-            this.applyFilters();
-          }
-        }
+          styleIndex
+        })
       );
     } catch (error) {
       console.error("Failed to load creators page", error);
@@ -89,6 +86,12 @@ Page({
       this.setData({
         loading: false,
         errorText: "",
+        destinationOptions: payload.destinationOptions,
+        styleOptions: payload.styleOptions,
+        destinationLabels: payload.destinationLabels,
+        styleLabels: payload.styleLabels,
+        destinationIndex: this.findIndexByValue(payload.destinationOptions, destination),
+        styleIndex: this.findIndexByValue(payload.styleOptions, style),
         creators: payload.creators
       });
     } catch (error) {

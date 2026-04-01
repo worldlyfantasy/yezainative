@@ -1,0 +1,10 @@
+{
+  "name": "adminGateway",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.17.0",
+    "pinyin-pro": "^3.28.0",
+    "wx-server-sdk": "latest"
+  }
+}

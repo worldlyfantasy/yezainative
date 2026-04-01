@@ -62,6 +62,7 @@
           class="service-gallery__thumb"
           src="{{item}}"
           mode="aspectFill"
+          lazy-load="{{true}}"
           bindtap="openMediaSheet"
         ></image>
       </view>
@@ -84,6 +85,15 @@
             bind:noticeaction="handleFavoriteNoticeAction"
           ></favorite-star>
         </view>
+        <view wx:if="{{serviceRouteTags && serviceRouteTags.length}}" class="row-tags service-route-tags">
+          <text
+            wx:for="{{serviceRouteTags}}"
+            wx:key="*this"
+            class="tag-chip service-route-tag service-route-tag--clickable"
+            data-tag="{{item}}"
+            bindtap="onRouteTagTap"
+          >{{item}}</text>
+        </view>
         <view wx:if="{{creator}}" class="creator-quote creator-card creator-quote--tappable" bindtap="goCreatorDetail">
           <view class="creator-card__head">
             <image class="creator-card__avatar" src="{{creator.avatar}}" mode="aspectFill"></image>
@@ -105,9 +115,9 @@
       </view>
     </view>
 
-    <view wx:if="{{service.tags && service.tags.length > 0}}" class="service-tags">
+    <view wx:if="{{serviceMetaCards && serviceMetaCards.length > 0}}" class="service-tags">
       <view
-        wx:for="{{service.tags}}"
+        wx:for="{{serviceMetaCards}}"
         wx:key="key"
         class="service-tag {{item.clickable ? 'service-tag--clickable' : ''}}"
         data-key="{{item.key}}"
@@ -124,7 +134,7 @@
     <view wx:if="{{groupPeriods && groupPeriods.length > 0}}" class="service-periods">
       <view class="service-periods__head">
         <text class="section-title service-periods__title">选择团期</text>
-        <text class="service-periods__more" bindtap="onViewMorePeriods">查看更多 ></text>
+        <view class="service-periods__cta" bindtap="onViewMorePeriods">立即报名</view>
       </view>
       <scroll-view class="service-periods__strip" scroll-x="true" enable-flex="true" show-scrollbar="{{false}}">
         <view class="service-periods__row">
@@ -136,6 +146,10 @@
             bindtap="onSelectPeriod"
           >
             <view wx:if="{{selectedPeriodId === item.id}}" class="period-card__check">✓</view>
+            <view wx:if="{{showGroupPeriodVersionTags && (item.versionName || item.durationLabel)}}" class="period-card__meta-row">
+              <text wx:if="{{showGroupPeriodVersionTags && item.versionName}}" class="period-card__version">{{item.versionName}}</text>
+              <text wx:if="{{item.durationLabel}}" class="period-card__duration">{{item.durationLabel}}</text>
+            </view>
             <text class="period-card__date">{{item.dateLabel}}</text>
             <text class="period-card__price {{selectedPeriodId === item.id ? 'period-card__price--active' : ''}}">¥{{item.price}}</text>
             <text class="period-card__status">{{item.statusText}}</text>
@@ -172,7 +186,7 @@
             {{travelDetail.overview.whyJoinText}}
           </text>
           <text class="travel-overview__subtitle">
-            {{(travelDetail.overview && travelDetail.overview.suitableTitle) || '这段旅程适合谁'}}
+            {{suitableTitleText || (travelDetail.overview && travelDetail.overview.suitableTitle) || '这段旅程适合谁'}}
           </text>
           <text wx:if="{{travelDetail.overview && travelDetail.overview.suitableText}}" class="travel-overview__body travel-overview__body--suitable">
             {{travelDetail.overview.suitableText}}
@@ -208,6 +222,7 @@
                   class="travel-highlight-card__image"
                   src="{{imageUrl}}"
                   mode="aspectFill"
+                  lazy-load="{{true}}"
                   bindload="onTravelDetailMediaLoad"
                 ></image>
               </view>
@@ -219,8 +234,17 @@
       <view wx:if="{{sectionItem.key === 'itinerary'}}" id="{{sectionItem.anchorId}}" class="travel-section">
         <view class="travel-section__head">
           <text class="section-title travel-section__title">{{sectionItem.title}}</text>
+          <view wx:if="{{itineraryVersions.length > 1}}" class="travel-section__version-tags">
+            <text
+              wx:for="{{itineraryVersions}}"
+              wx:key="key"
+              class="travel-section__version-tag {{activeItineraryVersionKey === item.key ? 'travel-section__version-tag--active' : ''}}"
+              data-version-name="{{item.versionName}}"
+              bindtap="onItineraryVersionTap"
+            >{{item.versionName}}</text>
+          </view>
         </view>
-        <itinerary-block itinerary="{{travelDetail.itinerary}}"></itinerary-block>
+        <itinerary-block itinerary="{{displayItinerary}}"></itinerary-block>
       </view>
 
       <view wx:if="{{sectionItem.key === 'notices'}}" id="{{sectionItem.anchorId}}" class="travel-section">
@@ -280,6 +304,20 @@
         <view class="sheet-close period-sheet__close" bindtap="closePeriodSheet">⌄</view>
       </view>
       <scroll-view class="period-sheet__body" scroll-y="true">
+        <view wx:if="{{periodSheetVersions.length > 1}}" class="period-sheet__section">
+          <text class="period-sheet__label">版本</text>
+          <scroll-view class="period-sheet__versions" scroll-x="true">
+            <view class="period-sheet__versions-inner">
+              <view
+                wx:for="{{periodSheetVersions}}"
+                wx:key="key"
+                class="period-version {{periodSheetActiveVersion === item.key ? 'period-version--active' : ''}}"
+                data-version-key="{{item.key}}"
+                bindtap="onSelectPeriodVersion"
+              >{{item.label}}</view>
+            </view>
+          </scroll-view>
+        </view>
         <view class="period-sheet__section">
           <text class="period-sheet__label">出发日期</text>
           <view class="period-sheet__months">
@@ -300,6 +338,10 @@
                 data-date="{{item}}"
                 bindtap="onSelectSheetDate"
               >
+                <view wx:if="{{item.versionName || item.durationLabel}}" class="period-date__info">
+                  <text wx:if="{{item.versionName}}" class="period-date__version">{{item.versionName}}</text>
+                  <text wx:if="{{item.durationLabel}}" class="period-date__duration">{{item.durationLabel}}</text>
+                </view>
                 <text class="period-date__start">{{item.startDateLabel}} -</text>
                 <text class="period-date__end">{{item.endDateLabel}}</text>
                 <view class="period-date__meta">
@@ -325,7 +367,11 @@
           <text class="period-sheet__total-label">总价</text>
           <text class="period-sheet__total-price">¥{{periodSheetTotalPrice}}</text>
         </view>
-        <button class="period-sheet__next" bindtap="goToCheckout">下一步</button>
+        <button
+          class="period-sheet__next {{!periodSheetCanCheckout ? 'period-sheet__next--disabled' : ''}}"
+          bindtap="goToCheckout"
+          disabled="{{!periodSheetCanCheckout}}"
+        >立即报名</button>
       </view>
     </view>
   </view>
@@ -356,6 +402,7 @@
             class="media-sheet__image"
             src="{{item}}"
             mode="aspectFill"
+            lazy-load="{{true}}"
           ></image>
         </view>
       </scroll-view>
@@ -371,9 +418,10 @@
         <view class="sheet-close consult-sheet__close" bindtap="closeConsultSheet">⌄</view>
       </view>
       <view class="consult-sheet__cards">
-        <view class="consult-card">
-          <image class="consult-card__qr" src="{{consultGroupQr}}" mode="aspectFit"></image>
-          <text wx:if="{{consultCardLabel}}" class="consult-card__label">{{consultCardLabel}}</text>
+        <view wx:if="{{consultWeChatQr}}" class="consult-card">
+          <image class="consult-card__qr" src="{{consultWeChatQr}}" mode="aspectFit"></image>
+          <text class="consult-card__label">路线专属客服</text>
+          <text wx:if="{{consultCardLabel}}" class="consult-card__desc">{{consultCardLabel}}</text>
           <text class="consult-card__desc">{{consultCardDesc}}</text>
           <text class="consult-card__desc">{{consultFollowupNote}}</text>
         </view>
@@ -386,7 +434,7 @@
     <view class="suitable-sheet__panel {{suitableSheetAnimating ? 'suitable-sheet__panel--active' : ''}}">
       <view class="suitable-sheet__handle"></view>
       <view class="suitable-sheet__header">
-        <text class="suitable-sheet__title">适合谁</text>
+        <text class="suitable-sheet__title">{{suitableTitleText || '这段旅程适合谁'}}</text>
         <view class="sheet-close suitable-sheet__close" bindtap="closeSuitableSheet">⌄</view>
       </view>
       <scroll-view class="suitable-sheet__body" scroll-y="true">
@@ -406,4 +454,4 @@
   ></favorite-star>
 </view>
 
-<app-tab-bar></app-tab-bar>
+<app-tab-bar wx:if="{{!periodSheetVisible && !mediaSheetVisible && !consultSheetVisible && !suitableSheetVisible}}"></app-tab-bar>

@@ -182,7 +182,8 @@
 
 .consult-sheet__cards {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 24rpx;
 }
 
 .consult-card {

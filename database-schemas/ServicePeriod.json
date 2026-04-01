@@ -1,0 +1,265 @@
+{
+    "x-primary-column": "periodCode",
+    "x-kind": "tcb",
+    "description": "服务期次模型",
+    "x-defaultMethods": [
+        "wedaCreate",
+        "wedaUpdate",
+        "wedaDelete",
+        "wedaGetItem",
+        "wedaGetRecords",
+        "wedaGetList",
+        "wedaBatchCreate",
+        "wedaBatchUpdate",
+        "wedaBatchDelete"
+    ],
+    "type": "object",
+    "title": "服务期次模型",
+    "x-relatedType": "exist",
+    "x-viewId": "view-7wyndoy0io",
+    "properties": {
+        "owner": {
+            "default": "",
+            "x-system": true,
+            "x-id": "8dd73af",
+            "name": "owner",
+            "format": "father-son",
+            "pattern": "",
+            "x-hidden": true,
+            "type": "string",
+            "title": "所有人",
+            "x-index": 4,
+            "x-unique": false,
+            "x-parent": {
+                "fatherAction": "judge",
+                "type": "father-son",
+                "parentDataSourceName": "sys_user"
+            }
+        },
+        "_mainDep": {
+            "x-system": true,
+            "x-id": "33f3590",
+            "name": "_mainDep",
+            "format": "father-son",
+            "x-hidden": true,
+            "type": "string",
+            "title": "所属主管部门",
+            "x-index": 7,
+            "x-unique": false,
+            "x-parent": {
+                "fatherAction": "judge",
+                "type": "father-son",
+                "parentDataSourceName": "sys_department"
+            }
+        },
+        "creatorId": {
+            "description": "创作者ID",
+            "type": "string",
+            "title": "创作者ID",
+            "maxLength": 256
+        },
+        "dateEnd": {
+            "x-required": true,
+            "description": "结束日期",
+            "type": "string",
+            "title": "结束日期",
+            "maxLength": 256
+        },
+        "dateEndDate": {
+            "description": "结束日期Date",
+            "type": "string",
+            "title": "结束日期Date",
+            "maxLength": 256
+        },
+        "serviceName": {
+            "x-required": true,
+            "description": "服务名称",
+            "type": "string",
+            "title": "服务名称",
+            "maxLength": 256
+        },
+        "versionName": {
+            "description": "版本名称",
+            "type": "string",
+            "title": "版本名称",
+            "maxLength": 256
+        },
+        "durationDays": {
+            "default": 1,
+            "description": "行程天数",
+            "type": "number",
+            "title": "行程天数"
+        },
+        "minGroup": {
+            "default": 1,
+            "description": "成团人数",
+            "type": "number",
+            "title": "成团人数"
+        },
+        "minGroupInt": {
+            "description": "成团人数Int",
+            "type": "number",
+            "title": "成团人数Int"
+        },
+        "remainingSeats": {
+            "x-required": true,
+            "default": 0,
+            "description": "剩余名额",
+            "type": "number",
+            "title": "剩余名额"
+        },
+        "remainingSeatsInt": {
+            "description": "剩余名额Int",
+            "type": "number",
+            "title": "剩余名额Int"
+        },
+        "periodCode": {
+            "x-required": true,
+            "description": "期次编码",
+            "type": "string",
+            "title": "期次编码",
+            "x-unique": true,
+            "maxLength": 256
+        },
+        "serviceSlug": {
+            "x-required": true,
+            "description": "服务Slug",
+            "type": "string",
+            "title": "服务Slug",
+            "maxLength": 256
+        },
+        "badge": {
+            "description": "徽标",
+            "type": "string",
+            "title": "徽标",
+            "maxLength": 256
+        },
+        "createdAt": {
+            "default": 0,
+            "x-system": true,
+            "x-id": "12acd90",
+            "format": "datetime",
+            "type": "number",
+            "title": "创建时间",
+            "x-index": 2,
+            "x-unique": false
+        },
+        "createBy": {
+            "default": "",
+            "x-system": true,
+            "x-id": "69cef44",
+            "name": "createBy",
+            "format": "father-son",
+            "pattern": "",
+            "x-hidden": true,
+            "type": "string",
+            "title": "创建人",
+            "x-index": 5,
+            "x-unique": false,
+            "x-parent": {
+                "fatherAction": "judge",
+                "type": "father-son",
+                "parentDataSourceName": "sys_user"
+            }
+        },
+        "dateStart": {
+            "x-required": true,
+            "description": "开始日期",
+            "type": "string",
+            "title": "开始日期",
+            "maxLength": 256
+        },
+        "dateStartDate": {
+            "description": "开始日期Date",
+            "type": "string",
+            "title": "开始日期Date",
+            "maxLength": 256
+        },
+        "updateBy": {
+            "default": "",
+            "x-system": true,
+            "x-id": "93a079a",
+            "name": "updateBy",
+            "format": "father-son",
+            "pattern": "",
+            "x-hidden": true,
+            "type": "string",
+            "title": "修改人",
+            "x-index": 6,
+            "x-unique": false,
+            "x-parent": {
+                "fatherAction": "judge",
+                "type": "father-son",
+                "parentDataSourceName": "sys_user"
+            }
+        },
+        "price": {
+            "x-required": true,
+            "description": "价格",
+            "type": "number",
+            "title": "价格"
+        },
+        "priceDec": {
+            "description": "价格Decimal",
+            "type": "number",
+            "title": "价格Decimal"
+        },
+        "_openid": {
+            "default": "",
+            "x-system": true,
+            "x-id": "0e006b1",
+            "name": "_openid",
+            "format": "",
+            "pattern": "",
+            "description": "仅微信云开发下使用",
+            "type": "string",
+            "title": "记录创建者",
+            "x-index": 45,
+            "x-unique": false
+        },
+        "_id": {
+            "x-system": true,
+            "x-id": "4ddb023",
+            "format": "",
+            "type": "string",
+            "title": "数据标识",
+            "x-index": 1,
+            "x-unique": true
+        },
+        "serviceId": {
+            "description": "服务ID",
+            "type": "string",
+            "title": "服务ID",
+            "maxLength": 256
+        },
+        "status": {
+            "x-required": true,
+            "default": "available",
+            "format": "x-enum",
+            "description": "状态",
+            "type": "string",
+            "title": "状态",
+            "maxLength": 64
+        },
+        "updatedAt": {
+            "default": 0,
+            "x-system": true,
+            "x-id": "4e2a439",
+            "format": "datetime",
+            "type": "number",
+            "title": "更新时间",
+            "x-index": 3,
+            "x-unique": false
+        }
+    },
+    "required": [
+        "dateStart",
+        "price",
+        "dateEnd",
+        "serviceName",
+        "remainingSeats",
+        "periodCode",
+        "serviceSlug",
+        "status"
+    ]
+}

@@ -1,7 +1,7 @@
 <view class="page-shell profile-page">
   <view wx:if="{{!loggedIn}}" class="profile-guest-wrap">
     <view class="profile-guest-card">
-      <image class="profile-guest-card__bg" src="cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/野哉-新媒体尺寸-小红书.jpg" mode="widthFix"></image>
+      <image class="profile-guest-card__bg" src="cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/野哉-新媒体尺寸-小红书.jpg" mode="widthFix"></image>
       <view class="profile-guest-card__content">
         <text class="profile-guest-card__title">野于本心\n在彼途中</text>
         <view class="profile-guest-card__button" bindtap="handleLogin" hover-class="profile-guest-card__button--pressing" hover-stay-time="100">微信登录</view>

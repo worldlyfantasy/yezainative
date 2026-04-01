@@ -20,3 +20,8 @@
   border-radius: 32rpx;
   font-size: 24rpx;
 }
+
+.creator-filter-picker--static {
+  display: flex;
+  align-items: center;
+}

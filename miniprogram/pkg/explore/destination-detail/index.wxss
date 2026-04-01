@@ -32,6 +32,26 @@
   margin-top: 0;
 }
 
+.destination-filter-shell {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.destination-detail-filter-item {
+  flex: 1;
+  min-width: 0;
+  gap: 10rpx;
+}
+
+.destination-detail-filter-picker {
+  min-height: 64rpx;
+  padding: 14rpx 20rpx;
+  border-radius: 32rpx;
+  font-size: 24rpx;
+}
+
 .destination-stories__title {
   display: block;
   margin-bottom: 24rpx;
@@ -92,5 +112,5 @@
 }
 
 .destination-journeys__title {
-  margin-bottom: 24rpx;
+  margin-bottom: 0;
 }

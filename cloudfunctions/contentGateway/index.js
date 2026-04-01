@@ -7,12 +7,18 @@ const {
   normalizeIdeaAssetFields,
   normalizeServiceAssetFields
 } = require("./image-ref");
+const {
+  DESTINATION_REGION_OPTIONS,
+  normalizeDestinationRegionCode,
+  resolveDestinationRegionCode,
+  getDestinationRegionLabel
+} = require("./destination-regions");
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const sqlApp = cloudbase.init({
-  env: process.env.TCB_ENV || "yezai-3gr73wd48057512e"
+  env: process.env.TCB_ENV || cloud.DYNAMIC_CURRENT_ENV
 });
 const models = sqlApp.models;
 const runSQL = models.$runSQL || models.runSQL;
@@ -25,10 +31,83 @@ const COLLECTIONS = {
   services: "services",
   ideas: "ideas"
 };
+const SERVICE_TYPE_OPTIONS = ["在地体验", "短途旅行", "长途旅行", "国际旅行"];
+const LEGACY_SERVICE_TYPE_OPTIONS = ["带团旅行", "定制规划", "路线设计"];
+const DEFAULT_SERVICE_TYPE = "短途旅行";
+const ROUTE_TAG_OPTIONS = [
+  "城市漫游",
+  "慢旅行",
+  "徒步与自然",
+  "度假放松",
+  "亲子&逆向亲子",
+  "人宠",
+  "摄影创作",
+  "瑜伽疗愈",
+  "特殊节庆"
+];
+const CREATOR_TAG_OPTIONS = [
+  "自然野行",
+  "在地人文",
+  "城市探索",
+  "公路旅行",
+  "影像记录",
+  "身心疗愈",
+  "研学观察",
+  "风物美食",
+  "亲子同行",
+  "宠物同行"
+];
+const IDEA_THEME_OPTIONS = [
+  { key: "hiking-nature", label: "徒步自然" },
+  { key: "city-walk", label: "城市漫游" },
+  { key: "local-life", label: "在地生活" },
+  { key: "craft-labor", label: "劳动手艺" },
+  { key: "reset-recovery", label: "疲惫重置" },
+  { key: "sensory-notes", label: "感官采集" },
+  { key: "inner-growth", label: "内在成长" }
+];
+const CUSTOM_IDEA_THEME_KEY = "custom";
+const IDEA_THEME_LABEL_MAP = IDEA_THEME_OPTIONS.reduce((map, item) => {
+  map[item.key] = item.label;
+  return map;
+}, {});
 const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 let contentDataCache = null;
 let contentDataPromise = null;
 const configValueCache = new Map();
+
+function clearGatewayCache() {
+  contentDataCache = null;
+  contentDataPromise = null;
+  configValueCache.clear();
+
+  return {
+    cleared: true,
+    clearedAt: Date.now()
+  };
+}
+
+const SERVICE_PERIOD_SQL_FIELDS = "`serviceName`, `versionName`, `durationDays`, `serviceSlug`, `periodCode`, `dateStart`, `dateEnd`, `price`, `minGroup`, `remainingSeats`, `status`, `badge`, `creatorId`, `createdAt`, `updatedAt`, `_id`, `owner`, `_mainDep`, `_openid`, `createBy`, `updateBy`";
+
+function normalizeText(value) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return "";
+}
+
+function normalizeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function isPublicContentActive(item) {
+  return normalizeText(item && item.status) !== "inactive";
+}
 
 function getSQLRows(result) {
   const data = result && result.data ? result.data : {};
@@ -46,7 +125,7 @@ async function listSqlServicePeriods(serviceSlug) {
     }
 
     const result = await runSQL(
-      "SELECT `serviceName`, `versionName`, `serviceSlug`, `periodCode`, `dateStart`, `dateEnd`, `price`, `minGroup`, `remainingSeats`, `status`, `creatorId`, `createdAt`, `updatedAt`, `_id`, `owner`, `_mainDep`, `_openid`, `createBy`, `updateBy` FROM `ServicePeriod` WHERE `serviceSlug` = {{serviceSlug}} ORDER BY `dateStart` ASC",
+      `SELECT ${SERVICE_PERIOD_SQL_FIELDS} FROM \`ServicePeriod\` WHERE \`serviceSlug\` = {{serviceSlug}} ORDER BY \`dateStart\` ASC`,
       {
         serviceSlug: String(serviceSlug).trim()
       }
@@ -61,36 +140,192 @@ async function listSqlServicePeriods(serviceSlug) {
   }
 }
 
+async function listAllSqlServicePeriods() {
+  try {
+    if (typeof runSQL !== "function") {
+      throw new Error("models.$runSQL unavailable");
+    }
+
+    const result = await runSQL(
+      `SELECT ${SERVICE_PERIOD_SQL_FIELDS} FROM \`ServicePeriod\` ORDER BY \`serviceSlug\` ASC, \`dateStart\` ASC`
+    );
+    return getSQLRows(result);
+  } catch (error) {
+    console.error("Failed to list all SQL service periods", error);
+    return [];
+  }
+}
+
+function calcDurationDays(dateStart, dateEnd) {
+  if (!dateStart || !dateEnd) {
+    return 0;
+  }
+
+  const start = new Date(dateStart);
+  const end = new Date(dateEnd);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return 0;
+  }
+
+  const diff = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  return Number.isFinite(diff) && diff > 0 ? diff : 0;
+}
+
+function getPeriodDurationDays(period) {
+  const fromField = Number(period && period.durationDays);
+  if (Number.isFinite(fromField) && fromField > 0) {
+    return Math.round(fromField);
+  }
+
+  return calcDurationDays(period && period.dateStart, period && period.dateEnd);
+}
+
+function buildDurationLabelFromPeriods(periods) {
+  const uniqueDays = Array.from(
+    new Set(
+      (periods || [])
+        .map((period) => getPeriodDurationDays(period))
+        .filter((value) => value > 0)
+    )
+  ).sort((a, b) => a - b);
+
+  if (!uniqueDays.length) {
+    return "";
+  }
+
+  if (uniqueDays.length === 1) {
+    return `${uniqueDays[0]}天`;
+  }
+
+  return `${uniqueDays.join("/")}天`;
+}
+
+function formatMoneyValue(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return "";
+  }
+
+  return Number.isInteger(amount) ? String(amount) : amount.toFixed(2).replace(/\.?0+$/, "");
+}
+
+function buildPriceLabelFromPeriods(periods) {
+  const prices = (periods || [])
+    .map((period) => Number(period && period.price))
+    .filter((value) => Number.isFinite(value) && value > 0);
+
+  if (!prices.length) {
+    return "";
+  }
+
+  return `¥${formatMoneyValue(Math.min(...prices))} 起`;
+}
+
+function groupSqlPeriodsByServiceSlug(periods) {
+  return (periods || []).reduce((result, period) => {
+    const serviceSlug = String(period && period.serviceSlug ? period.serviceSlug : "").trim();
+    if (!serviceSlug) {
+      return result;
+    }
+
+    if (!result[serviceSlug]) {
+      result[serviceSlug] = [];
+    }
+
+    result[serviceSlug].push(period);
+    return result;
+  }, {});
+}
+
 function parseIdeaBody(body) {
   if (!body) {
     return [];
   }
 
   return String(body)
-    .split("\n\n")
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .filter(Boolean)
     .map((block, index) => {
-      if (block.indexOf("###") === 0) {
+      if (/^#{1,3}\s+/.test(block)) {
         return {
           id: `block-${index}`,
           type: "heading",
-          content: block.replace("###", "").trim()
+          content: block.replace(/^#{1,3}\s+/, "").trim()
         };
       }
 
-      if (block.indexOf(">") === 0) {
+      if (/^>\s?/.test(block)) {
         return {
           id: `block-${index}`,
           type: "quote",
-          content: block.replace(">", "").trim()
+          content: block.replace(/^>\s?/, "").trim()
         };
       }
 
       return {
         id: `block-${index}`,
         type: "paragraph",
-        content: block.trim()
+        content: block
       };
     });
+}
+
+function normalizeIdeaTheme(themeKeyValue, themeLabelValue, isCustomThemeValue) {
+  const rawKey = typeof themeKeyValue === "string" ? themeKeyValue.trim() : "";
+  const rawLabel = typeof themeLabelValue === "string" ? themeLabelValue.trim() : "";
+  const matchedByKey = rawKey && IDEA_THEME_LABEL_MAP[rawKey]
+    ? { key: rawKey, label: IDEA_THEME_LABEL_MAP[rawKey] }
+    : null;
+  const matchedByLabel = rawLabel
+    ? IDEA_THEME_OPTIONS.find((item) => item.label === rawLabel) || null
+    : null;
+  const forceCustom = Boolean(isCustomThemeValue) || rawKey === CUSTOM_IDEA_THEME_KEY;
+
+  if (!rawKey && !rawLabel) {
+    return {
+      themeKey: "",
+      themeLabel: "",
+      isCustomTheme: false
+    };
+  }
+
+  if (!forceCustom && matchedByKey) {
+    return {
+      themeKey: matchedByKey.key,
+      themeLabel: matchedByKey.label,
+      isCustomTheme: false
+    };
+  }
+
+  if (!forceCustom && matchedByLabel) {
+    return {
+      themeKey: matchedByLabel.key,
+      themeLabel: matchedByLabel.label,
+      isCustomTheme: false
+    };
+  }
+
+  return {
+    themeKey: CUSTOM_IDEA_THEME_KEY,
+    themeLabel: rawLabel || (matchedByKey ? matchedByKey.label : ""),
+    isCustomTheme: true
+  };
+}
+
+function normalizeIdeaThemeDoc(idea) {
+  const theme = normalizeIdeaTheme(
+    idea && idea.themeKey,
+    (idea && (idea.themeLabel || idea.theme)) || "",
+    idea && idea.isCustomTheme
+  );
+
+  return Object.assign({}, idea, {
+    theme: theme.themeLabel,
+    themeKey: theme.themeKey,
+    themeLabel: theme.themeLabel,
+    isCustomTheme: theme.isCustomTheme
+  });
 }
 
 function formatPeriodDate(dateStr) {
@@ -105,6 +340,7 @@ function buildGroupPeriodDisplay(period) {
   const startDateLabel = formatPeriodDate(period.dateStart);
   const endDateLabel = formatPeriodDate(period.dateEnd);
   const dateLabel = period.dateStart === period.dateEnd ? startDateLabel : `${startDateLabel} - ${endDateLabel}`;
+  const durationDays = getPeriodDurationDays(period);
   let statusText = "可报名";
 
   if (period.status === "confirmed") {
@@ -116,9 +352,12 @@ function buildGroupPeriodDisplay(period) {
   }
 
   return Object.assign({}, period, {
+    badge: normalizeText(period && period.badge),
     dateLabel,
     startDateLabel,
     endDateLabel,
+    durationDays,
+    durationLabel: durationDays > 0 ? `${durationDays}天` : "",
     statusText
   });
 }
@@ -127,17 +366,22 @@ function getServiceCreatorRoles(service) {
   const customRoles = Array.isArray(service.creatorRoles)
     ? service.creatorRoles.map((item) => String(item || "").trim()).filter(Boolean)
     : [];
+  const serviceType = String(service && service.type ? service.type : "").trim();
 
   if (customRoles.length) {
     return customRoles;
   }
 
-  if (service.type === "带团旅行") {
+  if (serviceType === "带团旅行") {
     return ["创作者", "带领者"];
   }
 
-  if (service.type === "定制规划") {
+  if (serviceType === "定制规划") {
     return ["创作者", "策划者"];
+  }
+
+  if (SERVICE_TYPE_OPTIONS.includes(serviceType)) {
+    return ["创作者", "带领者"];
   }
 
   return ["创作者"];
@@ -159,22 +403,112 @@ function getServiceAdjustmentDisplayText(refundText) {
 }
 
 function getServicePriceLabel(service) {
-  return String(service && service.priceLabel ? service.priceLabel : "").trim();
+  return buildPriceLabelFromPeriods(service && service.groupPeriods);
+}
+
+function getServiceDurationTag(service) {
+  return buildDurationLabelFromPeriods(service && service.groupPeriods);
+}
+
+function parseServiceDurationDays(value) {
+  const matches = normalizeText(value).match(/\d+/g);
+  if (!matches || !matches.length) {
+    return [];
+  }
+
+  return matches
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item) && item > 0);
+}
+
+function inferServiceTypeByDuration(service) {
+  const durationCandidates = parseServiceDurationDays(service && service.durationTag);
+  const itineraryDays = normalizeArray(
+    service && service.travelDetail && service.travelDetail.itinerary && service.travelDetail.itinerary.days
+  ).length;
+  const inferredDurationDays = durationCandidates.length
+    ? Math.max(...durationCandidates)
+    : Math.max(0, itineraryDays);
+
+  if (inferredDurationDays >= 4) {
+    return "长途旅行";
+  }
+  if (inferredDurationDays >= 2) {
+    return "短途旅行";
+  }
+  if (inferredDurationDays === 1) {
+    return "在地体验";
+  }
+
+  return DEFAULT_SERVICE_TYPE;
+}
+
+function normalizeServiceType(type, service) {
+  const normalized = normalizeText(type);
+  if (SERVICE_TYPE_OPTIONS.includes(normalized)) {
+    return normalized;
+  }
+  if (LEGACY_SERVICE_TYPE_OPTIONS.includes(normalized)) {
+    return inferServiceTypeByDuration(service);
+  }
+  return inferServiceTypeByDuration(service);
+}
+
+function normalizeRouteTags(value, fallbackValue) {
+  return unique((value && value.length ? value : fallbackValue) || [])
+    .map((item) => String(item || "").trim())
+    .filter((item) => ROUTE_TAG_OPTIONS.includes(item))
+    .slice(0, 3);
+}
+
+function normalizeCreatorTags(value, fallbackValue) {
+  return unique((value && value.length ? value : fallbackValue) || [])
+    .map((item) => String(item || "").trim())
+    .filter((item) => CREATOR_TAG_OPTIONS.includes(item))
+    .slice(0, 2);
+}
+
+function getCreatorTags(creator) {
+  return normalizeCreatorTags(creator && creator.tags);
+}
+
+function getServiceRouteTags(service) {
+  return normalizeRouteTags(service && service.tags, service && service.styles);
 }
 
 function normalizeServiceContentDoc(service) {
   const normalized = normalizeServiceAssetFields(service);
+  const durationTag = getServiceDurationTag(normalized);
   return Object.assign({}, normalized, {
-    priceLabel: getServicePriceLabel(normalized)
+    type: normalizeServiceType(normalized && normalized.type, Object.assign({}, normalized, { durationTag })),
+    durationTag,
+    priceLabel: getServicePriceLabel(normalized),
+    tags: getServiceRouteTags(normalized),
+    styles: getServiceRouteTags(normalized)
+  });
+}
+
+function normalizeDestinationContentDoc(destination) {
+  const normalized = normalizeDestinationAssetFields(destination);
+  const regionCode = resolveDestinationRegionCode(normalized && normalized.regionCode, normalized && normalized.slug);
+
+  return Object.assign({}, normalized, {
+    regionCode,
+    regionLabel: getDestinationRegionLabel(regionCode)
   });
 }
 
 function buildPublicService(service, overrides) {
   const source = service && typeof service === "object" ? service : {};
   const { groupPeriods, ...rest } = source;
+  const durationTag = getServiceDurationTag(source);
 
   return Object.assign({}, rest, {
-    priceLabel: getServicePriceLabel(source)
+    type: normalizeServiceType(source && source.type, Object.assign({}, source, { durationTag })),
+    durationTag,
+    priceLabel: getServicePriceLabel(source),
+    tags: getServiceRouteTags(source),
+    styles: getServiceRouteTags(source)
   }, overrides || {});
 }
 
@@ -214,6 +548,7 @@ function listCreatorServiceIds(services, creator) {
 
 function enrichCreatorDoc(creator, services) {
   return Object.assign({}, creator, {
+    tags: getCreatorTags(creator),
     serviceIds: listCreatorServiceIds(services, creator)
   });
 }
@@ -245,14 +580,6 @@ function getItineraryDayCount(service) {
 
     if (Number.isFinite(diff) && diff > 0) {
       return Math.min(Math.max(diff, 3), 8);
-    }
-  }
-
-  const matches = String(service.durationTag || "").match(/\d+/g);
-  if (matches && matches.length) {
-    const parsed = parseInt(matches[matches.length - 1], 10);
-    if (Number.isFinite(parsed)) {
-      return Math.min(Math.max(parsed, 3), 8);
     }
   }
 
@@ -348,7 +675,7 @@ function buildDefaultItinerary(service, tags, dayCount) {
         type: "accommodation",
         title: "住宿",
         content:
-          service.type === "带团旅行"
+          getServiceCreatorRoles(service).includes("带领者")
             ? "如涉及住宿或落脚点，将按当日推进节点安排，并以最终行前通知为准。"
             : "如涉及留宿或驻点，将根据最终确认方案执行；部分服务类型可能不含住宿。"
       }
@@ -532,6 +859,7 @@ function buildServiceTravelDetail(service, tags, photoBaseList) {
     overview: buildServiceOverview(service, tags, photoBaseList, highlights),
     highlights,
     itinerary: buildDefaultItinerary(service, tags, dayCount),
+    itineraryVersions: [],
     costs: buildDefaultCosts(service, tags, dayCount),
     notices: buildDefaultNotices(service, tags)
   };
@@ -554,10 +882,33 @@ async function listCollection(name) {
       offset += batch.length;
     }
 
-    return rows.filter((item) => item.status !== "inactive");
+    return rows.filter((item) => isPublicContentActive(item));
   } catch (error) {
     return [];
   }
+}
+
+async function findCollectionDocBySlug(collectionName, slug) {
+  const normalizedSlug = normalizeText(slug);
+  if (!normalizedSlug) {
+    return null;
+  }
+
+  try {
+    const result = await db.collection(collectionName).where({ slug: normalizedSlug }).limit(1).get();
+    return result.data && result.data.length ? result.data[0] : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function findPublicIdeaBySlug(slug) {
+  const idea = await findCollectionDocBySlug(COLLECTIONS.ideas, slug);
+  if (!idea || !isPublicContentActive(idea)) {
+    return null;
+  }
+
+  return normalizeIdeaThemeDoc(normalizeIdeaAssetFields(idea));
 }
 
 async function getConfigValue(key) {
@@ -591,6 +942,13 @@ async function getConfigValue(key) {
 function buildOptionList(items, mode) {
   return [{ label: "全部", value: "" }].concat(
     (items || []).map((item) => {
+      if (item && typeof item === "object" && Object.prototype.hasOwnProperty.call(item, "label") && Object.prototype.hasOwnProperty.call(item, "value")) {
+        return {
+          label: item.label,
+          value: item.value
+        };
+      }
+
       if (mode === "destination") {
         return {
           label: item.name,
@@ -610,23 +968,44 @@ function unique(values) {
   return Array.from(new Set((values || []).filter(Boolean)));
 }
 
+function normalizeSelectedValue(options, value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  return (options || []).some((item) => item && item.value === normalized) ? normalized : "";
+}
+
 function filterCreators(creators, options) {
   const filters = options || {};
   return (creators || []).filter((creator) => {
     const matchDestination = filters.destination ? (creator.destinationSlugs || []).includes(filters.destination) : true;
-    const matchStyle = filters.style ? (creator.tags || []).includes(filters.style) : true;
+    const matchStyle = filters.style ? getCreatorTags(creator).includes(filters.style) : true;
     return matchDestination && matchStyle;
   });
 }
 
-function filterDestinations(destinations, search) {
-  const keyword = String(search || "").trim();
-  if (!keyword) {
-    return destinations || [];
-  }
+function filterDestinations(destinations, services, options) {
+  const filters = options || {};
+  const keyword = String(filters.search || "").trim();
+  const tag = String(filters.tag || "").trim();
+  const regionCode = normalizeDestinationRegionCode(filters.regionCode);
 
   return (destinations || []).filter((destination) => {
-    return String(destination.name || "").includes(keyword) || String(destination.description || "").includes(keyword);
+    const matchKeyword = keyword
+      ? String(destination.name || "").includes(keyword) || String(destination.description || "").includes(keyword)
+      : true;
+    const matchRegion = regionCode ? resolveDestinationRegionCode(destination && destination.regionCode, destination && destination.slug) === regionCode : true;
+    const matchTag = tag
+      ? (services || []).some((service) =>
+          Array.isArray(service && service.destinationSlugs)
+          && service.destinationSlugs.includes(destination.slug)
+          && getServiceRouteTags(service).includes(tag)
+        )
+      : true;
+
+    return matchKeyword && matchRegion && matchTag;
   });
 }
 
@@ -634,10 +1013,97 @@ function filterServices(services, options) {
   const filters = options || {};
   return (services || []).filter((service) => {
     const matchDestination = filters.destinationSlug ? (service.destinationSlugs || []).includes(filters.destinationSlug) : true;
-    const matchType = filters.type ? service.type === filters.type : true;
-    const matchStyle = filters.style ? (service.styles || []).includes(filters.style) : true;
-    return matchDestination && matchType && matchStyle;
+    const matchType = filters.type ? normalizeServiceType(service && service.type, service) === filters.type : true;
+    const targetTag = String(filters.tag || filters.style || "").trim();
+    const matchTag = targetTag ? getServiceRouteTags(service).includes(targetTag) : true;
+    return matchDestination && matchType && matchTag;
   });
+}
+
+function buildCreatorDestinationOptions(destinations, creators, filters) {
+  const matchedCreators = filterCreators(creators, {
+    style: filters && filters.style
+  });
+  const destinationSlugSet = new Set(
+    matchedCreators.reduce((result, creator) => result.concat(creator.destinationSlugs || []), [])
+  );
+
+  return buildOptionList(
+    (destinations || []).filter((destination) => destinationSlugSet.has(destination.slug)),
+    "destination"
+  );
+}
+
+function buildCreatorStyleOptions(creators, filters) {
+  const matchedCreators = filterCreators(creators, {
+    destination: filters && filters.destination
+  });
+  const tagSet = new Set(
+    matchedCreators.reduce((result, creator) => result.concat(getCreatorTags(creator)), [])
+  );
+
+  return buildOptionList(CREATOR_TAG_OPTIONS.filter((tag) => tagSet.has(tag)));
+}
+
+function buildDestinationRegionOptions(destinations, services, filters) {
+  const matchedDestinations = filterDestinations(destinations, services, {
+    search: filters && filters.search,
+    tag: filters && filters.tag
+  });
+  const regionCodeSet = new Set(
+    matchedDestinations
+      .map((destination) => resolveDestinationRegionCode(destination && destination.regionCode, destination && destination.slug))
+      .filter(Boolean)
+  );
+
+  return buildOptionList(
+    DESTINATION_REGION_OPTIONS.filter((item) => regionCodeSet.has(item.value))
+  );
+}
+
+function buildDestinationStyleOptions(destinations, services, filters) {
+  const matchedDestinations = filterDestinations(destinations, services, {
+    search: filters && filters.search,
+    regionCode: filters && filters.regionCode
+  });
+  const destinationSlugSet = new Set(matchedDestinations.map((destination) => destination.slug));
+  const tagSet = new Set();
+
+  (services || []).forEach((service) => {
+    const isMatchedDestination = Array.isArray(service && service.destinationSlugs)
+      && service.destinationSlugs.some((slug) => destinationSlugSet.has(slug));
+
+    if (!isMatchedDestination) {
+      return;
+    }
+
+    getServiceRouteTags(service).forEach((tag) => tagSet.add(tag));
+  });
+
+  return buildOptionList(ROUTE_TAG_OPTIONS.filter((tag) => tagSet.has(tag)));
+}
+
+function buildDestinationDetailTypeOptions(services, filters) {
+  const matchedServices = filterServices(services, {
+    destinationSlug: filters && filters.destinationSlug,
+    style: filters && filters.style
+  });
+
+  return buildOptionList(unique(matchedServices.map((service) => normalizeServiceType(service && service.type, service))));
+}
+
+function buildDestinationDetailStyleOptions(services, filters) {
+  const matchedServices = filterServices(services, {
+    destinationSlug: filters && filters.destinationSlug,
+    type: filters && filters.type
+  });
+  const tagSet = new Set();
+
+  matchedServices.forEach((service) => {
+    getServiceRouteTags(service).forEach((tag) => tagSet.add(tag));
+  });
+
+  return buildOptionList(ROUTE_TAG_OPTIONS.filter((tag) => tagSet.has(tag)));
 }
 
 function listBySlugOrder(items, slugs, limit) {
@@ -698,15 +1164,30 @@ async function loadContentData() {
     listCollection(COLLECTIONS.creators),
     listCollection(COLLECTIONS.destinations),
     listCollection(COLLECTIONS.services),
-    listCollection(COLLECTIONS.ideas)
+    listCollection(COLLECTIONS.ideas),
+    listAllSqlServicePeriods()
   ])
-    .then(([rawCreators, rawDestinations, rawServices, rawIdeas]) => {
-      const services = rawServices.map(normalizeServiceContentDoc);
+    .then(([rawCreators, rawDestinations, rawServices, rawIdeas, sqlPeriods]) => {
+      const periodMap = groupSqlPeriodsByServiceSlug(sqlPeriods);
+      const services = rawServices.map((service) =>
+        normalizeServiceContentDoc(
+          Object.assign({}, service, {
+            groupPeriods: (() => {
+              const serviceSlug = String(service && service.slug ? service.slug : "").trim();
+              const sqlGroupPeriods = periodMap[serviceSlug];
+              if (Array.isArray(sqlGroupPeriods) && sqlGroupPeriods.length) {
+                return sqlGroupPeriods;
+              }
+              return Array.isArray(service && service.groupPeriods) ? service.groupPeriods : [];
+            })()
+          })
+        )
+      );
       const creators = rawCreators.map(normalizeCreatorAssetFields).map((creator) => enrichCreatorDoc(creator, services));
       const destinations = rawDestinations
-        .map(normalizeDestinationAssetFields)
+        .map(normalizeDestinationContentDoc)
         .map((destination) => enrichDestinationDoc(destination, creators, services));
-      const ideas = rawIdeas.map(normalizeIdeaAssetFields);
+      const ideas = rawIdeas.map(normalizeIdeaAssetFields).map(normalizeIdeaThemeDoc);
       const payload = {
         creators,
         destinations,
@@ -800,15 +1281,31 @@ async function getHomePageData() {
 
 async function getCreatorsPageData(filters) {
   const { creators, destinations } = await loadContentData();
-  const destinationOptions = buildOptionList(destinations, "destination");
-  const styleOptions = buildOptionList(unique(creators.reduce((result, creator) => result.concat(creator.tags || []), [])));
+  const requestedFilters = filters || {};
+  let style = String(requestedFilters.style || "").trim();
+  let destination = String(requestedFilters.destination || "").trim();
+  let destinationOptions = buildCreatorDestinationOptions(destinations, creators, { style });
+
+  destination = normalizeSelectedValue(destinationOptions, destination);
+
+  let styleOptions = buildCreatorStyleOptions(creators, { destination });
+  style = normalizeSelectedValue(styleOptions, style);
+
+  destinationOptions = buildCreatorDestinationOptions(destinations, creators, { style });
+  destination = normalizeSelectedValue(destinationOptions, destination);
+  styleOptions = buildCreatorStyleOptions(creators, { destination });
+
+  const normalizedFilters = {
+    destination,
+    style: normalizeSelectedValue(styleOptions, style)
+  };
 
   return {
     destinationOptions,
     styleOptions,
     destinationLabels: destinationOptions.map((item) => item.label),
     styleLabels: styleOptions.map((item) => item.label),
-    creators: filterCreators(creators, filters || {})
+    creators: filterCreators(creators, normalizedFilters)
   };
 }
 
@@ -833,10 +1330,35 @@ async function getCreatorDetailData(slug) {
   };
 }
 
-async function getDestinationsPageData(search) {
-  const { destinations } = await loadContentData();
+async function getDestinationsPageData(options) {
+  const { destinations, services } = await loadContentData();
+  const requestedOptions = options || {};
+  const search = String(requestedOptions.search || "").trim();
+  let tag = String(requestedOptions.tag || "").trim();
+  let regionCode = normalizeDestinationRegionCode(requestedOptions.regionCode);
+  let regionOptions = buildDestinationRegionOptions(destinations, services, { search, tag });
+
+  regionCode = normalizeSelectedValue(regionOptions, regionCode);
+
+  let styleOptions = buildDestinationStyleOptions(destinations, services, { search, regionCode });
+  tag = normalizeSelectedValue(styleOptions, tag);
+
+  regionOptions = buildDestinationRegionOptions(destinations, services, { search, tag });
+  regionCode = normalizeSelectedValue(regionOptions, regionCode);
+  styleOptions = buildDestinationStyleOptions(destinations, services, { search, regionCode });
+
+  const normalizedOptions = {
+    search,
+    regionCode,
+    tag: normalizeSelectedValue(styleOptions, tag)
+  };
+
   return {
-    destinations: filterDestinations(destinations, search)
+    regionOptions,
+    regionLabels: regionOptions.map((item) => item.label),
+    styleOptions,
+    styleLabels: styleOptions.map((item) => item.label),
+    destinations: filterDestinations(destinations, services, normalizedOptions)
   };
 }
 
@@ -847,8 +1369,38 @@ async function getDestinationDetailData(slug, filters) {
     return null;
   }
 
-  const typeOptions = buildOptionList(unique(services.map((service) => service.type)));
-  const styleOptions = buildOptionList(unique(services.reduce((result, service) => result.concat(service.styles || []), [])));
+  const requestedFilters = filters || {};
+  let type = String(requestedFilters.type || "").trim();
+  let style = String(requestedFilters.style || "").trim();
+  let typeOptions = buildDestinationDetailTypeOptions(services, {
+    destinationSlug: destination.slug,
+    style
+  });
+
+  type = normalizeSelectedValue(typeOptions, type);
+
+  let tagOptions = buildDestinationDetailStyleOptions(services, {
+    destinationSlug: destination.slug,
+    type
+  });
+  style = normalizeSelectedValue(tagOptions, style);
+
+  typeOptions = buildDestinationDetailTypeOptions(services, {
+    destinationSlug: destination.slug,
+    style
+  });
+  type = normalizeSelectedValue(typeOptions, type);
+  tagOptions = buildDestinationDetailStyleOptions(services, {
+    destinationSlug: destination.slug,
+    type
+  });
+
+  const normalizedFilters = {
+    destinationSlug: destination.slug,
+    type,
+    style: normalizeSelectedValue(tagOptions, style)
+  };
+
   const relatedCreators = creators
     .filter((creator) => (creator.destinationSlugs || []).includes(destination.slug))
     .map((creator) => Object.assign({}, creator, { isFavorited: false }));
@@ -862,12 +1414,7 @@ async function getDestinationDetailData(slug, filters) {
     });
   const matchedServices = filterServices(
     services,
-    Object.assign(
-      {
-        destinationSlug: destination.slug
-      },
-      filters || {}
-    )
+    normalizedFilters
   ).map((service) => {
     const creator = findCreatorByRef(creators, service.creatorId);
     return buildPublicService(service, {
@@ -878,9 +1425,9 @@ async function getDestinationDetailData(slug, filters) {
   return {
     destination: Object.assign({}, destination, { isFavorited: false }),
     typeOptions,
-    styleOptions,
+    styleOptions: tagOptions,
     typeLabels: typeOptions.map((item) => item.label),
-    styleLabels: styleOptions.map((item) => item.label),
+    styleLabels: tagOptions.map((item) => item.label),
     relatedCreators,
     relatedIdeas,
     services: matchedServices
@@ -904,8 +1451,8 @@ async function getIdeasPageData(theme, creatorSlug) {
     ? sourceIdeas.filter((idea) => !theme || idea.theme === theme)
     : (!theme ? sourceIdeas : sourceIdeas.filter((idea) => idea.theme === theme));
   const themes = creatorSlug
-    ? unique(sourceIdeas.map((idea) => idea.theme))
-    : unique(ideas.map((idea) => idea.theme));
+    ? unique(sourceIdeas.map((idea) => idea.theme).filter(Boolean))
+    : unique(ideas.map((idea) => idea.theme).filter(Boolean));
 
   return {
     themes,
@@ -915,8 +1462,8 @@ async function getIdeasPageData(theme, creatorSlug) {
 }
 
 async function getIdeaDetailData(slug) {
-  const { creators, ideas } = await loadContentData();
-  const idea = ideas.find((item) => item.slug === slug);
+  const { creators } = await loadContentData();
+  const idea = await findPublicIdeaBySlug(slug);
   if (!idea) {
     return null;
   }
@@ -929,21 +1476,30 @@ async function getIdeaDetailData(slug) {
   };
 }
 
-async function getServiceDetailData(slug) {
-  const { creators, destinations, services } = await loadContentData();
-  const service = services.find((item) => item.slug === slug);
-  if (!service) {
-    return null;
-  }
+function normalizeServiceGalleryGroups(service) {
+  return (Array.isArray(service && service.galleryGroups) ? service.galleryGroups : [])
+    .map((item, index) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
 
-  const creator = findCreatorByRef(creators, service.creatorId);
-  const relatedDestinations = destinations.filter((item) => (service.destinationSlugs || []).includes(item.slug));
-  const heroCover = service.cover || (relatedDestinations[0] ? relatedDestinations[0].cover : "");
-  const photoGallery = Array.isArray(service.gallery) && service.gallery.length ? service.gallery : heroCover ? [heroCover] : [];
-  const photoBaseList = heroCover ? [heroCover].concat(photoGallery) : photoGallery;
-  const photoTotal = photoBaseList.length;
-  const sqlPeriods = await listSqlServicePeriods(service.slug);
-  const mediaTabs = [
+      const label = String(item.label || "").trim() || `图集 ${index + 1}`;
+      const images = unique(Array.isArray(item.images) ? item.images.filter(Boolean) : []);
+      if (!images.length) {
+        return null;
+      }
+
+      return {
+        key: String(item.key || "").trim() || `gallery-${index + 1}`,
+        label,
+        images
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildLegacyMediaTabs(photoBaseList) {
+  return [
     {
       key: "landscape",
       label: "景观",
@@ -960,6 +1516,63 @@ async function getServiceDetailData(slug) {
       images: photoBaseList.slice(2, 4).length ? photoBaseList.slice(2, 4) : photoBaseList.slice(0, 1)
     }
   ];
+}
+
+function buildServiceGalleryState(service, heroCover) {
+  const galleryGroups = normalizeServiceGalleryGroups(service);
+  const galleryGroupsCard = Array.isArray(service && service.galleryGroupsCard) ? service.galleryGroupsCard : [];
+
+  if (galleryGroups.length) {
+    const photoGallery = unique((galleryGroupsCard.length ? galleryGroupsCard : galleryGroups).flatMap((item) => item.images || []));
+    const photoBaseList = unique(heroCover ? [heroCover].concat(photoGallery) : photoGallery);
+
+    return {
+      photoGallery,
+      photoBaseList,
+      mediaTabs: galleryGroups.map((item) => ({
+        key: item.key,
+        label: item.label,
+        images: item.images
+      }))
+    };
+  }
+
+  const photoGallery = Array.isArray(service && service.galleryCard) && service.galleryCard.length
+    ? service.galleryCard
+    : Array.isArray(service && service.gallery) && service.gallery.length
+      ? service.gallery
+    : heroCover ? [heroCover] : [];
+  const detailGallery = Array.isArray(service && service.gallery) && service.gallery.length
+    ? service.gallery
+    : photoGallery;
+  const photoBaseList = unique(heroCover ? [heroCover].concat(detailGallery) : detailGallery);
+
+  return {
+    photoGallery,
+    photoBaseList,
+    mediaTabs: buildLegacyMediaTabs(photoBaseList)
+  };
+}
+
+async function getServiceDetailData(slug) {
+  const { creators, destinations, services } = await loadContentData();
+  const service = services.find((item) => item.slug === slug);
+  if (!service) {
+    return null;
+  }
+
+  const creator = findCreatorByRef(creators, service.creatorId);
+  const relatedDestinations = destinations.filter((item) => (service.destinationSlugs || []).includes(item.slug));
+  const heroCover = service.coverDetail || service.cover || (relatedDestinations[0] ? (relatedDestinations[0].coverDetail || relatedDestinations[0].cover) : "");
+  const galleryState = buildServiceGalleryState(service, heroCover);
+  const photoGallery = galleryState.photoGallery;
+  const photoBaseList = galleryState.photoBaseList;
+  const photoTotal = photoBaseList.length;
+  const sqlPeriods = await listSqlServicePeriods(service.slug);
+  const effectivePeriods = Array.isArray(sqlPeriods) && sqlPeriods.length
+    ? sqlPeriods
+    : (Array.isArray(service.groupPeriods) ? service.groupPeriods : []);
+  const mediaTabs = galleryState.mediaTabs;
 
   return {
     service: buildPublicService(service, {
@@ -973,16 +1586,18 @@ async function getServiceDetailData(slug) {
     photoGallery,
     photoTotal,
     mediaTabs,
-    groupPeriods: sqlPeriods
+    groupPeriods: effectivePeriods
       .map((period) =>
         buildGroupPeriodDisplay({
           id: period.periodCode || period.id,
           periodCode: period.periodCode || period.id || "",
           versionName: period.versionName || "",
+          durationDays: Number(period.durationDays) || 0,
           dateStart: period.dateStart || "",
           dateEnd: period.dateEnd || period.dateStart || "",
           price: Number(period.price) || 0,
           status: period.status || "available",
+          badge: period.badge || "",
           remainingSeats: Number(period.remainingSeats) || 0,
           minGroup: Number(period.minGroup) || 1
         })
@@ -991,10 +1606,15 @@ async function getServiceDetailData(slug) {
 }
 
 const handlers = {
+  clearCache: () => clearGatewayCache(),
   getHomePageData: (payload) => getHomePageData(payload),
   getCreatorsPageData: (payload) => getCreatorsPageData(payload.filters),
   getCreatorDetailData: (payload) => getCreatorDetailData(payload.slug),
-  getDestinationsPageData: (payload) => getDestinationsPageData(payload.search),
+  getDestinationsPageData: (payload) => getDestinationsPageData({
+    search: payload.search,
+    tag: payload.filters && payload.filters.tag,
+    regionCode: payload.filters && payload.filters.regionCode
+  }),
   getDestinationDetailData: (payload) => getDestinationDetailData(payload.slug, payload.filters),
   getIdeasPageData: (payload) => getIdeasPageData(payload.theme, payload.creatorSlug),
   getIdeaDetailData: (payload) => getIdeaDetailData(payload.slug),

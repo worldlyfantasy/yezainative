@@ -50,6 +50,10 @@ function mapCreatorDetailData(payload) {
 function mapDestinationsPageData(payload) {
   const source = ensureObject(payload);
   return {
+    regionOptions: ensureArray(source.regionOptions),
+    regionLabels: ensureArray(source.regionLabels),
+    styleOptions: ensureArray(source.styleOptions),
+    styleLabels: ensureArray(source.styleLabels),
     destinations: ensureArray(source.destinations)
   };
 }

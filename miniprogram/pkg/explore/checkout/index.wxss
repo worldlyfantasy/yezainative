@@ -1,5 +1,6 @@
 .checkout-page {
-  padding-bottom: 320rpx;
+  padding-top: 0;
+  padding-bottom: 220rpx;
 }
 
 /* ---------- 订单摘要 ---------- */
@@ -27,22 +28,6 @@
   text-align: right;
 }
 
-.checkout-summary__value--em {
-  font-weight: 500;
-}
-
-.checkout-summary__row--total {
-  margin-top: 24rpx;
-  padding-top: 20rpx;
-  border-top: 1rpx solid rgba(153, 57, 33, 0.12);
-}
-
-.checkout-summary__total {
-  font-size: 36rpx;
-  font-weight: 600;
-  color: #2b241d;
-}
-
 /* ---------- 出行人信息 ---------- */
 .checkout-travelers-block {
   min-height: 200rpx;
@@ -50,42 +35,128 @@
 .checkout-travelers {
   display: flex;
   flex-direction: column;
-  gap: 36rpx;
+  gap: 24rpx;
 }
 
-.checkout-traveler {
-  padding: 24rpx 0 0;
-  border-top: 1rpx solid rgba(153, 57, 33, 0.08);
+.checkout-traveler,
+.checkout-contact-card {
+  padding: 28rpx 24rpx 24rpx;
+  border: 1rpx solid rgba(189, 154, 95, 0.24);
+  border-radius: 28rpx;
+  background:
+    linear-gradient(180deg, rgba(255, 251, 244, 0.84), rgba(255, 248, 236, 0.62)),
+    rgba(255, 250, 241, 0.48);
+  box-shadow: 0 12rpx 30rpx rgba(153, 57, 33, 0.04);
 }
 
-.checkout-traveler:first-child {
-  border-top: 0;
-  padding-top: 0;
+.checkout-traveler__header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 18rpx;
 }
 
 .checkout-traveler__title {
   display: block;
-  font-size: 28rpx;
-  font-weight: 500;
+  font-size: 32rpx;
+  line-height: 1.35;
+  font-weight: 600;
   color: #2b241d;
-  margin-bottom: 16rpx;
+}
+
+.checkout-field-group + .checkout-field-group {
+  margin-top: 18rpx;
+}
+
+.checkout-field-label {
+  display: block;
+  margin-bottom: 10rpx;
+  padding-left: 6rpx;
+  font-size: 23rpx;
+  line-height: 1.5;
+  color: #6a5a4b;
 }
 
 .checkout-field {
-  margin-top: 16rpx;
+  margin-top: 0;
+}
+
+.checkout-field--error {
+  border-color: rgba(153, 57, 33, 0.72);
+  background: rgba(255, 245, 242, 0.88);
+}
+
+.checkout-field-error {
+  display: block;
+  margin-top: 10rpx;
+  padding-left: 6rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #993921;
+}
+
+.checkout-field-error--compact {
+  padding-left: 4rpx;
+}
+
+.checkout-document-row {
+  display: flex;
+  align-items: stretch;
+  gap: 14rpx;
+}
+
+.checkout-document-col {
+  min-width: 0;
+}
+
+.checkout-document-col--type {
+  flex: 0 0 176rpx;
+}
+
+.checkout-document-col--number {
+  flex: 1;
+}
+
+.checkout-document-trigger,
+.checkout-document-input {
+  margin-top: 0;
+  min-height: 72rpx;
+  height: 72rpx;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.checkout-picker-value {
+  display: flex;
+  align-items: center;
+  min-height: 72rpx;
+  height: 72rpx;
+  padding-top: 0;
+  padding-bottom: 0;
+  width: 100%;
+}
+
+.checkout-picker-value--placeholder {
+  color: rgba(106, 90, 75, 0.72);
 }
 
 .checkout-note {
   width: 100%;
-  min-height: 140rpx;
-  margin-top: 16rpx;
+  height: 148rpx;
+  min-height: 148rpx;
+  margin-top: 0;
   padding: 20rpx 24rpx;
   border: 1rpx solid rgba(189, 154, 95, 0.35);
-  border-radius: 16rpx;
+  border-radius: 20rpx;
   background: rgba(255, 250, 241, 0.5);
   color: #2b241d;
   font-size: 26rpx;
+  line-height: 1.7;
   box-sizing: border-box;
+}
+
+.checkout-contact-block {
+  margin-top: 48rpx;
 }
 
 /* ---------- 协议确认 ---------- */
@@ -205,37 +276,61 @@
   white-space: pre-line;
 }
 
-/* ---------- 底部栏：金额大号 + 按钮深棕圆角、约 60% ---------- */
-.checkout-page .checkout-bottom-bar.bottom-action-bar {
-  padding: 24rpx 28rpx 24rpx;
+/* ---------- 顶部吸附操作条 ---------- */
+.checkout-action-bar .bottom-action-bar {
+  z-index: 1001;
+  margin: 0;
+  padding: 18rpx 40rpx 16rpx;
   align-items: center;
 }
 
-.checkout-page .checkout-bottom-bar .bottom-action-bar__label {
+.checkout-action-bar .bottom-action-bar__meta {
+  min-height: 88rpx;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.checkout-action-bar .bottom-action-bar__meta--compact {
+  justify-content: center;
+}
+
+.checkout-action-bar .bottom-action-bar__label {
   font-size: 24rpx;
   color: #6a5a4b;
 }
 
-.checkout-page .checkout-bottom-bar .bottom-action-bar__price {
+.checkout-action-bar .bottom-action-bar__price {
   font-size: 44rpx;
   font-weight: 600;
   color: #2b241d;
-  margin-top: 4rpx;
+  margin-top: 0;
+  line-height: 1;
 }
 
-.checkout-page .checkout-bottom-bar .bottom-action-bar__button {
-  flex: 0 0 58%;
-  max-width: 58%;
-  min-width: 0;
+.checkout-action-bar .bottom-action-bar__button {
+  flex: 0 0 320rpx;
+  width: 320rpx;
+  max-width: none;
+  min-width: 320rpx;
   min-height: 88rpx;
   border-radius: 44rpx;
-  font-size: 30rpx;
-  font-weight: 500;
-  background-color: #5c4a3d;
+  font-size: 28rpx;
+  font-weight: 600;
+  white-space: nowrap;
+  background-color: #993921;
   background-image: none;
-  color: #f5efe6;
+  color: #ffffff;
+  box-shadow: 0 12rpx 28rpx rgba(153, 57, 33, 0.18);
 }
 
-.checkout-page .checkout-bottom-bar .bottom-action-bar__button::after {
+.checkout-action-bar .bottom-action-bar__button::after {
   border: 0;
+}
+
+.checkout-action-bar .bottom-action-bar__button--disabled {
+  color: rgba(255, 255, 255, 0.82);
+  background-color: rgba(153, 57, 33, 0.32);
+  box-shadow: none;
 }

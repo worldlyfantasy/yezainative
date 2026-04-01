@@ -1,4 +1,17 @@
-<view wx:if="{{service}}" class="page-shell checkout-page">
+<view wx:if="{{service}}" class="checkout-screen">
+  <bottom-action-bar
+    placement="sticky-top"
+    label-text="{{amountLabelText}}"
+    price-text="{{payableText}}"
+    button-text="{{submitButtonText}}"
+    loading-text="提交中..."
+    disabled="{{submitting}}"
+    loading="{{submitting}}"
+    bind:actiontap="submitOrder"
+    class="checkout-action-bar"
+  ></bottom-action-bar>
+
+  <view class="page-shell checkout-page">
   <!-- 订单摘要模块 -->
   <view class="checkout-summary paper-block">
     <text class="section-title">{{summaryTitleText}}</text>
@@ -22,36 +35,73 @@
       <text class="checkout-summary__label">出行人数</text>
       <text class="checkout-summary__value">{{summaryCount}} 人</text>
     </view>
-    <view class="checkout-summary__row">
-      <text class="checkout-summary__label">小计</text>
-      <text class="checkout-summary__value checkout-summary__value--em">¥{{summarySubtotal}}</text>
-    </view>
-    <view class="checkout-summary__row checkout-summary__row--total">
-      <text class="checkout-summary__label">总价</text>
-      <text class="checkout-summary__total">¥{{summaryTotal}}</text>
-    </view>
   </view>
 
   <!-- 出行人信息（动态数量） -->
   <view class="section-block paper-block checkout-travelers-block">
     <text class="section-title">出行人信息</text>
     <view class="checkout-travelers">
-      <view wx:for="{{travelPersons}}" wx:key="index" class="checkout-traveler">
-        <text class="checkout-traveler__title">出行人 {{item.index}}</text>
-        <input class="search-input checkout-field" placeholder="姓名（必填）" data-index="{{item.index}}" data-field="name" value="{{item.name}}" bindinput="onTravelPersonInput" />
-        <input class="search-input checkout-field" placeholder="身份证号/护照号（必填）" data-index="{{item.index}}" data-field="idCard" value="{{item.idCard}}" bindinput="onTravelPersonInput" />
-        <input class="search-input checkout-field" placeholder="手机号（必填）" data-index="{{item.index}}" data-field="phone" value="{{item.phone}}" bindinput="onTravelPersonInput" />
-        <input class="search-input checkout-field" placeholder="微信号（选填）" data-index="{{item.index}}" data-field="wechat" value="{{item.wechat}}" bindinput="onTravelPersonInput" />
-        <textarea class="checkout-note" placeholder="备注需求（选填）" data-index="{{item.index}}" data-field="note" value="{{item.note}}" bindinput="onTravelPersonInput"></textarea>
+      <view wx:for="{{travelPersons}}" wx:for-index="idx" wx:key="index" class="checkout-traveler">
+        <view class="checkout-traveler__header">
+          <text class="checkout-traveler__title">出行人 {{item.index}}</text>
+        </view>
+
+        <view class="checkout-field-group">
+          <text class="checkout-field-label">姓名</text>
+          <input class="search-input checkout-field {{travelPersonErrors[idx].name ? 'checkout-field--error' : ''}}" placeholder="真实姓名" data-index="{{item.index}}" data-field="name" value="{{item.name}}" bindinput="onTravelPersonInput" bindblur="onTravelPersonBlur" />
+          <text wx:if="{{travelPersonErrors[idx].name}}" class="checkout-field-error">{{travelPersonErrors[idx].name}}</text>
+        </view>
+
+        <view class="checkout-field-group">
+          <text class="checkout-field-label">证件信息</text>
+          <view class="checkout-document-row">
+            <view class="checkout-document-col checkout-document-col--type">
+              <picker class="filter-picker-trigger checkout-document-trigger" mode="selector" range="{{documentTypeOptions}}" value="{{item.documentTypeIndex}}" data-index="{{item.index}}" bindchange="onTravelPersonDocumentTypeChange">
+                <view class="filter-picker checkout-picker-value {{travelPersonErrors[idx].documentType ? 'checkout-field--error' : ''}} {{item.documentType ? '' : 'checkout-picker-value--placeholder'}}">{{item.documentType ? documentTypeOptions[item.documentTypeIndex] : "证件类型"}}</view>
+              </picker>
+              <text wx:if="{{travelPersonErrors[idx].documentType}}" class="checkout-field-error checkout-field-error--compact">{{travelPersonErrors[idx].documentType}}</text>
+            </view>
+            <view class="checkout-document-col checkout-document-col--number">
+              <input class="search-input checkout-document-input {{travelPersonErrors[idx].documentNumber ? 'checkout-field--error' : ''}}" placeholder="{{item.documentType === 'passport' ? '护照号' : (item.documentType === 'idCard' ? '身份证号' : '证件号')}}" maxlength="18" data-index="{{item.index}}" data-field="documentNumber" value="{{item.documentNumber}}" bindinput="onTravelPersonInput" bindblur="onTravelPersonBlur" />
+              <text wx:if="{{travelPersonErrors[idx].documentNumber}}" class="checkout-field-error checkout-field-error--compact">{{travelPersonErrors[idx].documentNumber}}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="checkout-field-group">
+          <text class="checkout-field-label">手机号</text>
+          <input class="search-input checkout-field {{travelPersonErrors[idx].phone ? 'checkout-field--error' : ''}}" placeholder="常用手机号" type="number" maxlength="11" data-index="{{item.index}}" data-field="phone" value="{{item.phone}}" bindinput="onTravelPersonInput" bindblur="onTravelPersonBlur" />
+          <text wx:if="{{travelPersonErrors[idx].phone}}" class="checkout-field-error">{{travelPersonErrors[idx].phone}}</text>
+        </view>
+
+        <view class="checkout-field-group">
+          <text class="checkout-field-label">微信号（选填）</text>
+          <input class="search-input checkout-field" placeholder="微信号" data-index="{{item.index}}" data-field="wechat" value="{{item.wechat}}" bindinput="onTravelPersonInput" />
+        </view>
+
+        <view class="checkout-field-group">
+          <text class="checkout-field-label">备注需求（选填）</text>
+          <textarea class="checkout-note" placeholder="饮食禁忌、过敏源等补充说明" data-index="{{item.index}}" data-field="note" value="{{item.note}}" bindinput="onTravelPersonInput"></textarea>
+        </view>
       </view>
     </view>
   </view>
 
   <!-- 联系人信息 -->
-  <view class="section-block paper-block">
+  <view class="section-block paper-block checkout-contact-block">
     <text class="section-title">联系人信息</text>
-    <input class="search-input checkout-field" placeholder="联系人姓名" data-field="contactName" value="{{contactName}}" bindinput="onContactInput" />
-    <input class="search-input checkout-field" placeholder="联系电话" data-field="contactPhone" value="{{contactPhone}}" bindinput="onContactInput" />
+    <view class="checkout-contact-card">
+      <view class="checkout-field-group">
+        <text class="checkout-field-label">联系人姓名</text>
+        <input class="search-input checkout-field {{contactErrors.contactName ? 'checkout-field--error' : ''}}" placeholder="联系人姓名" data-field="contactName" value="{{contactName}}" bindinput="onContactInput" bindblur="onContactBlur" />
+        <text wx:if="{{contactErrors.contactName}}" class="checkout-field-error">{{contactErrors.contactName}}</text>
+      </view>
+      <view class="checkout-field-group">
+        <text class="checkout-field-label">联系电话</text>
+        <input class="search-input checkout-field {{contactErrors.contactPhone ? 'checkout-field--error' : ''}}" placeholder="手机号或座机" maxlength="20" data-field="contactPhone" value="{{contactPhone}}" bindinput="onContactInput" bindblur="onContactBlur" />
+        <text wx:if="{{contactErrors.contactPhone}}" class="checkout-field-error">{{contactErrors.contactPhone}}</text>
+      </view>
+    </view>
   </view>
 
   <!-- 协议确认 -->
@@ -78,17 +128,8 @@
       </label>
     </checkbox-group>
   </view>
+  </view>
 
-  <bottom-action-bar
-    label-text="{{amountLabelText}}"
-    price-text="{{payableText}}"
-    button-text="{{submitButtonText}}"
-    loading-text="提交中..."
-    disabled="{{submitting}}"
-    loading="{{submitting}}"
-    bind:actiontap="submitOrder"
-    class="checkout-bottom-bar"
-  ></bottom-action-bar>
 </view>
 
 <!-- 协议正文弹层 -->

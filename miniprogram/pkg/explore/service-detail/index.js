@@ -5,41 +5,13 @@ const { getCurrentUser } = require("../../../services/user");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../utils/favorite-notice");
 const { isAuditMode, pickAuditText } = require("../../../utils/audit");
+const {
+  normalizeVersionName,
+  resolveItineraryVersionState
+} = require("./version-state");
+const { calcDurationLabel } = require("./duration-state");
 
 const SECTION_SCROLL_DURATION = 320;
-
-function calcDurationLabelFromDates(dateStart, dateEnd) {
-  if (!dateStart || !dateEnd) return "";
-  const start = new Date(dateStart);
-  const end = new Date(dateEnd);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "";
-  const diff = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
-  if (!Number.isFinite(diff) || diff <= 0) return "";
-  const days = diff;
-  const nights = Math.max(days - 1, 0);
-  return nights > 0 ? `${days}天${nights}晚` : `${days}天`;
-}
-
-function calcDurationLabel(payload, travelDetail) {
-  const durationTag = String((payload && payload.service && payload.service.durationTag) || "").trim();
-  if (durationTag) return durationTag;
-
-  const firstPeriod = (payload && payload.groupPeriods && payload.groupPeriods[0]) || null;
-  if (firstPeriod) {
-    const fromPeriod = calcDurationLabelFromDates(firstPeriod.dateStart, firstPeriod.dateEnd);
-    if (fromPeriod) return fromPeriod;
-  }
-
-  const itineraryDays = travelDetail && travelDetail.itinerary && Array.isArray(travelDetail.itinerary.days)
-    ? travelDetail.itinerary.days.length
-    : 0;
-  if (itineraryDays > 0) {
-    const nights = Math.max(itineraryDays - 1, 0);
-    return nights > 0 ? `${itineraryDays}天${nights}晚` : `${itineraryDays}天`;
-  }
-
-  return "行程待确认";
-}
 
 function getMonthLabel(dateStr) {
   const m = new Date(dateStr).getMonth() + 1;
@@ -62,6 +34,75 @@ function filterPeriodsByMonth(periods, monthLabel) {
     const m = new Date(p.dateStart).getMonth() + 1;
     return m === monthNum;
   });
+}
+
+function normalizePeriodVersionKey(value) {
+  return normalizeVersionName(value) || "__default__";
+}
+
+function buildPeriodVersionLabel(value) {
+  const normalized = normalizeVersionName(value);
+  return normalized || "默认版";
+}
+
+function buildPeriodVersionOptions(periods) {
+  const optionMap = {};
+  (periods || []).forEach((period) => {
+    const key = normalizePeriodVersionKey(period && period.versionName);
+    if (optionMap[key]) {
+      return;
+    }
+
+    optionMap[key] = {
+      key,
+      label: buildPeriodVersionLabel(period && period.versionName),
+      versionName: normalizeVersionName(period && period.versionName)
+    };
+  });
+
+  return Object.keys(optionMap).map((key) => optionMap[key]);
+}
+
+function hasMultiplePeriodVersions(periods) {
+  return buildPeriodVersionOptions(periods).length > 1;
+}
+
+function filterPeriodsByVersion(periods, versionKey) {
+  if (!periods || !periods.length) return [];
+  if (!versionKey) return periods;
+  return periods.filter((period) => normalizePeriodVersionKey(period && period.versionName) === versionKey);
+}
+
+function getSelectedPeriod(periods, selectedPeriodId) {
+  if (!Array.isArray(periods) || !periods.length) {
+    return null;
+  }
+
+  if (!selectedPeriodId) {
+    return periods[0];
+  }
+
+  return periods.find((item) => item.id === selectedPeriodId) || periods[0];
+}
+
+function isBookablePeriodStatus(status) {
+  const normalized = String(status || "").trim();
+  return normalized === "available" || normalized === "confirmed";
+}
+
+function isBookablePeriod(period) {
+  return isBookablePeriodStatus(period && period.status);
+}
+
+function getPeriodUnavailableMessage(period) {
+  const status = String(period && period.status || "").trim();
+  if (status === "soldout") {
+    return "该团期名额已满";
+  }
+  if (status === "closed") {
+    return "该团期已截止报名";
+  }
+  return "该团期暂不可报名";
 }
 
 function buildCostTableGroups(costs) {
@@ -94,10 +135,14 @@ function buildCostTableGroups(costs) {
   ].filter((group) => group.rows.length);
 }
 
-function buildTravelDetailState(travelDetail) {
+function buildTravelDetailState(travelDetail, preferredVersionName) {
   if (!travelDetail) {
     return {
       travelDetail: null,
+      itineraryVersions: [],
+      activeItineraryVersionKey: "",
+      activeItineraryVersionName: "",
+      displayItinerary: null,
       costTableGroups: [],
       activeSectionKey: ""
     };
@@ -106,14 +151,36 @@ function buildTravelDetailState(travelDetail) {
   const sections = Array.isArray(travelDetail.sections)
     ? travelDetail.sections.filter((item) => item && item.key && item.anchorId)
     : [];
+  const itineraryState = resolveItineraryVersionState(travelDetail, preferredVersionName);
 
   return {
     travelDetail: Object.assign({}, travelDetail, {
       sections
     }),
+    itineraryVersions: itineraryState.itineraryVersions,
+    activeItineraryVersionKey: itineraryState.activeItineraryVersionKey,
+    activeItineraryVersionName: itineraryState.activeItineraryVersionName,
+    displayItinerary: itineraryState.displayItinerary,
     costTableGroups: buildCostTableGroups(travelDetail.costs),
     activeSectionKey: sections[0] ? sections[0].key : ""
   };
+}
+
+function buildServiceMetaCards(durationLabel) {
+  return [
+    {
+      key: "duration",
+      label: "行程时间",
+      value: durationLabel || "行程待确认",
+      clickable: true
+    },
+    {
+      key: "consultation",
+      label: "报名咨询",
+      value: "路线专属客服",
+      clickable: true
+    }
+  ];
 }
 
 function getCreatorQuoteText(service, travelDetail) {
@@ -133,7 +200,13 @@ Page({
     loading: true,
     auditMode: isAuditMode(),
     service: null,
+    serviceRouteTags: [],
+    serviceMetaCards: [],
     travelDetail: null,
+    itineraryVersions: [],
+    activeItineraryVersionKey: "",
+    activeItineraryVersionName: "",
+    displayItinerary: null,
     costTableGroups: [],
     activeSectionKey: "",
     sectionOffsets: [],
@@ -169,19 +242,24 @@ Page({
     consultCardLabel: "",
     consultCardDesc: "",
     consultFollowupNote: "",
+    suitableTitleText: "",
     suitableSheetVisible: false,
     suitableSheetAnimating: false,
     suitableSheetContent: "",
     groupPeriods: [],
+    showGroupPeriodVersionTags: false,
     selectedPeriodId: null,
     periodSheetVisible: false,
     periodSheetAnimating: false,
+    periodSheetVersions: [],
+    periodSheetActiveVersion: "",
     periodSheetMonths: [],
     periodSheetActiveMonth: "",
     periodSheetDates: [],
     periodSheetSelectedDateId: null,
     periodSheetPeople: 1,
     periodSheetTotalPrice: 0,
+    periodSheetCanCheckout: false,
     timelineTitleText: "",
     refundTitleText: "",
     serviceNoticeTitle: "",
@@ -210,33 +288,29 @@ Page({
       }
 
       const groupPeriods = Array.isArray(payload.groupPeriods) ? payload.groupPeriods : [];
+      const showGroupPeriodVersionTags = hasMultiplePeriodVersions(groupPeriods);
       const originalService = payload.service || {};
-      const detailState = buildTravelDetailState(payload.travelDetail);
-
-      const durationTag = {
-        key: "duration",
-        label: "行程时间",
-        value: calcDurationLabel(payload, detailState.travelDetail),
-        clickable: true
-      };
-      const consultationTag = {
-        key: "consultation",
-        label: "报名咨询",
-        value: "路线专属客服",
-        clickable: true
-      };
-      const mappedTags = [durationTag, consultationTag].filter(Boolean);
+      const initialPeriod = getSelectedPeriod(groupPeriods, null);
+      const detailState = buildTravelDetailState(
+        payload.travelDetail,
+        initialPeriod && initialPeriod.versionName
+      );
+      const mappedMetaCards = buildServiceMetaCards(calcDurationLabel(payload, detailState.travelDetail));
       const favorited = await isFavorited("services", originalService.slug);
-      const serviceWithTags = Object.assign({}, originalService, {
-        isFavorited: favorited,
-        tags: mappedTags
+      const routeTags = Array.isArray(originalService.tags)
+        ? originalService.tags.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 3)
+        : [];
+      const serviceWithState = Object.assign({}, originalService, {
+        isFavorited: favorited
       });
 
       this.setData(
         Object.assign(
           {
             loading: false,
-            service: serviceWithTags,
+            service: serviceWithState,
+            serviceRouteTags: routeTags,
+            serviceMetaCards: mappedMetaCards,
             creator: payload.creator,
             creatorQuoteText: getCreatorQuoteText(originalService, detailState.travelDetail),
             relatedDestinations: payload.relatedDestinations || [],
@@ -245,12 +319,15 @@ Page({
             photoTotal: payload.photoTotal || 0,
             mediaTabs: payload.mediaTabs || [],
             groupPeriods,
-            consultWeChatQr: pageConfig.consultWeChatQr,
+            showGroupPeriodVersionTags,
+            selectedPeriodId: initialPeriod ? initialPeriod.id : null,
+            consultWeChatQr: (payload.travelDetail && payload.travelDetail.consultWeChatQr) || pageConfig.consultWeChatQr,
             consultGroupQr: pageConfig.consultGroupQr,
             consultSheetTitle: pageConfig.consultSheetTitle,
             consultCardLabel: pageConfig.consultCardLabel,
             consultCardDesc: pageConfig.consultCardDesc,
             consultFollowupNote: pageConfig.consultFollowupNote,
+            suitableTitleText: pageConfig.suitableTitleText,
             timelineTitleText: pageConfig.timelineTitleText,
             refundTitleText: pageConfig.refundTitleText,
             serviceNoticeTitle: pageConfig.serviceNoticeTitle,
@@ -310,6 +387,44 @@ Page({
     }
     clearFavoriteNotice(this, "favoriteNoticeState", true);
     clearFavoriteNotice(this, "checkoutNoticeState", true);
+  },
+
+  refreshDurationMetaCard() {
+    this.setData({
+      serviceMetaCards: buildServiceMetaCards(
+        calcDurationLabel({ groupPeriods: this.data.groupPeriods }, this.data.travelDetail)
+      )
+    });
+  },
+
+  applyItineraryVersion(versionName, options) {
+    if (!this.data.travelDetail) {
+      return;
+    }
+
+    const itineraryState = resolveItineraryVersionState(this.data.travelDetail, versionName);
+    const selectedPeriodId = options && Object.prototype.hasOwnProperty.call(options, "selectedPeriodId")
+      ? options.selectedPeriodId
+      : this.data.selectedPeriodId;
+    const selectedPeriod = getSelectedPeriod(this.data.groupPeriods, selectedPeriodId);
+
+    this.setData(
+      {
+        itineraryVersions: itineraryState.itineraryVersions,
+        activeItineraryVersionKey: itineraryState.activeItineraryVersionKey,
+        activeItineraryVersionName: itineraryState.activeItineraryVersionName,
+        displayItinerary: itineraryState.displayItinerary
+      },
+      () => {
+        this.refreshDurationMetaCard();
+        this.scheduleMeasureTravelDetailLayout();
+      }
+    );
+  },
+
+  onItineraryVersionTap(event) {
+    const versionName = event.currentTarget.dataset.versionName;
+    this.applyItineraryVersion(versionName);
   },
 
   getActiveSectionKey(scrollTop, sectionOffsets, navHeight) {
@@ -492,6 +607,12 @@ Page({
       return;
     }
     if (key === "duration") {
+      const selectedPeriod = getSelectedPeriod(this.data.groupPeriods, this.data.selectedPeriodId);
+      if (selectedPeriod) {
+        this.applyItineraryVersion(selectedPeriod.versionName, {
+          selectedPeriodId: selectedPeriod.id
+        });
+      }
       this.onSectionTabTap({
         detail: {
           key: "itinerary"
@@ -503,6 +624,22 @@ Page({
       this.openConsultSheet();
       return;
     }
+  },
+
+  onRouteTagTap(event) {
+    const destinationSlug = this.data.service
+      && Array.isArray(this.data.service.destinationSlugs)
+      && this.data.service.destinationSlugs.length
+      ? this.data.service.destinationSlugs[0]
+      : "";
+
+    if (!destinationSlug) {
+      return;
+    }
+
+    wx.navigateTo({
+      url: `/pkg/explore/destination-detail/index?slug=${destinationSlug}`
+    });
   },
 
   buildSuitableSheetContent(service, travelDetail) {
@@ -570,6 +707,32 @@ Page({
     }, 260);
   },
 
+  updatePeriodSheetDates(versionKey, monthLabel, preferredPeriodId) {
+    const versionFiltered = filterPeriodsByVersion(this.data.groupPeriods, versionKey);
+    const months = getMonthsFromPeriods(versionFiltered);
+    const safeMonth = monthLabel && months.includes(monthLabel) ? monthLabel : (months[0] || "");
+    const dates = filterPeriodsByMonth(versionFiltered, safeMonth);
+    const selected = preferredPeriodId
+      ? dates.find((item) => item.id === preferredPeriodId) || dates[0] || null
+      : dates[0] || null;
+
+    this.setData({
+      periodSheetMonths: months,
+      periodSheetActiveMonth: safeMonth,
+      periodSheetDates: dates,
+      periodSheetSelectedDateId: selected ? selected.id : null,
+      selectedPeriodId: selected ? selected.id : this.data.selectedPeriodId,
+      periodSheetTotalPrice: selected ? selected.price * this.data.periodSheetPeople : 0,
+      periodSheetCanCheckout: isBookablePeriod(selected)
+    });
+
+    if (selected) {
+      this.applyItineraryVersion(selected.versionName, {
+        selectedPeriodId: selected.id
+      });
+    }
+  },
+
   onViewMorePeriods() {
     const periods = this.data.groupPeriods || [];
     if (!periods.length) return;
@@ -582,23 +745,32 @@ Page({
 
   openPeriodSheetWith(period) {
     if (!period) return;
-    const months = getMonthsFromPeriods(this.data.groupPeriods);
+    const versionOptions = buildPeriodVersionOptions(this.data.groupPeriods);
+    const activeVersionKey = versionOptions.length > 1
+      ? normalizePeriodVersionKey(period.versionName)
+      : (versionOptions[0] ? versionOptions[0].key : "");
     const monthLabel = getMonthLabel(period.dateStart);
-    const dates = filterPeriodsByMonth(this.data.groupPeriods, monthLabel);
     this.setData({
       selectedPeriodId: period.id,
       periodSheetVisible: true,
       periodSheetAnimating: false,
-      periodSheetMonths: months,
-      periodSheetActiveMonth: monthLabel,
-      periodSheetDates: dates,
+      periodSheetVersions: versionOptions,
+      periodSheetActiveVersion: activeVersionKey,
+      periodSheetMonths: [],
+      periodSheetActiveMonth: "",
+      periodSheetDates: [],
       periodSheetSelectedDateId: period.id,
       periodSheetPeople: 1,
-      periodSheetTotalPrice: period.price * 1
+      periodSheetTotalPrice: period.price * 1,
+      periodSheetCanCheckout: isBookablePeriod(period)
     });
+    this.updatePeriodSheetDates(activeVersionKey, monthLabel, period.id);
     setTimeout(() => {
       this.setData({ periodSheetAnimating: true });
     }, 20);
+    this.applyItineraryVersion(period.versionName, {
+      selectedPeriodId: period.id
+    });
   },
 
   onSelectPeriod(event) {
@@ -614,24 +786,34 @@ Page({
     }, 260);
   },
 
+  onSelectPeriodVersion(event) {
+    const versionKey = event.currentTarget.dataset.versionKey;
+    if (!versionKey || versionKey === this.data.periodSheetActiveVersion) {
+      return;
+    }
+
+    this.setData({
+      periodSheetActiveVersion: versionKey
+    });
+    this.updatePeriodSheetDates(versionKey, "", null);
+  },
+
   onSelectMonth(event) {
     const month = event.currentTarget.dataset.month;
-    const dates = filterPeriodsByMonth(this.data.groupPeriods, month);
-    const first = dates[0];
-    this.setData({
-      periodSheetActiveMonth: month,
-      periodSheetDates: dates,
-      periodSheetSelectedDateId: first ? first.id : null,
-      periodSheetTotalPrice: first ? first.price * this.data.periodSheetPeople : 0
-    });
+    this.updatePeriodSheetDates(this.data.periodSheetActiveVersion, month, null);
   },
 
   onSelectSheetDate(event) {
     const period = event.currentTarget.dataset.date;
     if (!period) return;
     this.setData({
+      selectedPeriodId: period.id,
       periodSheetSelectedDateId: period.id,
-      periodSheetTotalPrice: period.price * this.data.periodSheetPeople
+      periodSheetTotalPrice: period.price * this.data.periodSheetPeople,
+      periodSheetCanCheckout: isBookablePeriod(period)
+    });
+    this.applyItineraryVersion(period.versionName, {
+      selectedPeriodId: period.id
     });
   },
 
@@ -662,6 +844,13 @@ Page({
       wx.showToast({ title: "请选择出发日期", icon: "none" });
       return;
     }
+    if (!isBookablePeriod(selected)) {
+      wx.showToast({
+        title: getPeriodUnavailableMessage(selected),
+        icon: "none"
+      });
+      return;
+    }
     const user = await getCurrentUser();
     if (!user) {
       showFavoriteNotice(this, {
@@ -685,7 +874,7 @@ Page({
     const peopleCount = this.data.periodSheetPeople;
     const unitPrice = selected.price;
     const versionName = selected.versionName ? encodeURIComponent(selected.versionName) : "";
-    const periodCode = selected.periodCode || selected.id || "";
+    const periodCode = selected.periodCode || "";
     wx.navigateTo({
       url:
         `/pkg/explore/checkout/index?slug=${slug}&travelDateStart=${travelDateStart}&travelDateEnd=${travelDateEnd}&peopleCount=${peopleCount}` +

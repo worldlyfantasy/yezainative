@@ -1,6 +1,6 @@
-<view class="bottom-action-bar">
-  <view>
-    <text class="bottom-action-bar__label">{{labelText}}</text>
+<view class="bottom-action-bar {{placement === 'sticky-top' ? 'bottom-action-bar--sticky-top' : 'bottom-action-bar--fixed-bottom'}}">
+  <view class="bottom-action-bar__meta {{labelText ? '' : 'bottom-action-bar__meta--compact'}}">
+    <text wx:if="{{labelText}}" class="bottom-action-bar__label">{{labelText}}</text>
     <text class="bottom-action-bar__price">{{priceText}}</text>
   </view>
   <button

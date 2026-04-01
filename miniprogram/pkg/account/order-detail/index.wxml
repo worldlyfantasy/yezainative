@@ -47,7 +47,7 @@
         <text class="order-traveler__title">出行人 {{index + 1}}</text>
         <view class="detail-list">
           <text class="detail-list-item">姓名：{{item.name || "未填写"}}</text>
-          <text class="detail-list-item">证件：{{item.idCard || "未填写"}}</text>
+          <text class="detail-list-item">证件：{{item.documentDisplayText || item.documentNumber || item.idCard || "未填写"}}</text>
           <text class="detail-list-item">手机：{{item.phone || "未填写"}}</text>
           <text wx:if="{{item.wechat}}" class="detail-list-item">微信：{{item.wechat}}</text>
           <text wx:if="{{item.note}}" class="detail-list-item">备注：{{item.note}}</text>
@@ -94,11 +94,17 @@
       <view class="sheet-close consult-sheet__close" bindtap="closeConsultSheet">⌄</view>
     </view>
     <view class="consult-sheet__cards">
-      <view class="consult-card">
-        <image class="consult-card__qr" src="{{consultGroupQr}}" mode="aspectFit"></image>
-        <text wx:if="{{consultCardLabel}}" class="consult-card__label">{{consultCardLabel}}</text>
+      <view wx:if="{{consultWeChatQr}}" class="consult-card">
+        <image class="consult-card__qr" src="{{consultWeChatQr}}" mode="aspectFit"></image>
+        <text class="consult-card__label">路线专属客服</text>
+        <text wx:if="{{consultCardLabel}}" class="consult-card__desc">{{consultCardLabel}}</text>
         <text class="consult-card__desc">{{consultCardDesc}}</text>
         <text class="consult-card__desc">{{consultFollowupNote}}</text>
+      </view>
+      <view wx:if="{{consultGroupQr}}" class="consult-card">
+        <image class="consult-card__qr" src="{{consultGroupQr}}" mode="aspectFit"></image>
+        <text class="consult-card__label">咨询群</text>
+        <text class="consult-card__desc">也可扫码加入统一咨询群，获取答疑与报名支持</text>
       </view>
     </view>
   </view>

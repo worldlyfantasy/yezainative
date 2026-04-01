@@ -37,8 +37,11 @@ function getCreatorDetailData(slug) {
   return callContentGateway("getCreatorDetailData", { slug });
 }
 
-function getDestinationsPageData(search) {
-  return callContentGateway("getDestinationsPageData", { search: search || "" });
+function getDestinationsPageData(search, filters) {
+  return callContentGateway("getDestinationsPageData", {
+    search: search || "",
+    filters: filters || {}
+  });
 }
 
 function getDestinationDetailData(slug, filters) {

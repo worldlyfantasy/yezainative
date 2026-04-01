@@ -37,13 +37,7 @@
       ></favorite-star>
     </view>
 
-    <view class="article-blocks">
-      <block wx:for="{{blocks}}" wx:key="id">
-        <text wx:if="{{item.type === 'heading'}}" class="article-block article-block--heading">{{item.content}}</text>
-        <text wx:elif="{{item.type === 'quote'}}" class="article-block article-block--quote">{{item.content}}</text>
-        <text wx:else class="article-block article-block--paragraph">{{item.content}}</text>
-      </block>
-    </view>
+    <rich-text class="article-rich-text" nodes="{{richTextHtml}}"></rich-text>
   </view>
 
   <view wx:if="{{author}}" class="section-block article-author" bindtap="goCreatorDetail">

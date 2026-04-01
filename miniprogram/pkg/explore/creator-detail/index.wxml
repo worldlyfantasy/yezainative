@@ -59,7 +59,7 @@
           <text wx:for="{{creator.tags}}" wx:key="*this" class="creator-top__descriptor">{{item}}</text>
         </view>
       </view>
-      <image class="creator-top__avatar" src="{{creator.avatar}}" mode="aspectFill"></image>
+      <image class="creator-top__avatar" src="{{creator.avatarDetail || creator.avatar}}" mode="aspectFill"></image>
     </view>
   </view>
 

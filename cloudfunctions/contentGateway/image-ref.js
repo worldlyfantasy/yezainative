@@ -13,20 +13,30 @@ function pickFirstString(candidates) {
   return "";
 }
 
-function normalizeImageRef(value) {
+function getImageAsset(value) {
   if (typeof value === "string") {
-    return value.trim();
+    const normalized = value.trim();
+    return normalized
+      ? {
+          original: normalized,
+          card: "",
+          detail: ""
+        }
+      : null;
   }
 
   if (Array.isArray(value)) {
-    return normalizeImageRef(value[0]);
+    return getImageAsset(value[0]);
   }
 
   if (!isPlainObject(value)) {
-    return "";
+    return null;
   }
 
-  return pickFirstString([
+  const card = pickFirstString([value.card]);
+  const detail = pickFirstString([value.detail]);
+  const original = pickFirstString([
+    value.original,
     value.tempFileURL,
     value.url,
     value.src,
@@ -36,13 +46,38 @@ function normalizeImageRef(value) {
     value.avatar,
     value.fileID,
     value.cloudFileID,
-    value.path
+    value.path,
+    detail,
+    card
   ]);
+
+  if (!original && !card && !detail) {
+    return null;
+  }
+
+  return {
+    original,
+    card,
+    detail
+  };
 }
 
-function normalizeImageList(values) {
+function normalizeImageRef(value, variant) {
+  const asset = getImageAsset(value);
+  if (!asset) {
+    return "";
+  }
+
+  if (variant === "detail") {
+    return asset.detail || asset.original || asset.card || "";
+  }
+
+  return asset.card || asset.detail || asset.original || "";
+}
+
+function normalizeImageList(values, variant) {
   const list = Array.isArray(values) ? values : values ? [values] : [];
-  return list.map(normalizeImageRef).filter(Boolean);
+  return list.map((item) => normalizeImageRef(item, variant)).filter(Boolean);
 }
 
 function normalizeHeroSlide(slide) {
@@ -51,9 +86,11 @@ function normalizeHeroSlide(slide) {
   }
 
   const cloudFileID = pickFirstString([slide.cloudFileID, slide.fileID]);
-  const image = normalizeImageRef(slide.image || slide.coverImage || slide.cover || cloudFileID);
+  const imageSource = slide.image || slide.coverImage || slide.cover || cloudFileID;
+  const image = normalizeImageRef(imageSource, "detail");
+  const imageCard = normalizeImageRef(imageSource, "card");
 
-  return Object.assign({}, slide, image ? { image } : {}, cloudFileID ? { cloudFileID } : {});
+  return Object.assign({}, slide, image ? { image } : {}, imageCard ? { imageCard } : {}, cloudFileID ? { cloudFileID } : {});
 }
 
 function normalizeHeroSlides(slides) {
@@ -66,7 +103,8 @@ function normalizeCreatorAssetFields(creator) {
   }
 
   return Object.assign({}, creator, {
-    avatar: normalizeImageRef(creator.avatar)
+    avatar: normalizeImageRef(creator.avatar, "card"),
+    avatarDetail: normalizeImageRef(creator.avatar, "detail")
   });
 }
 
@@ -76,7 +114,8 @@ function normalizeDestinationAssetFields(destination) {
   }
 
   return Object.assign({}, destination, {
-    cover: normalizeImageRef(destination.cover)
+    cover: normalizeImageRef(destination.cover, "card"),
+    coverDetail: normalizeImageRef(destination.cover, "detail")
   });
 }
 
@@ -86,8 +125,30 @@ function normalizeIdeaAssetFields(idea) {
   }
 
   return Object.assign({}, idea, {
-    cover: normalizeImageRef(idea.cover)
+    cover: normalizeImageRef(idea.cover, "card"),
+    coverDetail: normalizeImageRef(idea.cover, "detail")
   });
+}
+
+function normalizeGalleryGroups(value, variant) {
+  return (Array.isArray(value) ? value : [])
+    .map((item, index) => {
+      if (!isPlainObject(item)) {
+        return null;
+      }
+
+      const label = pickFirstString([item.label, item.title, item.name]) || `图集 ${index + 1}`;
+      const images = normalizeImageList(item.images || item.gallery || item.items, variant);
+      if (!images.length) {
+        return null;
+      }
+
+      return Object.assign({}, item, {
+        label,
+        images
+      });
+    })
+    .filter(Boolean);
 }
 
 function normalizeTravelDetail(travelDetail) {
@@ -97,7 +158,8 @@ function normalizeTravelDetail(travelDetail) {
 
   const overview = isPlainObject(travelDetail.overview)
     ? Object.assign({}, travelDetail.overview, {
-        coverImage: normalizeImageRef(travelDetail.overview.coverImage || travelDetail.overview.image)
+        coverImage: normalizeImageRef(travelDetail.overview.coverImage || travelDetail.overview.image, "detail"),
+        coverImageCard: normalizeImageRef(travelDetail.overview.coverImage || travelDetail.overview.image, "card")
       })
     : travelDetail.overview;
 
@@ -108,12 +170,14 @@ function normalizeTravelDetail(travelDetail) {
         }
 
         return Object.assign({}, highlight, {
-          images: normalizeImageList(highlight.images || highlight.gallery || highlight.image)
+          images: normalizeImageList(highlight.images || highlight.gallery || highlight.image, "detail"),
+          imagesCard: normalizeImageList(highlight.images || highlight.gallery || highlight.image, "card")
         });
       })
     : travelDetail.highlights;
 
   return Object.assign({}, travelDetail, {
+    consultWeChatQr: normalizeImageRef(travelDetail.consultWeChatQr, "detail"),
     overview,
     highlights
   });
@@ -125,8 +189,12 @@ function normalizeServiceAssetFields(service) {
   }
 
   return Object.assign({}, service, {
-    cover: normalizeImageRef(service.cover),
-    gallery: normalizeImageList(service.gallery),
+    cover: normalizeImageRef(service.cover, "card"),
+    coverDetail: normalizeImageRef(service.cover, "detail"),
+    gallery: normalizeImageList(service.gallery, "detail"),
+    galleryCard: normalizeImageList(service.gallery, "card"),
+    galleryGroups: normalizeGalleryGroups(service.galleryGroups, "detail"),
+    galleryGroupsCard: normalizeGalleryGroups(service.galleryGroups, "card"),
     travelDetail: normalizeTravelDetail(service.travelDetail)
   });
 }

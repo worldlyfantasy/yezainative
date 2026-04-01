@@ -1,5 +1,5 @@
 <view class="idea-card {{showDivider ? '' : 'idea-card--no-divider'}}" bindtap="handleTap">
-  <image class="idea-card__cover" src="{{idea.cover}}" mode="aspectFill"></image>
+  <image class="idea-card__cover" src="{{idea.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
   <view class="idea-card__body">
     <text class="idea-card__theme">{{idea.theme}}</text>
     <text class="idea-card__title">{{idea.title}}</text>

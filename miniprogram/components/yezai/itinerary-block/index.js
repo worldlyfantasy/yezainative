@@ -19,6 +19,18 @@ const MODULE_META = {
     title: "温馨提示",
     icon: "tips"
   },
+  meal: {
+    title: "餐食",
+    icon: "meals"
+  },
+  note: {
+    title: "温馨提示",
+    icon: "tips"
+  },
+  stay: {
+    title: "住宿",
+    icon: "accommodation"
+  },
   gear: {
     title: "装备建议",
     icon: "gear"
@@ -33,12 +45,47 @@ const MODULE_META = {
   }
 };
 
+const MODULE_TITLE_TYPE_MAP = {
+  "当日行程": "schedule",
+  "行程": "schedule",
+  "交通": "transport",
+  "餐食": "meals",
+  "住宿": "accommodation",
+  "提示": "tips",
+  "温馨提示": "tips"
+};
+
+const MODULE_TYPE_ALIASES = {
+  meal: "meals",
+  note: "tips",
+  stay: "accommodation"
+};
+
+function resolveModuleType(module) {
+  const rawType = typeof module.type === "string" ? module.type.trim() : "";
+  if (MODULE_TYPE_ALIASES[rawType]) {
+    return MODULE_TYPE_ALIASES[rawType];
+  }
+  if (MODULE_META[rawType]) {
+    return rawType;
+  }
+
+  const rawTitle = typeof module.title === "string" ? module.title.trim() : "";
+  if (MODULE_TITLE_TYPE_MAP[rawTitle]) {
+    return MODULE_TITLE_TYPE_MAP[rawTitle];
+  }
+
+  return rawType || "default";
+}
+
 function normalizeModule(module, dayKey, index) {
-  const meta = MODULE_META[module.type] || {};
+  const normalizedType = resolveModuleType(module);
+  const meta = MODULE_META[normalizedType] || {};
   return Object.assign({}, module, {
     key: module.key || `${dayKey}-module-${index + 1}`,
     displayTitle: module.title || meta.title || "行程信息",
-    iconType: meta.icon || module.type || "default"
+    iconType: meta.icon || normalizedType || "default",
+    type: normalizedType
   });
 }
 

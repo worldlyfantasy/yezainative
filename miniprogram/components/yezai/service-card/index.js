@@ -18,6 +18,10 @@ Component({
       type: Boolean,
       value: false
     },
+    showTags: {
+      type: Boolean,
+      value: true
+    },
     linkText: {
       type: String,
       value: "查看这段路"

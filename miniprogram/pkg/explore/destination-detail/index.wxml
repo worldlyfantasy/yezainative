@@ -33,7 +33,7 @@
   <text class="back-link" bindtap="goBack">← 返回目的地</text>
 
   <view class="section-block destination-hero">
-    <image class="destination-hero__cover" src="{{destination.cover}}" mode="aspectFill"></image>
+    <image class="destination-hero__cover" src="{{destination.coverDetail || destination.cover}}" mode="aspectFill"></image>
     <view class="destination-hero__body">
       <text class="page-eyebrow">目的地</text>
       <view class="destination-hero__title-row">
@@ -53,11 +53,20 @@
   </view>
 
   <view class="section-block">
-    <text class="section-title destination-journeys__title">在彼途中</text>
-    <view wx:if="{{services.length}}" class="card-stack">
-      <service-card wx:for="{{services}}" wx:key="id" service="{{item}}" creator-name="{{item.creatorName}}" bind:cardtap="onServiceTap"></service-card>
+    <view class="section-head destination-journeys__head">
+      <text class="section-title destination-journeys__title">在彼途中</text>
     </view>
-    <view wx:else class="empty-state">暂无符合筛选的服务。</view>
+    <view wx:if="{{services.length}}" class="card-stack">
+      <service-card
+        wx:for="{{services}}"
+        wx:key="id"
+        service="{{item}}"
+        creator-name="{{item.creatorName}}"
+        show-tags="{{false}}"
+        bind:cardtap="onServiceTap"
+      ></service-card>
+    </view>
+    <view wx:else class="empty-state">暂无相关服务。</view>
   </view>
 
   <view class="section-block">

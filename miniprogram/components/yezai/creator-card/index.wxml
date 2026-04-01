@@ -1,6 +1,6 @@
 <view class="creator-card {{showDivider ? '' : 'creator-card--no-divider'}}" bindtap="handleTap">
   <view class="creator-card__head">
-    <image class="creator-card__avatar" src="{{creator.avatar}}" mode="aspectFill"></image>
+    <image class="creator-card__avatar" src="{{creator.avatar}}" mode="aspectFill" lazy-load="{{true}}"></image>
     <view class="creator-card__meta">
       <view class="creator-card__title-row">
         <text class="creator-card__name">{{creator.name}}</text>

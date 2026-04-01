@@ -35,10 +35,13 @@ Page({
       }
 
       const favorited = await isFavorited("destinations", payload.destination.slug);
-      this.setData(Object.assign({}, payload, {
-        loading: false,
-        "destination.isFavorited": favorited
-      }));
+
+      this.setData(
+        Object.assign({}, payload, {
+          loading: false,
+          "destination.isFavorited": favorited
+        })
+      );
     } catch (error) {
       console.error("Failed to load destination detail", error);
       this.setData({ loading: false });

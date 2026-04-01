@@ -1,5 +1,5 @@
 <view class="destination-card {{showDivider ? '' : 'destination-card--no-divider'}}" bindtap="handleTap">
-  <image class="destination-card__cover" src="{{destination.cover}}" mode="aspectFill"></image>
+  <image class="destination-card__cover" src="{{destination.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
   <view class="destination-card__body">
     <view class="destination-card__head">
       <text class="destination-card__name">{{destination.name}}</text>

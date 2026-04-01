@@ -1,0 +1,401 @@
+{
+    "x-primary-column": "orderNo",
+    "x-kind": "tcb",
+    "description": "旅行订单模型",
+    "x-defaultMethods": [
+        "wedaCreate",
+        "wedaUpdate",
+        "wedaDelete",
+        "wedaGetItem",
+        "wedaGetRecords",
+        "wedaGetList",
+        "wedaBatchCreate",
+        "wedaBatchUpdate",
+        "wedaBatchDelete"
+    ],
+    "type": "object",
+    "title": "旅行订单模型",
+    "x-relatedType": "exist",
+    "x-viewId": "view-7wynem5qg0",
+    "properties": {
+        "serviceType": {
+            "x-id": "x2idvi1l",
+            "description": "服务类型",
+            "type": "string",
+            "title": "服务类型",
+            "maxLength": 256
+        },
+        "travelerName": {
+            "x-id": "aj0pqglg",
+            "description": "联系人姓名",
+            "type": "string",
+            "title": "联系人姓名",
+            "maxLength": 256
+        },
+        "_mainDep": {
+            "x-system": true,
+            "x-id": "aa7499c",
+            "name": "_mainDep",
+            "format": "father-son",
+            "x-hidden": true,
+            "type": "string",
+            "title": "所属主管部门",
+            "x-index": 7,
+            "x-unique": false,
+            "x-parent": {
+                "fatherAction": "judge",
+                "type": "father-son",
+                "parentDataSourceName": "sys_department"
+            }
+        },
+        "shortId": {
+            "x-required": true,
+            "x-id": "5aj5nc9e",
+            "description": "短编号",
+            "type": "string",
+            "title": "短编号",
+            "maxLength": 256
+        },
+        "note": {
+            "x-id": "chwl9bgj",
+            "format": "x-rtf",
+            "description": "备注",
+            "type": "string",
+            "title": "备注",
+            "maxLength": 262144
+        },
+        "userOpenid": {
+            "x-required": true,
+            "x-id": "l8iz8cbt",
+            "description": "用户OpenID",
+            "type": "string",
+            "title": "用户OpenID",
+            "maxLength": 256
+        },
+        "travelersJson": {
+            "x-id": "zyqkrw0w",
+            "format": "x-rtf",
+            "description": "出行人JSON",
+            "type": "string",
+            "title": "出行人JSON",
+            "maxLength": 262144
+        },
+        "travelerIdCard": {
+            "x-id": "rjysreub",
+            "description": "联系人证件号",
+            "type": "string",
+            "title": "联系人证件号",
+            "maxLength": 256
+        },
+        "discount": {
+            "default": 0,
+            "x-id": "j314pxt5",
+            "description": "优惠金额",
+            "type": "number",
+            "title": "优惠金额"
+        },
+        "discountDec": {
+            "description": "优惠金额Decimal",
+            "type": "number",
+            "title": "优惠金额Decimal"
+        },
+        "servicePeriodCode": {
+            "x-id": "ej1956wa",
+            "description": "期次编码",
+            "type": "string",
+            "title": "期次编码",
+            "maxLength": 256
+        },
+        "versionName": {
+            "x-id": "uab6wsr0",
+            "description": "版本名称",
+            "type": "string",
+            "title": "版本名称",
+            "maxLength": 256
+        },
+        "creatorSnapshotJson": {
+            "x-id": "p3soyuom",
+            "format": "x-rtf",
+            "description": "创作者快照JSON",
+            "type": "string",
+            "title": "创作者快照JSON",
+            "maxLength": 262144
+        },
+        "serviceSlug": {
+            "x-required": true,
+            "x-id": "chpalx0z",
+            "description": "服务Slug",
+            "type": "string",
+            "title": "服务Slug",
+            "maxLength": 256
+        },
+        "serviceSnapshotJson": {
+            "x-id": "nmxfmex4",
+            "format": "x-rtf",
+            "description": "服务快照JSON",
+            "type": "string",
+            "title": "服务快照JSON",
+            "maxLength": 262144
+        },
+        "createdAt": {
+            "default": 0,
+            "x-system": true,
+            "x-id": "4b11bd7",
+            "format": "datetime",
+            "type": "number",
+            "title": "创建时间",
+            "x-index": 2,
+            "x-unique": false
+        },
+        "payable": {
+            "x-required": true,
+            "x-id": "xc9chkr5",
+            "description": "应付金额",
+            "type": "number",
+            "title": "应付金额"
+        },
+        "updateBy": {
+            "default": "",
+            "x-system": true,
+            "x-id": "93a079a",
+            "name": "updateBy",
+            "format": "father-son",
+            "pattern": "",
+            "x-hidden": true,
+            "type": "string",
+            "title": "修改人",
+            "x-index": 6,
+            "x-unique": false,
+            "x-parent": {
+                "fatherAction": "judge",
+                "type": "father-son",
+                "parentDataSourceName": "sys_user"
+            }
+        },
+        "peopleCount": {
+            "x-required": true,
+            "x-id": "68ceipg7",
+            "description": "人数",
+            "type": "number",
+            "title": "人数"
+        },
+        "peopleCountInt": {
+            "description": "人数Int",
+            "type": "number",
+            "title": "人数Int"
+        },
+        "travelerPhone": {
+            "x-id": "4o8h9etx",
+            "format": "phone",
+            "description": "联系人电话",
+            "type": "string",
+            "title": "联系人电话",
+            "maxLength": 32
+        },
+        "canceledAtTs": {
+            "x-id": "1og2jj4i",
+            "description": "取消时间戳",
+            "type": "number",
+            "title": "取消时间戳"
+        },
+        "createdAtText": {
+            "x-required": true,
+            "x-id": "ilxjwzsq",
+            "description": "创建时间文本",
+            "type": "string",
+            "title": "创建时间文本",
+            "maxLength": 256
+        },
+        "createdAtTs": {
+            "x-required": true,
+            "x-id": "f1s0ha4d",
+            "description": "创建时间戳",
+            "type": "number",
+            "title": "创建时间戳"
+        },
+        "updatedAt": {
+            "default": 0,
+            "x-system": true,
+            "x-id": "b0e4710",
+            "format": "datetime",
+            "type": "number",
+            "title": "更新时间",
+            "x-index": 3,
+            "x-unique": false
+        },
+        "owner": {
+            "default": "",
+            "x-system": true,
+            "x-id": "b3a3987",
+            "name": "owner",
+            "format": "father-son",
+            "pattern": "",
+            "x-hidden": true,
+            "type": "string",
+            "title": "所有人",
+            "x-index": 4,
+            "x-unique": false,
+            "x-parent": {
+                "fatherAction": "judge",
+                "type": "father-son",
+                "parentDataSourceName": "sys_user"
+            }
+        },
+        "amount": {
+            "x-required": true,
+            "x-id": "t2guu7mx",
+            "description": "订单金额",
+            "type": "number",
+            "title": "订单金额"
+        },
+        "amountDec": {
+            "description": "订单金额Decimal",
+            "type": "number",
+            "title": "订单金额Decimal"
+        },
+        "orderNo": {
+            "x-required": true,
+            "x-id": "1hhwv1fg",
+            "description": "订单号",
+            "type": "string",
+            "title": "订单号",
+            "x-unique": true,
+            "maxLength": 256
+        },
+        "clientRequestId": {
+            "x-id": "rkqjriq1",
+            "description": "客户端请求ID",
+            "type": "string",
+            "title": "客户端请求ID",
+            "maxLength": 256
+        },
+        "travelDateEnd": {
+            "x-required": true,
+            "x-id": "sacacaac",
+            "description": "结束日期",
+            "type": "string",
+            "title": "结束日期",
+            "maxLength": 256
+        },
+        "serviceCover": {
+            "x-id": "cfhob0ak",
+            "description": "服务封面",
+            "type": "string",
+            "title": "服务封面",
+            "maxLength": 256
+        },
+        "serviceName": {
+            "x-required": true,
+            "x-id": "ng8jlj03",
+            "description": "服务名称",
+            "type": "string",
+            "title": "服务名称",
+            "maxLength": 256
+        },
+        "createBy": {
+            "default": "",
+            "x-system": true,
+            "x-id": "3f03c75",
+            "name": "createBy",
+            "format": "father-son",
+            "pattern": "",
+            "x-hidden": true,
+            "type": "string",
+            "title": "创建人",
+            "x-index": 5,
+            "x-unique": false,
+            "x-parent": {
+                "fatherAction": "judge",
+                "type": "father-son",
+                "parentDataSourceName": "sys_user"
+            }
+        },
+        "paidAtTs": {
+            "x-id": "vh4htofm",
+            "description": "支付时间戳",
+            "type": "number",
+            "title": "支付时间戳"
+        },
+        "payableDec": {
+            "description": "应付金额Decimal",
+            "type": "number",
+            "title": "应付金额Decimal"
+        },
+        "travelDate": {
+            "x-required": true,
+            "x-id": "1ocm0kka",
+            "description": "出行日期",
+            "type": "string",
+            "title": "出行日期",
+            "maxLength": 256
+        },
+        "_openid": {
+            "default": "",
+            "x-system": true,
+            "x-id": "048a896",
+            "name": "_openid",
+            "format": "",
+            "pattern": "",
+            "description": "仅微信云开发下使用",
+            "type": "string",
+            "title": "记录创建者",
+            "x-index": 45,
+            "x-unique": false
+        },
+        "travelDateStart": {
+            "x-required": true,
+            "x-id": "s6w1lfb9",
+            "description": "开始日期",
+            "type": "string",
+            "title": "开始日期",
+            "maxLength": 256
+        },
+        "travelDateStartDate": {
+            "description": "开始日期Date",
+            "type": "string",
+            "title": "开始日期Date",
+            "maxLength": 256
+        },
+        "_id": {
+            "x-system": true,
+            "x-id": "c7c5e03",
+            "format": "",
+            "type": "string",
+            "title": "数据标识",
+            "x-index": 1,
+            "x-unique": true
+        },
+        "travelDateEndDate": {
+            "description": "结束日期Date",
+            "type": "string",
+            "title": "结束日期Date",
+            "maxLength": 256
+        },
+        "status": {
+            "x-required": true,
+            "default": "pending",
+            "x-id": "pvpc0n82",
+            "format": "x-enum",
+            "description": "订单状态",
+            "type": "string",
+            "title": "订单状态",
+            "maxLength": 64
+        }
+    },
+    "required": [
+        "shortId",
+        "amount",
+        "orderNo",
+        "userOpenid",
+        "travelDateEnd",
+        "serviceName",
+        "serviceSlug",
+        "payable",
+        "travelDate",
+        "peopleCount",
+        "createdAtText",
+        "travelDateStart",
+        "createdAtTs",
+        "status"
+    ]
+}

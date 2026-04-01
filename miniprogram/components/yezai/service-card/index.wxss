@@ -51,6 +51,14 @@
   color: #6a5a4b;
 }
 
+.service-card__tags {
+  gap: 8rpx 14rpx;
+}
+
+.service-card__tag {
+  letter-spacing: 1rpx;
+}
+
 .service-card__price {
   font-size: 30rpx;
   font-weight: 500;

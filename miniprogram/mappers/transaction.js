@@ -1,4 +1,10 @@
 const { buildOrderCard } = require("../constants/transaction-meta");
+const {
+  normalizeCreatorAssetFields,
+  normalizeDestinationAssetFields,
+  normalizeIdeaAssetFields,
+  normalizeServiceAssetFields
+} = require("../services/image-ref");
 
 function ensureArray(value) {
   return Array.isArray(value) ? value : [];
@@ -38,10 +44,10 @@ function mapFavoriteStatus(payload) {
 function mapFavoritesPageData(payload) {
   const source = ensureObject(payload);
   return {
-    favoriteDestinations: ensureArray(source.favoriteDestinations),
-    favoriteCreators: ensureArray(source.favoriteCreators),
-    favoriteServices: ensureArray(source.favoriteServices),
-    favoriteIdeas: ensureArray(source.favoriteIdeas)
+    favoriteDestinations: ensureArray(source.favoriteDestinations).map(normalizeDestinationAssetFields),
+    favoriteCreators: ensureArray(source.favoriteCreators).map(normalizeCreatorAssetFields),
+    favoriteServices: ensureArray(source.favoriteServices).map(normalizeServiceAssetFields),
+    favoriteIdeas: ensureArray(source.favoriteIdeas).map(normalizeIdeaAssetFields)
   };
 }
 

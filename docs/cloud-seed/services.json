@@ -8,7 +8,7 @@
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/ridge-journal/gallery/02.jpg",
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/ridge-journal/gallery/03.jpg"
     ],
-    "type": "带团旅行",
+    "type": "长途旅行",
     "name": "高原谷地徒步手帐",
     "creatorId": "creator-linyue",
     "creatorRoles": [
@@ -23,8 +23,9 @@
     "durationTag": "6天",
     "priceLabel": "¥4280 / 6天",
     "styles": [
-      "徒步自然",
-      "山地穿行"
+      "徒步与自然",
+      "慢旅行",
+      "摄影创作"
     ],
     "travelDetail": {
       "id": "travel-detail-ridge-journal",
@@ -419,7 +420,12 @@
           "content": "建议携带 25-30L 小背包、防风保暖层、徒步鞋、速干衣物、头灯、水壶、防晒用品及常备个人药品。"
         }
       ]
-    }
+    },
+    "tags": [
+      "徒步与自然",
+      "慢旅行",
+      "摄影创作"
+    ]
   },
   {
     "id": "svc-hexicorridor",
@@ -430,7 +436,7 @@
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/hexi-tracing/gallery/02.jpg",
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/hexi-tracing/gallery/03.jpg"
     ],
-    "type": "定制规划",
+    "type": "长途旅行",
     "name": "河西走廊风声记录",
     "creatorId": "creator-linyue",
     "destinationSlugs": [
@@ -440,8 +446,9 @@
     "durationTag": "5-7天",
     "priceLabel": "¥1990 起",
     "styles": [
-      "公路旅行",
-      "山地穿行"
+      "徒步与自然",
+      "摄影创作",
+      "慢旅行"
     ],
     "travelDetail": {
       "id": "travel-detail-hexi-tracing",
@@ -758,7 +765,12 @@
           "content": "请结合“支付后 3 天提交草案”与“支持 2 次文档修订”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
         }
       ]
-    }
+    },
+    "tags": [
+      "徒步与自然",
+      "摄影创作",
+      "慢旅行"
+    ]
   },
   {
     "id": "svc-lancang-source",
@@ -769,7 +781,7 @@
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/lancang-source-lab/gallery/02.jpg",
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/lancang-source-lab/gallery/03.jpg"
     ],
-    "type": "带团旅行",
+    "type": "长途旅行",
     "name": "澜沧江源水系小实验",
     "creatorId": "creator-hechen",
     "destinationSlugs": [
@@ -781,8 +793,8 @@
     "durationTag": "7天",
     "priceLabel": "¥5980 / 7天",
     "styles": [
-      "田野考察",
-      "徒步自然"
+      "徒步与自然",
+      "慢旅行"
     ],
     "travelDetail": {
       "id": "travel-detail-lancang-source-lab",
@@ -1099,7 +1111,11 @@
           "content": "请结合“支付后 7 天发送准备清单”与“不提供临时加人”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
         }
       ]
-    }
+    },
+    "tags": [
+      "徒步与自然",
+      "慢旅行"
+    ]
   },
   {
     "id": "svc-miao-night-walk",
@@ -1110,7 +1126,7 @@
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/miao-night-walk/gallery/02.jpg",
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/miao-night-walk/gallery/03.jpg"
     ],
-    "type": "带团旅行",
+    "type": "长途旅行",
     "name": "山谷夜步与寨子谈话",
     "creatorId": "creator-cengu",
     "destinationSlugs": [
@@ -1122,7 +1138,7 @@
     "priceLabel": "¥3680 / 4天",
     "styles": [
       "慢旅行",
-      "人文在地"
+      "徒步与自然"
     ],
     "travelDetail": {
       "id": "travel-detail-miao-night-walk",
@@ -1358,7 +1374,11 @@
           "content": "请结合“支付后 4 天确认住宿与访谈名单”与“可微调 1 次访谈安排”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
         }
       ]
-    }
+    },
+    "tags": [
+      "慢旅行",
+      "徒步与自然"
+    ]
   },
   {
     "id": "svc-qiongbay-salt",
@@ -1369,7 +1389,7 @@
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/salt-pan-diary/gallery/02.jpg",
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/salt-pan-diary/gallery/03.jpg"
     ],
-    "type": "路线设计",
+    "type": "短途旅行",
     "name": "盐田潮汐观测日志",
     "creatorId": "creator-dufan",
     "destinationSlugs": [
@@ -1380,7 +1400,8 @@
     "priceLabel": "¥980 起",
     "styles": [
       "城市漫游",
-      "慢旅行"
+      "慢旅行",
+      "摄影创作"
     ],
     "travelDetail": {
       "id": "travel-detail-salt-pan-diary",
@@ -1585,7 +1606,12 @@
           "content": "请结合“支付后 2 天提供方案”与“可免费修改 1 次”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
         }
       ]
-    }
+    },
+    "tags": [
+      "城市漫游",
+      "慢旅行",
+      "摄影创作"
+    ]
   },
   {
     "id": "svc-songhua-ice",
@@ -1596,7 +1622,7 @@
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/songhua-dock/gallery/02.jpg",
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/songhua-dock/gallery/03.jpg"
     ],
-    "type": "带团旅行",
+    "type": "短途旅行",
     "name": "松花江口码头漫步",
     "creatorId": "creator-dufan",
     "destinationSlugs": [
@@ -1607,7 +1633,8 @@
     "priceLabel": "¥2280 / 3天",
     "styles": [
       "城市漫游",
-      "慢旅行"
+      "慢旅行",
+      "摄影创作"
     ],
     "travelDetail": {
       "id": "travel-detail-songhua-dock",
@@ -1812,7 +1839,12 @@
           "content": "请结合“支付后 3 天寄送旅行包”与“不提供临时加位”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
         }
       ]
-    }
+    },
+    "tags": [
+      "城市漫游",
+      "慢旅行",
+      "摄影创作"
+    ]
   },
   {
     "id": "svc-enxi-gorge",
@@ -1823,7 +1855,7 @@
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/enxi-residency/gallery/02.jpg",
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/enxi-residency/gallery/03.jpg"
     ],
-    "type": "定制规划",
+    "type": "长途旅行",
     "name": "鄂西峡谷共居计划",
     "creatorId": "creator-yaoyao",
     "destinationSlugs": [
@@ -1833,8 +1865,9 @@
     "durationTag": "5天",
     "priceLabel": "¥2680 起",
     "styles": [
-      "人文在地",
-      "慢旅行"
+      "慢旅行",
+      "摄影创作",
+      "度假放松"
     ],
     "travelDetail": {
       "id": "travel-detail-enxi-residency",
@@ -2097,7 +2130,12 @@
           "content": "请结合“支付后 5 天安排匹配家庭”与“联合家庭协商，允许一次小调”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
         }
       ]
-    }
+    },
+    "tags": [
+      "慢旅行",
+      "摄影创作",
+      "度假放松"
+    ]
   },
   {
     "id": "svc-nanjiang-dune",
@@ -2108,7 +2146,7 @@
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/dune-sunset/gallery/02.jpg",
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/dune-sunset/gallery/03.jpg"
     ],
-    "type": "带团旅行",
+    "type": "长途旅行",
     "name": "沙丘黄昏聆听",
     "creatorId": "creator-shang",
     "destinationSlugs": [
@@ -2118,8 +2156,9 @@
     "durationTag": "5天",
     "priceLabel": "¥4580 / 5天",
     "styles": [
-      "公路旅行",
-      "山地穿行"
+      "徒步与自然",
+      "度假放松",
+      "摄影创作"
     ],
     "travelDetail": {
       "id": "travel-detail-dune-sunset",
@@ -2382,7 +2421,12 @@
           "content": "请结合“支付后 4 天提供设备清单”与“不可临时改期”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
         }
       ]
-    }
+    },
+    "tags": [
+      "徒步与自然",
+      "度假放松",
+      "摄影创作"
+    ]
   },
   {
     "id": "svc-qinghai-loop",
@@ -2393,7 +2437,7 @@
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/qinghai-loop/gallery/02.jpg",
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/qinghai-loop/gallery/03.jpg"
     ],
-    "type": "路线设计",
+    "type": "长途旅行",
     "name": "湖岸环线体感",
     "creatorId": "creator-hechen",
     "destinationSlugs": [
@@ -2404,8 +2448,9 @@
     "durationTag": "5-6天",
     "priceLabel": "¥1680 起",
     "styles": [
-      "公路旅行",
-      "田野考察"
+      "徒步与自然",
+      "度假放松",
+      "慢旅行"
     ],
     "travelDetail": {
       "id": "travel-detail-qinghai-loop",
@@ -2664,7 +2709,12 @@
           "content": "请结合“支付后 3 天交付方案”与“支持 2 次调整”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
         }
       ]
-    }
+    },
+    "tags": [
+      "徒步与自然",
+      "度假放松",
+      "慢旅行"
+    ]
   },
   {
     "id": "svc-yunnan-rainforest",
@@ -2675,7 +2725,7 @@
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/rainforest-dawn/gallery/02.jpg",
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/rainforest-dawn/gallery/03.jpg"
     ],
-    "type": "带团旅行",
+    "type": "长途旅行",
     "name": "雨林晨雾观察",
     "creatorId": "creator-menglu",
     "destinationSlugs": [
@@ -2685,8 +2735,9 @@
     "durationTag": "5天",
     "priceLabel": "¥3980 / 5天",
     "styles": [
-      "徒步自然",
-      "慢旅行"
+      "徒步与自然",
+      "慢旅行",
+      "度假放松"
     ],
     "travelDetail": {
       "id": "travel-detail-rainforest-dawn",
@@ -2945,7 +2996,12 @@
           "content": "请结合“支付后 6 天寄送准备包”与“不接受临时人数增加”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
         }
       ]
-    }
+    },
+    "tags": [
+      "徒步与自然",
+      "慢旅行",
+      "度假放松"
+    ]
   },
   {
     "id": "svc-wuyi-ancient",
@@ -2956,7 +3012,7 @@
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/wuyi-ink-trail/gallery/02.jpg",
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/wuyi-ink-trail/gallery/03.jpg"
     ],
-    "type": "带团旅行",
+    "type": "长途旅行",
     "name": "武夷古道静心行",
     "creatorId": "creator-suxi",
     "destinationSlugs": [
@@ -2968,7 +3024,8 @@
     "priceLabel": "¥3280 / 4天",
     "styles": [
       "慢旅行",
-      "人文在地"
+      "徒步与自然",
+      "瑜伽疗愈"
     ],
     "travelDetail": {
       "id": "travel-detail-wuyi-ink-trail",
@@ -3204,7 +3261,12 @@
           "content": "请结合“支付后 5 天发送体感练习音频”与“可更换 1 次日期”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
         }
       ]
-    }
+    },
+    "tags": [
+      "慢旅行",
+      "徒步与自然",
+      "瑜伽疗愈"
+    ]
   },
   {
     "id": "svc-minbei-creek",
@@ -3215,7 +3277,7 @@
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/minbei-creek-study/gallery/02.jpg",
       "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/services/minbei-creek-study/gallery/03.jpg"
     ],
-    "type": "定制规划",
+    "type": "长途旅行",
     "name": "溪谷水声研究",
     "creatorId": "creator-menglu",
     "destinationSlugs": [
@@ -3225,8 +3287,9 @@
     "durationTag": "3-5天",
     "priceLabel": "¥1180 起",
     "styles": [
+      "徒步与自然",
       "慢旅行",
-      "徒步自然"
+      "摄影创作"
     ],
     "travelDetail": {
       "id": "travel-detail-minbei-creek-study",
@@ -3431,6 +3494,11 @@
           "content": "请结合“支付后 2 天提供框架，5 天内定稿”与“含 2 次在线讨论”安排，提前准备个人证件、常用物品及页面说明中提到的必要装备。"
         }
       ]
-    }
+    },
+    "tags": [
+      "徒步与自然",
+      "慢旅行",
+      "摄影创作"
+    ]
   }
 ]

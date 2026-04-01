@@ -41,8 +41,8 @@ const defaultConfigs = {
     }
   },
   serviceDetailPage: {
-    consultWeChatQr: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/config/qrcode/consult-wechat.jpg",
-    consultGroupQr: "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/content/config/qrcode/consult-group.jpg",
+    consultWeChatQr: "https://7965-yezai-3gr73wd48057512e-10f17b581-1407224025.tcb.qcloud.la/content/config/qrcode/consult-wechat.jpg",
+    consultGroupQr: "https://7965-yezai-3gr73wd48057512e-10f17b581-1407224025.tcb.qcloud.la/content/config/qrcode/consult-group.jpg",
     consultSheetTitle: "路线客服",
     consultCardLabel: "",
     consultCardDesc: "扫码添加，咨询更多行程信息",

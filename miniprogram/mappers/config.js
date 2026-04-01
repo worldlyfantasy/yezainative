@@ -33,6 +33,7 @@ function mapServiceDetailPageConfig(payload) {
     consultCardLabel: source.consultCardLabel || "",
     consultCardDesc: source.consultCardDesc || "",
     consultFollowupNote: source.consultFollowupNote || "",
+    suitableTitleText: source.suitableTitleText || "",
     timelineTitleText: source.timelineTitleText || "",
     refundTitleText: source.refundTitleText || "",
     serviceNoticeTitle: source.serviceNoticeTitle || "",

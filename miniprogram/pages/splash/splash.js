@@ -6,7 +6,7 @@ const ENABLE_SPLASH_DEBUG = false;
 // 优先使用本地 Logo，与文字同时显示无延迟；不存在则用云存储地址（需联网）
 const LOGO_LOCAL_PATH = "/images/splash-logo.png";
 const LOGO_CLOUD_ID =
-  "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/野哉（纯白底）.png";
+  "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/野哉（纯白底）.png";
 
 function restoreSplash(page, error) {
   console.error("Failed to open home page from splash", error);

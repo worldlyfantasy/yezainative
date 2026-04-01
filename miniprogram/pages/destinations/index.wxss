@@ -1,8 +1,29 @@
+.destinations-filter-shell {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
 .destination-search-input {
-  width: 92%;
-  margin: 0 auto;
-  min-height: 68rpx;
-  padding: 14rpx 22rpx;
+  min-height: 64rpx;
+  padding: 14rpx 20rpx;
   border-radius: 34rpx;
   font-size: 24rpx;
+}
+
+.destination-filter-item {
+  flex: 1;
+  min-width: 0;
+  gap: 10rpx;
+}
+
+.destination-filter-picker {
+  min-height: 64rpx;
+  padding: 14rpx 20rpx;
+  font-size: 24rpx;
+}
+
+.destination-filter-picker--static {
+  display: flex;
+  align-items: center;
 }

@@ -5,7 +5,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const sqlApp = cloudbase.init({
-  env: process.env.TCB_ENV || "yezai-3gr73wd48057512e"
+  env: process.env.TCB_ENV || cloud.DYNAMIC_CURRENT_ENV
 });
 const models = sqlApp.models;
 const runSQL = models.$runSQL || models.runSQL;

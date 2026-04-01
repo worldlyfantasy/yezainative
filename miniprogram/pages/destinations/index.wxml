@@ -1,16 +1,36 @@
 <view class="page-shell">
   <text class="page-eyebrow">土地的故事</text>
-  <text class="page-subtitle">它们或许没有喧闹的景点，却有清晰的生活节奏。试着以关键词搜索，你会看见不同肌理。</text>
+  <text class="page-subtitle">它们或许没有喧闹的景点，却有清晰的生活节奏。试着按区域和路线类型筛选，你会看见不同肌理。</text>
 
-  <view class="section-block filter-shell">
-    <input
-      class="search-input destination-search-input"
-      placeholder="搜索目的地或关键词"
-      value="{{searchValue}}"
-      bindinput="onSearchInput"
-      bindconfirm="onSearch"
-      confirm-type="search"
-    />
+  <view class="section-block filter-shell destinations-filter-shell">
+    <view class="filter-item destination-filter-item">
+      <text class="filter-label">路线类型</text>
+      <picker
+        wx:if="{{styleLabels.length > 1}}"
+        class="filter-picker-trigger"
+        mode="selector"
+        range="{{styleLabels}}"
+        value="{{styleIndex}}"
+        bindchange="onStyleChange"
+      >
+        <view class="filter-picker destination-filter-picker">{{styleLabels[styleIndex] || '全部'}}</view>
+      </picker>
+      <view wx:else class="filter-picker destination-filter-picker destination-filter-picker--static">全部</view>
+    </view>
+    <view class="filter-item destination-filter-item">
+      <text class="filter-label">所在区域</text>
+      <picker
+        wx:if="{{regionLabels.length > 1}}"
+        class="filter-picker-trigger"
+        mode="selector"
+        range="{{regionLabels}}"
+        value="{{regionIndex}}"
+        bindchange="onRegionChange"
+      >
+        <view class="filter-picker destination-filter-picker">{{regionLabels[regionIndex] || '全部'}}</view>
+      </picker>
+      <view wx:else class="filter-picker destination-filter-picker destination-filter-picker--static">全部</view>
+    </view>
   </view>
 
   <view class="section-block">

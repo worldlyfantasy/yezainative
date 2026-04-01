@@ -1,25 +1,35 @@
 const cloud = require("wx-server-sdk");
 const cloudbase = require("@cloudbase/node-sdk");
+const {
+  normalizeContact,
+  normalizeTravelerRecord,
+  normalizeTravelers,
+  validateOrderParticipants
+} = require("./order-validation");
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const sqlApp = cloudbase.init({
-  env: process.env.TCB_ENV || "yezai-3gr73wd48057512e"
+  env: process.env.TCB_ENV || cloud.DYNAMIC_CURRENT_ENV
 });
+const runSQL = (sqlApp.models && (sqlApp.models.$runSQL || sqlApp.models.runSQL)) || null;
 const FAVORITES_COLLECTION = "favorites";
+const ORDER_EVENTS_COLLECTION = "order_events";
 const QUERY_BATCH_SIZE = 100;
 const MODEL_QUERY_BATCH_SIZE = 100;
 const SERVICE_PERIOD_UPDATE_RETRY_LIMIT = 5;
 const ORDER_STATUS_UPDATE_RETRY_LIMIT = 3;
 const ORDER_MODEL_NAME = "TravelOrder";
 const SERVICE_PERIOD_MODEL_NAME = "ServicePeriod";
+const ENABLE_CLIENT_PAY_ORDER = process.env.ENABLE_CLIENT_PAY_ORDER === "true";
 const CONTENT_COLLECTIONS = {
   creators: "creators",
   destinations: "destinations",
   services: "services",
   ideas: "ideas"
 };
+const SERVICE_PERIOD_SQL_FIELDS = "`serviceSlug`, `periodCode`, `dateStart`, `dateEnd`, `price`";
 
 function getOrderModel() {
   const model = sqlApp.models && sqlApp.models[ORDER_MODEL_NAME];
@@ -57,14 +67,192 @@ function formatDateTime(timestamp) {
   });
 }
 
+function getSQLRows(result) {
+  const data = result && result.data ? result.data : {};
+  return Array.isArray(data.executeResultList) ? data.executeResultList : [];
+}
+
 function normalizeNumber(value, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function isPlainObject(value) {
+  return Boolean(value) && Object.prototype.toString.call(value) === "[object Object]";
+}
+
+function pickImageRef(value) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  if (Array.isArray(value)) {
+    return pickImageRef(value[0]);
+  }
+
+  if (!isPlainObject(value)) {
+    return "";
+  }
+
+  const candidates = [
+    value.card,
+    value.detail,
+    value.original,
+    value.url,
+    value.src,
+    value.image,
+    value.cover,
+    value.coverImage,
+    value.avatar,
+    value.fileID,
+    value.cloudFileID,
+    value.path
+  ];
+
+  for (let index = 0; index < candidates.length; index += 1) {
+    if (typeof candidates[index] === "string" && candidates[index].trim()) {
+      return candidates[index].trim();
+    }
+  }
+
+  return "";
+}
+
 function normalizePositiveInteger(value) {
   const parsed = parseInt(value, 10);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
+}
+
+async function appendOrderStatusEvent(event) {
+  const orderNo = String(event && event.orderNo ? event.orderNo : "").trim();
+  const status = String(event && event.status ? event.status : "").trim();
+  if (!orderNo || !status) {
+    return;
+  }
+
+  const occurredAtTs = normalizeNumber(event && event.occurredAtTs, Date.now());
+  const data = {
+    orderNo,
+    userOpenid: String(event && event.userOpenid ? event.userOpenid : "").trim(),
+    status,
+    fromStatus: String(event && event.fromStatus ? event.fromStatus : "").trim(),
+    source: String(event && event.source ? event.source : "system").trim(),
+    occurredAtTs,
+    occurredAtText: formatDateTime(occurredAtTs),
+    createdAt: occurredAtTs,
+    updatedAt: occurredAtTs
+  };
+
+  try {
+    await db.collection(ORDER_EVENTS_COLLECTION).add({ data });
+  } catch (error) {
+    console.error("Failed to append order status event", {
+      orderNo,
+      status,
+      error
+    });
+  }
+}
+
+async function listAllSqlServicePeriods() {
+  try {
+    if (typeof runSQL !== "function") {
+      throw new Error("models.$runSQL unavailable");
+    }
+
+    const result = await runSQL(
+      `SELECT ${SERVICE_PERIOD_SQL_FIELDS} FROM \`ServicePeriod\` ORDER BY \`serviceSlug\` ASC, \`dateStart\` ASC`
+    );
+    return getSQLRows(result);
+  } catch (error) {
+    console.error("Failed to list all SQL service periods in transactionGateway", error);
+    return [];
+  }
+}
+
+function groupSqlPeriodsByServiceSlug(periods) {
+  return (periods || []).reduce((result, period) => {
+    const serviceSlug = String(period && period.serviceSlug ? period.serviceSlug : "").trim();
+    if (!serviceSlug) {
+      return result;
+    }
+
+    if (!result[serviceSlug]) {
+      result[serviceSlug] = [];
+    }
+
+    result[serviceSlug].push(period);
+    return result;
+  }, {});
+}
+
+function calcDurationDays(dateStart, dateEnd) {
+  if (!dateStart || !dateEnd) {
+    return 0;
+  }
+
+  const start = new Date(dateStart);
+  const end = new Date(dateEnd);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return 0;
+  }
+
+  const diff = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  return Number.isFinite(diff) && diff > 0 ? diff : 0;
+}
+
+function buildDurationLabelFromPeriods(periods) {
+  const uniqueDays = Array.from(
+    new Set(
+      (periods || [])
+        .map((period) => calcDurationDays(period.dateStart, period.dateEnd))
+        .filter((value) => value > 0)
+    )
+  ).sort((a, b) => a - b);
+
+  if (!uniqueDays.length) {
+    return "";
+  }
+
+  if (uniqueDays.length === 1) {
+    return `${uniqueDays[0]}天`;
+  }
+
+  return `${uniqueDays.join("/")}天`;
+}
+
+function formatMoneyValue(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return "";
+  }
+
+  return Number.isInteger(amount) ? String(amount) : amount.toFixed(2).replace(/\.?0+$/, "");
+}
+
+function buildPriceLabelFromPeriods(periods) {
+  const prices = (periods || [])
+    .map((period) => Number(period && period.price))
+    .filter((value) => Number.isFinite(value) && value > 0);
+
+  if (!prices.length) {
+    return "";
+  }
+
+  return `¥${formatMoneyValue(Math.min(...prices))} 起`;
+}
+
+function attachServicePeriodSummary(service, periodMap) {
+  const source = service && typeof service === "object" ? service : {};
+  const serviceSlug = String(source.slug || "").trim();
+  const groupPeriods = periodMap[serviceSlug] || [];
+  const durationTag = buildDurationLabelFromPeriods(groupPeriods);
+  const priceLabel = buildPriceLabelFromPeriods(groupPeriods);
+
+  return Object.assign({}, source, {
+    durationTag: durationTag || String(source.durationTag || "").trim(),
+    priceLabel: priceLabel || String(source.priceLabel || "").trim()
+  });
 }
 
 function getMutationCount(result) {
@@ -105,6 +293,48 @@ function stringifyJson(value) {
   }
 }
 
+function truncateString(value, maxLength) {
+  const text = String(value == null ? "" : value).trim();
+  if (!maxLength || text.length <= maxLength) {
+    return text;
+  }
+  return text.slice(0, maxLength);
+}
+
+function stringifyJsonWithMaxLength(value, maxLength) {
+  const serialized = stringifyJson(value);
+  if (!serialized) {
+    return "";
+  }
+  if (!maxLength || serialized.length <= maxLength) {
+    return serialized;
+  }
+  return serialized.slice(0, maxLength);
+}
+
+function buildPersistedServiceSnapshot(snapshot) {
+  const source = snapshot && typeof snapshot === "object" ? snapshot : {};
+  const period = source.travelPeriod && typeof source.travelPeriod === "object" ? source.travelPeriod : {};
+  return {
+    serviceSlug: truncateString(source.serviceSlug, 64),
+    serviceName: truncateString(source.serviceName, 48),
+    versionName: truncateString(source.versionName, 32),
+    travelPeriod: {
+      dateStart: truncateString(period.dateStart, 32),
+      dateEnd: truncateString(period.dateEnd, 32)
+    }
+  };
+}
+
+function buildPersistedCreatorSnapshot(snapshot) {
+  const source = snapshot && typeof snapshot === "object" ? snapshot : {};
+  return {
+    id: truncateString(source.id, 48),
+    slug: truncateString(source.slug, 48),
+    name: truncateString(source.name, 32)
+  };
+}
+
 function listCreatorRefCandidates(creator) {
   const candidates = [];
   const creatorId = String(creator && creator.id ? creator.id : "").trim();
@@ -133,45 +363,78 @@ function findCreatorByRef(creators, ref) {
   return (creators || []).find((creator) => matchesCreatorRef(creator, ref)) || null;
 }
 
-function normalizeTravelerRecord(traveler) {
-  const source = traveler && typeof traveler === "object" ? traveler : {};
-  return {
-    name: String(source.name || "").trim(),
-    idCard: String(source.idCard || "").trim(),
-    phone: String(source.phone || "").trim(),
-    wechat: String(source.wechat || "").trim(),
-    note: String(source.note || "").trim()
-  };
+function buildFavoriteCreator(creator) {
+  const source = creator && typeof creator === "object" ? creator : {};
+
+  return Object.assign({}, source, {
+    avatar: pickImageRef(source.avatar)
+  });
 }
 
-function hasTravelerContent(traveler) {
-  return Boolean(
-    traveler &&
-      (traveler.name || traveler.idCard || traveler.phone || traveler.wechat || traveler.note)
+function buildFavoriteDestination(destination, creators, services) {
+  const source = destination && typeof destination === "object" ? destination : {};
+  const destinationSlug = String(source.slug || "").trim();
+  const relatedServices = (services || []).filter((service) =>
+    Array.isArray(service && service.destinationSlugs) && service.destinationSlugs.includes(destinationSlug)
   );
+  const relatedCreators = (creators || []).filter((creator) =>
+    Array.isArray(creator && creator.destinationSlugs) && creator.destinationSlugs.includes(destinationSlug)
+  );
+
+  return Object.assign({}, source, {
+    cover: pickImageRef(source.cover),
+    creatorCount: relatedCreators.length,
+    routeCount: relatedServices.length
+  });
 }
 
-function normalizeTravelers(travelers, fallbackTraveler) {
-  const normalized = (Array.isArray(travelers) ? travelers : [])
-    .map(normalizeTravelerRecord)
-    .filter(hasTravelerContent);
+function buildFavoriteService(service, creators, periodMap) {
+  const source = attachServicePeriodSummary(service, periodMap);
+  const creator = findCreatorByRef(creators, source.creatorId);
 
-  if (normalized.length) {
-    return normalized;
-  }
-
-  const fallback = normalizeTravelerRecord(fallbackTraveler);
-  return hasTravelerContent(fallback) ? [fallback] : [];
+  return Object.assign({}, source, {
+    cover: pickImageRef(source.cover),
+    creatorName: creator ? creator.name : ""
+  });
 }
 
-function normalizeContact(payload) {
-  const source = payload && typeof payload === "object" ? payload : {};
-  const contact = source.contact && typeof source.contact === "object" ? source.contact : {};
-  const legacyTraveler = source.traveler && typeof source.traveler === "object" ? source.traveler : {};
+function buildFavoriteIdea(idea, creators) {
+  const source = idea && typeof idea === "object" ? idea : {};
+  const author = findCreatorByRef(creators, source.authorId);
+
+  return Object.assign({}, source, {
+    cover: pickImageRef(source.cover),
+    authorName: author ? author.name : ""
+  });
+}
+
+function buildOrderServiceSnapshot({
+  payload,
+  periodRecord,
+  requestedTravelPeriod,
+  serviceSnapshot,
+  contact,
+  travelers
+}) {
+  const travelDateStart = periodRecord.dateStart || requestedTravelPeriod.dateStart;
+  const travelDateEnd = periodRecord.dateEnd || requestedTravelPeriod.dateEnd || travelDateStart;
 
   return {
-    name: String(source.contactName || contact.name || legacyTraveler.name || "").trim(),
-    phone: String(source.contactPhone || contact.phone || legacyTraveler.phone || "").trim()
+    serviceSlug: payload.serviceSlug,
+    serviceName: periodRecord.serviceName || serviceSnapshot.serviceName || payload.serviceName || "",
+    serviceType: serviceSnapshot.serviceType || payload.serviceType || "",
+    cover: pickImageRef(serviceSnapshot.cover) || pickImageRef(payload.cover) || "",
+    versionName: periodRecord.versionName || payload.versionName || "",
+    travelPeriod: {
+      dateStart: travelDateStart,
+      dateEnd: travelDateEnd
+    },
+    creatorRoles: Array.isArray(serviceSnapshot.creatorRoles) ? serviceSnapshot.creatorRoles : [],
+    contact: {
+      name: String(contact && contact.name ? contact.name : "").trim(),
+      phone: String(contact && contact.phone ? contact.phone : "").trim()
+    },
+    travelers: normalizeTravelers(travelers, null)
   };
 }
 
@@ -416,13 +679,18 @@ async function findOrderRecordByWhere(where) {
 
 async function findServicePeriodByPayload(payload) {
   if (payload.periodCode) {
-    return findSingleRecord(getServicePeriodModel(), {
+    const byPeriodCode = await findSingleRecord(getServicePeriodModel(), {
       where: {
         periodCode: {
           $eq: String(payload.periodCode).trim()
         }
       }
     });
+    if (byPeriodCode) {
+      return byPeriodCode;
+    }
+    // Some legacy clients may accidentally pass a non-periodCode identifier
+    // (for example a document id). Fall through to date-based lookup.
   }
 
   const travelDateStart = String(
@@ -586,6 +854,34 @@ function buildOrderStatusUpdateData(nextStatus) {
   return updateData;
 }
 
+function isAllowedOrderTransition(currentStatus, nextStatus) {
+  if (currentStatus === nextStatus) {
+    return true;
+  }
+
+  if (nextStatus === "paid") {
+    return currentStatus === "pending";
+  }
+
+  if (nextStatus === "canceled") {
+    return ["pending", "paid", "traveling"].includes(currentStatus);
+  }
+
+  return true;
+}
+
+function resolveOrderSettlement(amount) {
+  const normalizedAmount = Math.max(0, normalizeNumber(amount, 0));
+  // Never trust client-submitted discount values. Final payable must be fully
+  // resolved by server-side promotion/settlement logic.
+  const discount = 0;
+  return {
+    amount: normalizedAmount,
+    discount,
+    payable: normalizedAmount - discount
+  };
+}
+
 function shouldRestoreSeatsForOrderStatus(status) {
   return status === "pending" || status === "paid" || status === "traveling";
 }
@@ -725,31 +1021,38 @@ async function createOrder(payload) {
     throw new Error("service period price is invalid");
   }
 
-  const amount = unitPrice * peopleCount;
-  const discount = Math.max(0, Math.min(normalizeNumber(payload.discount, 0), amount));
-  const payable = amount - discount;
+  const settlement = resolveOrderSettlement(unitPrice * peopleCount);
+  const amount = settlement.amount;
+  const discount = settlement.discount;
+  const payable = settlement.payable;
   const timestamp = Date.now();
   const orderNo = createOrderNo(timestamp);
   const shortId = String(orderNo).slice(-4);
   const createdAtText = formatDateTime(timestamp);
   const serviceSnapshot = payload.serviceSnapshot || {};
   const creatorSnapshot = payload.creatorSnapshot || {};
-  const travelDateStart = periodRecord.dateStart || requestedTravelPeriod.dateStart;
-  const travelDateEnd = periodRecord.dateEnd || requestedTravelPeriod.dateEnd || travelDateStart;
   const contact = normalizeContact(payload);
-  const travelers = normalizeTravelers(payload.travelers, payload.traveler);
-  const orderServiceSnapshot = {
-    serviceSlug: payload.serviceSlug,
-    serviceName: periodRecord.serviceName || serviceSnapshot.serviceName || payload.serviceName || "",
-    serviceType: serviceSnapshot.serviceType || payload.serviceType || "",
-    cover: serviceSnapshot.cover || payload.cover || "",
-    versionName: periodRecord.versionName || payload.versionName || "",
-    travelPeriod: {
-      dateStart: travelDateStart,
-      dateEnd: travelDateEnd
-    },
-    creatorRoles: Array.isArray(serviceSnapshot.creatorRoles) ? serviceSnapshot.creatorRoles : []
-  };
+  const travelers = normalizeTravelers(payload.travelers, payload.traveler, {
+    inferDocumentType: false
+  });
+  const participantError = validateOrderParticipants({
+    travelers,
+    contact,
+    peopleCount
+  });
+  if (participantError) {
+    throw new Error(participantError);
+  }
+  const orderServiceSnapshot = buildOrderServiceSnapshot({
+    payload,
+    periodRecord,
+    requestedTravelPeriod,
+    serviceSnapshot,
+    contact,
+    travelers
+  });
+  const travelDateStart = orderServiceSnapshot.travelPeriod.dateStart;
+  const travelDateEnd = orderServiceSnapshot.travelPeriod.dateEnd;
   const orderData = {
     orderNo,
     shortId,
@@ -777,15 +1080,9 @@ async function createOrder(payload) {
     // Keep legacy model fields for compatibility until the CloudBase model is updated.
     travelerName: String(contact.name || "").trim(),
     travelerPhone: String(contact.phone || "").trim(),
-    travelersJson: stringifyJson(travelers),
-    serviceSnapshotJson: stringifyJson(orderServiceSnapshot),
-    creatorSnapshotJson: stringifyJson({
-      id: creatorSnapshot.id || "",
-      slug: creatorSnapshot.slug || "",
-      name: creatorSnapshot.name || "",
-      avatar: creatorSnapshot.avatar || "",
-      stance: creatorSnapshot.stance || ""
-    }),
+    travelersJson: stringifyJsonWithMaxLength(travelers, 4096),
+    serviceSnapshotJson: stringifyJsonWithMaxLength(buildPersistedServiceSnapshot(orderServiceSnapshot), 240),
+    creatorSnapshotJson: stringifyJsonWithMaxLength(buildPersistedCreatorSnapshot(creatorSnapshot), 240),
     status: "pending",
     createdAtText,
     createdAtTs: timestamp
@@ -796,6 +1093,13 @@ async function createOrder(payload) {
   try {
     await getOrderModel().create({
       data: orderData
+    });
+    await appendOrderStatusEvent({
+      orderNo,
+      userOpenid: openid,
+      status: "pending",
+      occurredAtTs: timestamp,
+      source: "create"
     });
   } catch (error) {
     let restoreSucceeded = false;
@@ -854,6 +1158,10 @@ async function updateOrderStatus(orderId, nextStatus) {
     return mapSqlOrder(targetRecord);
   }
 
+  if (!isAllowedOrderTransition(targetRecord.status, nextStatus)) {
+    throw new Error("current order status does not allow transition");
+  }
+
   const updatedOrder = await transitionOrderStatus(targetRecord, nextStatus);
   if (!updatedOrder) {
     return null;
@@ -885,7 +1193,23 @@ async function updateOrderStatus(orderId, nextStatus) {
     }
   }
 
+  await appendOrderStatusEvent({
+    orderNo: updatedOrder.orderNo || targetRecord.orderNo,
+    userOpenid: openid,
+    status: nextStatus,
+    fromStatus: targetRecord.status,
+    source: "status_change"
+  });
+
   return updatedOrder;
+}
+
+async function payOrder(orderId) {
+  if (!ENABLE_CLIENT_PAY_ORDER) {
+    throw new Error("payOrder is disabled");
+  }
+
+  return updateOrderStatus(orderId, "paid");
 }
 
 async function getFavoriteDocs(openid) {
@@ -961,32 +1285,24 @@ async function toggleFavorite(type, slug) {
 
 async function getFavoritesPageData() {
   const state = await getFavoriteState();
-  const [creators, destinations, services, ideas] = await Promise.all([
+  const [rawCreators, rawDestinations, rawServices, rawIdeas, sqlPeriods] = await Promise.all([
     listCollection(CONTENT_COLLECTIONS.creators),
     listCollection(CONTENT_COLLECTIONS.destinations),
     listCollection(CONTENT_COLLECTIONS.services),
-    listCollection(CONTENT_COLLECTIONS.ideas)
+    listCollection(CONTENT_COLLECTIONS.ideas),
+    listAllSqlServicePeriods()
   ]);
+  const periodMap = groupSqlPeriodsByServiceSlug(sqlPeriods);
+  const creators = rawCreators.map(buildFavoriteCreator);
+  const services = rawServices.map((service) => buildFavoriteService(service, creators, periodMap));
+  const destinations = rawDestinations.map((destination) => buildFavoriteDestination(destination, creators, services));
+  const ideas = rawIdeas.map((idea) => buildFavoriteIdea(idea, creators));
 
   return {
     favoriteDestinations: destinations.filter((item) => state.destinations[item.slug]),
     favoriteCreators: creators.filter((item) => state.creators[item.slug]),
-    favoriteServices: services
-      .filter((item) => state.services[item.slug])
-      .map((service) => {
-        const creator = findCreatorByRef(creators, service.creatorId);
-        return Object.assign({}, service, {
-          creatorName: creator ? creator.name : ""
-        });
-      }),
-    favoriteIdeas: ideas
-      .filter((item) => state.ideas[item.slug])
-      .map((idea) => {
-        const author = findCreatorByRef(creators, idea.authorId);
-        return Object.assign({}, idea, {
-          authorName: author ? author.name : ""
-        });
-      })
+    favoriteServices: services.filter((item) => state.services[item.slug]),
+    favoriteIdeas: ideas.filter((item) => state.ideas[item.slug])
   };
 }
 
@@ -996,7 +1312,7 @@ const handlers = {
   getOrderById: (payload) => getOrderById(payload.orderId),
   createOrder: (payload) => createOrder(payload),
   cancelOrder: (payload) => updateOrderStatus(payload.orderId, "canceled"),
-  payOrder: (payload) => updateOrderStatus(payload.orderId, "paid"),
+  payOrder: (payload) => payOrder(payload.orderId),
   getFavoriteState: () => getFavoriteState(),
   isFavorited: (payload) => isFavorited(payload.type, payload.slug),
   toggleFavorite: (payload) => toggleFavorite(payload.type, payload.slug),
@@ -1031,4 +1347,25 @@ exports.main = async (event) => {
       error: error && error.message ? error.message : "Transaction gateway error"
     };
   }
+};
+
+exports.__test__ = {
+  attachServicePeriodSummary,
+  buildFavoriteCreator,
+  buildFavoriteDestination,
+  buildFavoriteIdea,
+  buildFavoriteService,
+  buildOrderServiceSnapshot,
+  buildOrderStatusUpdateData,
+  buildServiceSnapshot,
+  filterOrdersByStatus,
+  getTravelPeriod,
+  mapSqlOrder,
+  normalizeContact,
+  normalizeTravelers,
+  isAllowedOrderTransition,
+  resolveOrderSettlement,
+  resolvePeriodStatus,
+  shouldRestoreSeatsForOrderStatus,
+  validateOrderParticipants
 };

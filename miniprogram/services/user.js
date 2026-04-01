@@ -16,7 +16,7 @@ const PROFILE_SHORTCUTS = [
     eyebrow: "旅程归档",
     desc: "查看全部订单",
     glyphSrc:
-      "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/野（扣底圆体）.png"
+      "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/野（扣底圆体）.png"
   },
   {
     key: "favorites",
@@ -25,7 +25,7 @@ const PROFILE_SHORTCUTS = [
     eyebrow: "心意收藏",
     desc: "回看喜欢的故事",
     glyphSrc:
-      "cloud://yezai-3gr73wd48057512e.7965-yezai-3gr73wd48057512e-1407224025/brandasset/哉（扣底圆体）.png"
+      "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/哉（扣底圆体）.png"
   }
 ];
 

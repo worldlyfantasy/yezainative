@@ -3,6 +3,10 @@ Component({
     addGlobalClass: true
   },
   properties: {
+    placement: {
+      type: String,
+      value: "fixed-bottom"
+    },
     labelText: {
       type: String,
       value: "参考金额"
