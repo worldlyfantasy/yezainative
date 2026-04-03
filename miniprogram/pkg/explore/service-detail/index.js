@@ -97,7 +97,7 @@ function isBookablePeriod(period) {
 function getPeriodUnavailableMessage(period) {
   const status = String(period && period.status || "").trim();
   if (status === "soldout") {
-    return "该团期名额已满";
+    return "该团期已报满";
   }
   if (status === "closed") {
     return "该团期已截止报名";

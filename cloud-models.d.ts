@@ -175,6 +175,11 @@ interface IModal_ServicePeriod {
    */
   minGroup?: number;
   /**
+   * 总名额
+   * 总名额
+   */
+  totalSeats?: number;
+  /**
    * 剩余名额
    * 剩余名额
    */

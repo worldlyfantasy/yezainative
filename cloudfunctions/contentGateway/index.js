@@ -87,7 +87,7 @@ function clearGatewayCache() {
   };
 }
 
-const SERVICE_PERIOD_SQL_FIELDS = "`serviceName`, `versionName`, `durationDays`, `serviceSlug`, `periodCode`, `dateStart`, `dateEnd`, `price`, `minGroup`, `remainingSeats`, `status`, `badge`, `creatorId`, `createdAt`, `updatedAt`, `_id`, `owner`, `_mainDep`, `_openid`, `createBy`, `updateBy`";
+const SERVICE_PERIOD_SQL_FIELDS = "`serviceName`, `versionName`, `durationDays`, `serviceSlug`, `periodCode`, `dateStart`, `dateEnd`, `price`, `minGroup`, `remainingSeats`, `status`, `creatorId`, `createdAt`, `updatedAt`, `_id`, `owner`, `_mainDep`, `_openid`, `createBy`, `updateBy`";
 
 function normalizeText(value) {
   if (typeof value === "string" && value.trim()) {
@@ -103,6 +103,11 @@ function normalizeText(value) {
 
 function normalizeArray(value) {
   return Array.isArray(value) ? value : [];
+}
+
+function normalizeNumber(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function isPublicContentActive(item) {
@@ -130,13 +135,48 @@ async function listSqlServicePeriods(serviceSlug) {
         serviceSlug: String(serviceSlug).trim()
       }
     );
-    return getSQLRows(result);
+    return filterPublicActivePeriods(getSQLRows(result));
   } catch (error) {
     console.error("Failed to list SQL service periods", {
       serviceSlug,
       error
     });
     return [];
+  }
+}
+
+async function getSoldCountByPeriodCodeMap(serviceSlug) {
+  if (!serviceSlug) {
+    return {};
+  }
+
+  try {
+    if (typeof runSQL !== "function") {
+      throw new Error("models.$runSQL unavailable");
+    }
+
+    const result = await runSQL(
+      "SELECT `servicePeriodCode`, SUM(COALESCE(`peopleCountInt`, `peopleCount`, 0)) AS `soldCount` FROM `TravelOrder` WHERE `serviceSlug` = {{serviceSlug}} AND COALESCE(`status`, '') <> 'canceled' GROUP BY `servicePeriodCode`",
+      {
+        serviceSlug: String(serviceSlug).trim()
+      }
+    );
+
+    return getSQLRows(result).reduce((map, row) => {
+      const periodCode = normalizeText(row && row.servicePeriodCode);
+      if (!periodCode) {
+        return map;
+      }
+
+      map[periodCode] = Math.max(0, normalizeNumber(row && row.soldCount, 0));
+      return map;
+    }, {});
+  } catch (error) {
+    console.error("Failed to list sold counts for service periods", {
+      serviceSlug,
+      error
+    });
+    return {};
   }
 }
 
@@ -149,7 +189,7 @@ async function listAllSqlServicePeriods() {
     const result = await runSQL(
       `SELECT ${SERVICE_PERIOD_SQL_FIELDS} FROM \`ServicePeriod\` ORDER BY \`serviceSlug\` ASC, \`dateStart\` ASC`
     );
-    return getSQLRows(result);
+    return filterPublicActivePeriods(getSQLRows(result));
   } catch (error) {
     console.error("Failed to list all SQL service periods", error);
     return [];
@@ -181,9 +221,10 @@ function getPeriodDurationDays(period) {
 }
 
 function buildDurationLabelFromPeriods(periods) {
+  const activePeriods = filterPublicActivePeriods(periods);
   const uniqueDays = Array.from(
     new Set(
-      (periods || [])
+      activePeriods
         .map((period) => getPeriodDurationDays(period))
         .filter((value) => value > 0)
     )
@@ -210,7 +251,7 @@ function formatMoneyValue(value) {
 }
 
 function buildPriceLabelFromPeriods(periods) {
-  const prices = (periods || [])
+  const prices = filterPublicActivePeriods(periods)
     .map((period) => Number(period && period.price))
     .filter((value) => Number.isFinite(value) && value > 0);
 
@@ -336,23 +377,75 @@ function formatPeriodDate(dateStr) {
   return `${String(month).padStart(2, "0")}/${String(day).padStart(2, "0")} ${week}`;
 }
 
+function getShanghaiTodayDateString() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date());
+}
+
+function resolvePublicPeriodStatus(period) {
+  const manualStatus = normalizeText(period && period.status) === "inactive" ? "inactive" : "available";
+  if (manualStatus === "inactive") {
+    return "inactive";
+  }
+
+  const dateEnd = normalizeText(period && period.dateEnd);
+  const today = getShanghaiTodayDateString();
+  if (dateEnd && today && dateEnd < today) {
+    return "inactive";
+  }
+
+  const totalSeats = Math.max(0, normalizeNumber(period && period.totalSeats, 0));
+  const soldCount = Math.max(0, normalizeNumber(period && period.soldCount, 0));
+  const minGroup = Math.max(1, normalizeNumber(period && period.minGroup, 1));
+  const dateStart = normalizeText(period && period.dateStart);
+
+  if (dateStart && today && dateStart <= today) {
+    return "closed";
+  }
+
+  if (totalSeats <= 0 || soldCount >= totalSeats) {
+    return "soldout";
+  }
+
+  if (soldCount >= minGroup) {
+    return "confirmed";
+  }
+
+  return "available";
+}
+
+function isPublicPeriodActive(period) {
+  return resolvePublicPeriodStatus(period) !== "inactive";
+}
+
+function filterPublicActivePeriods(periods) {
+  return normalizeArray(periods).filter((period) => isPublicPeriodActive(period));
+}
+
 function buildGroupPeriodDisplay(period) {
   const startDateLabel = formatPeriodDate(period.dateStart);
   const endDateLabel = formatPeriodDate(period.dateEnd);
   const dateLabel = period.dateStart === period.dateEnd ? startDateLabel : `${startDateLabel} - ${endDateLabel}`;
   const durationDays = getPeriodDurationDays(period);
+  const status = resolvePublicPeriodStatus(period);
   let statusText = "可报名";
 
-  if (period.status === "confirmed") {
+  if (status === "confirmed") {
     statusText = "确定成行";
-  } else if (period.status === "soldout") {
-    statusText = "名额已满";
-  } else if (period.status === "closed") {
+  } else if (status === "soldout") {
+    statusText = "已报满";
+  } else if (status === "closed") {
     statusText = "已截止";
+  } else if (status === "inactive") {
+    statusText = "下架";
   }
 
   return Object.assign({}, period, {
-    badge: normalizeText(period && period.badge),
+    status,
     dateLabel,
     startDateLabel,
     endDateLabel,
@@ -1568,10 +1661,13 @@ async function getServiceDetailData(slug) {
   const photoGallery = galleryState.photoGallery;
   const photoBaseList = galleryState.photoBaseList;
   const photoTotal = photoBaseList.length;
-  const sqlPeriods = await listSqlServicePeriods(service.slug);
+  const [sqlPeriods, soldCountMap] = await Promise.all([
+    listSqlServicePeriods(service.slug),
+    getSoldCountByPeriodCodeMap(service.slug)
+  ]);
   const effectivePeriods = Array.isArray(sqlPeriods) && sqlPeriods.length
     ? sqlPeriods
-    : (Array.isArray(service.groupPeriods) ? service.groupPeriods : []);
+    : filterPublicActivePeriods(service.groupPeriods);
   const mediaTabs = galleryState.mediaTabs;
 
   return {
@@ -1597,7 +1693,8 @@ async function getServiceDetailData(slug) {
           dateEnd: period.dateEnd || period.dateStart || "",
           price: Number(period.price) || 0,
           status: period.status || "available",
-          badge: period.badge || "",
+          totalSeats: Number(period.totalSeats) || (Number(period.remainingSeats) || 0) + (soldCountMap[period.periodCode || period.id || ""] || 0),
+          soldCount: soldCountMap[period.periodCode || period.id || ""] || 0,
           remainingSeats: Number(period.remainingSeats) || 0,
           minGroup: Number(period.minGroup) || 1
         })

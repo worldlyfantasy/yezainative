@@ -64,6 +64,7 @@ async function findServicePeriodByCode(periodCode) {
 }
 
 function buildServicePeriodRecord(service, period) {
+  const totalSeats = Math.max(0, normalizeNumber(period.totalSeats ?? period.remainingSeats, 0));
   return {
     periodCode: String(period.id || "").trim(),
     serviceSlug: String(service.slug || "").trim(),
@@ -74,7 +75,9 @@ function buildServicePeriodRecord(service, period) {
     dateEnd: String(period.dateEnd || period.dateStart || "").trim(),
     price: normalizeNumber(period.price, 0),
     minGroup: normalizePositiveInteger(period.minGroup) || 1,
-    remainingSeats: Math.max(0, normalizeNumber(period.remainingSeats, 0)),
+    totalSeats,
+    totalSeatsInt: totalSeats,
+    remainingSeats: totalSeats,
     status: String(period.status || "available").trim() || "available"
   };
 }

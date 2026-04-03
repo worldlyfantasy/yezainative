@@ -108,7 +108,7 @@
 
 - 新增标准字段并完成回填：
   - `TravelOrder`: `amountDec/discountDec/payableDec/peopleCountInt/travelDateStartDate/travelDateEndDate`
-  - `ServicePeriod`: `priceDec/minGroupInt/remainingSeatsInt/dateStartDate/dateEndDate`
+  - `ServicePeriod`: `priceDec/minGroupInt/totalSeatsInt/remainingSeatsInt/dateStartDate/dateEndDate`
 - 清理废弃字段：
   - `TravelOrder.contactName-drop-1774251802`
   - `TravelOrder.contactPhone-drop-1774251802`

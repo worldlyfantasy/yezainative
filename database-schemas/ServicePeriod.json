@@ -101,6 +101,18 @@
             "type": "number",
             "title": "成团人数Int"
         },
+        "totalSeats": {
+            "x-required": true,
+            "default": 0,
+            "description": "总名额",
+            "type": "number",
+            "title": "总名额"
+        },
+        "totalSeatsInt": {
+            "description": "总名额Int",
+            "type": "number",
+            "title": "总名额Int"
+        },
         "remainingSeats": {
             "x-required": true,
             "default": 0,
@@ -257,6 +269,7 @@
         "price",
         "dateEnd",
         "serviceName",
+        "totalSeats",
         "remainingSeats",
         "periodCode",
         "serviceSlug",

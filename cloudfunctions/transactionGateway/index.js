@@ -67,6 +67,15 @@ function formatDateTime(timestamp) {
   });
 }
 
+function getShanghaiTodayDateString() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date());
+}
+
 function getSQLRows(result) {
   const data = result && result.data ? result.data : {};
   return Array.isArray(data.executeResultList) ? data.executeResultList : [];
@@ -734,12 +743,25 @@ async function findServicePeriodById(periodId) {
   });
 }
 
-function resolvePeriodStatus(currentStatus, remainingSeats) {
+function resolvePeriodStatus(periodRecord, remainingSeats) {
+  const currentStatus = String(periodRecord && periodRecord.status ? periodRecord.status : "").trim();
+  const today = getShanghaiTodayDateString();
+  const dateEnd = String(periodRecord && (periodRecord.dateEnd || periodRecord.dateStart) ? (periodRecord.dateEnd || periodRecord.dateStart) : "").trim();
+  const dateStart = String(periodRecord && periodRecord.dateStart ? periodRecord.dateStart : "").trim();
+
+  if (currentStatus === "inactive") {
+    return "inactive";
+  }
+
+  if (dateEnd && today && dateEnd < today) {
+    return "inactive";
+  }
+
   if (remainingSeats <= 0) {
     return "soldout";
   }
 
-  if (currentStatus === "closed") {
+  if ((dateStart && today && dateStart <= today) || currentStatus === "closed") {
     return "closed";
   }
 
@@ -757,7 +779,12 @@ async function reserveServicePeriodSeats(periodId, peopleCount) {
       throw new Error("service period not found");
     }
 
-    if (periodRecord.status === "closed") {
+    const currentStatus = resolvePeriodStatus(periodRecord, normalizeNumber(periodRecord.remainingSeats, 0));
+    if (currentStatus === "inactive") {
+      throw new Error("service period is inactive");
+    }
+
+    if (currentStatus === "closed") {
       throw new Error("service period is closed");
     }
 
@@ -770,7 +797,7 @@ async function reserveServicePeriodSeats(periodId, peopleCount) {
     const result = await getServicePeriodModel().update({
       data: {
         remainingSeats: nextRemainingSeats,
-        status: resolvePeriodStatus(periodRecord.status, nextRemainingSeats)
+        status: resolvePeriodStatus(periodRecord, nextRemainingSeats)
       },
       filter: {
         where: {
@@ -790,7 +817,7 @@ async function reserveServicePeriodSeats(periodId, peopleCount) {
     if (getMutationCount(result) > 0) {
       return Object.assign({}, periodRecord, {
         remainingSeats: nextRemainingSeats,
-        status: resolvePeriodStatus(periodRecord.status, nextRemainingSeats)
+        status: resolvePeriodStatus(periodRecord, nextRemainingSeats)
       });
     }
   }
@@ -810,7 +837,7 @@ async function restoreServicePeriodSeats(periodId, peopleCount) {
     const result = await getServicePeriodModel().update({
       data: {
         remainingSeats: nextRemainingSeats,
-        status: resolvePeriodStatus(periodRecord.status, nextRemainingSeats)
+        status: resolvePeriodStatus(periodRecord, nextRemainingSeats)
       },
       filter: {
         where: {
@@ -830,7 +857,7 @@ async function restoreServicePeriodSeats(periodId, peopleCount) {
     if (getMutationCount(result) > 0) {
       return Object.assign({}, periodRecord, {
         remainingSeats: nextRemainingSeats,
-        status: resolvePeriodStatus(periodRecord.status, nextRemainingSeats)
+        status: resolvePeriodStatus(periodRecord, nextRemainingSeats)
       });
     }
   }

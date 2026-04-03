@@ -61,7 +61,7 @@ test("service detail injects default itinerary even if custom shares the same du
   );
 });
 
-test("service detail only exposes custom itinerary versions instead of injecting a visible standard version", () => {
+test("service detail keeps the default itinerary visible alongside multiple named versions", () => {
   const travelDetail = {
     defaultVersionName: "标准版",
     itinerary: {
@@ -85,7 +85,7 @@ test("service detail only exposes custom itinerary versions instead of injecting
 
   assert.deepEqual(
     state.itineraryVersions.map((item) => item.versionName),
-    ["湖岸环线5日", "湖岸环线6日"]
+    ["标准版", "湖岸环线5日", "湖岸环线6日"]
   );
   assert.equal(state.activeItineraryVersionName, "湖岸环线6日");
   assert.equal(state.displayItinerary.days[0].title, "6日第1天");

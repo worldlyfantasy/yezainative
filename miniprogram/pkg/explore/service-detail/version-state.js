@@ -70,34 +70,15 @@ function buildVisibleItineraryVersions(travelDetail) {
     return true;
   });
 
-  // The itinerary switcher UI only appears when there are 2+ options.
-  // For services that have exactly "default itinerary + one named itinerary", expose the default
-  // as a selectable option so users can switch between the two versions.
-  //
-  // When there are multiple named itineraries, we keep the picker focused on named variants to
-  // avoid an extra "标准版" that is often an implementation baseline instead of a real SKU.
   const defaultItineraryVersion = buildDefaultItineraryVersion(travelDetail);
   if (!defaultItineraryVersion) {
     return visibleCustomVersions;
   }
 
-  if (visibleCustomVersions.length !== 1) {
-    return visibleCustomVersions;
-  }
-
-  const onlyCustom = visibleCustomVersions[0];
-  const defaultDays = countItineraryDays(defaultItineraryVersion.days);
-  const customDays = countItineraryDays(onlyCustom.days);
-
-  if (!defaultDays || !customDays) {
-    return visibleCustomVersions;
-  }
-
-  if (defaultItineraryVersion.versionName === onlyCustom.versionName) {
-    return visibleCustomVersions;
-  }
-
-  return [defaultItineraryVersion, ...visibleCustomVersions];
+  return [
+    defaultItineraryVersion,
+    ...visibleCustomVersions.filter((item) => item.versionName !== defaultItineraryVersion.versionName)
+  ];
 }
 
 function resolveItineraryVersionState(travelDetail, preferredVersionName) {

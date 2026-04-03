@@ -536,6 +536,74 @@ function normalizePositiveInteger(value, fallback = 0) {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
+function resolvePeriodSoldCount(record, fallback = 0) {
+  return Math.max(
+    0,
+    normalizePositiveInteger(
+      record && (record.soldCount ?? record.soldSeats),
+      fallback
+    )
+  );
+}
+
+function resolvePeriodTotalSeats(record, soldCount = 0) {
+  const explicitTotalSeats = normalizePositiveInteger(record && record.totalSeats, -1);
+  if (explicitTotalSeats >= 0) {
+    return explicitTotalSeats;
+  }
+
+  const legacyRemainingSeats = normalizePositiveInteger(record && record.remainingSeats, 0);
+  return legacyRemainingSeats + Math.max(0, soldCount);
+}
+
+function resolvePeriodRemainingSeats(record, soldCount = 0) {
+  const explicitRemainingSeats = normalizePositiveInteger(record && record.remainingSeats, -1);
+  if (explicitRemainingSeats >= 0) {
+    return explicitRemainingSeats;
+  }
+
+  return Math.max(0, resolvePeriodTotalSeats(record, soldCount) - Math.max(0, soldCount));
+}
+
+function normalizeManualServicePeriodStatus(status) {
+  return normalizeText(status) === "inactive" ? "inactive" : "available";
+}
+
+function isServicePeriodExpired(record, today = getShanghaiTodayDateString()) {
+  const dateEnd = normalizeText(record && record.dateEnd);
+  return Boolean(dateEnd && today && dateEnd < today);
+}
+
+function resolveDisplayServicePeriodStatus(record, soldCount = resolvePeriodSoldCount(record)) {
+  const manualStatus = normalizeManualServicePeriodStatus(record && record.status);
+  if (manualStatus === "inactive") {
+    return "inactive";
+  }
+
+  const today = getShanghaiTodayDateString();
+  if (isServicePeriodExpired(record, today)) {
+    return "inactive";
+  }
+
+  const totalSeats = resolvePeriodTotalSeats(record, soldCount);
+  const minGroup = Math.max(1, normalizePositiveInteger(record && record.minGroup, 1));
+  const dateStart = normalizeText(record && record.dateStart);
+
+  if (dateStart && today && dateStart <= today) {
+    return "closed";
+  }
+
+  if (totalSeats <= 0 || soldCount >= totalSeats) {
+    return "soldout";
+  }
+
+  if (soldCount >= minGroup) {
+    return "confirmed";
+  }
+
+  return "available";
+}
+
 function getOrderUserId(user) {
   return normalizeText(user && (user._id || user.id));
 }
@@ -1858,12 +1926,27 @@ async function findServicePeriodByCode(periodCode) {
   return rows.length ? rows[0] : null;
 }
 
-function resolveServicePeriodStatus(requestedStatus, service) {
+function resolveServicePeriodStatus(requestedStatus, service, remainingSeats, dateStart, dateEnd, soldCount = 0, minGroup = 1) {
   if (buildStatusTag(service) === "inactive") {
     return "inactive";
   }
 
-  return normalizeStatus(requestedStatus, SERVICE_PERIOD_STATUSES, "available");
+  const manualStatus = normalizeManualServicePeriodStatus(
+    normalizeStatus(requestedStatus, SERVICE_PERIOD_STATUSES, "available")
+  );
+
+  if (manualStatus === "inactive") {
+    return "inactive";
+  }
+
+  return resolveDisplayServicePeriodStatus({
+    status: manualStatus,
+    dateStart,
+    dateEnd,
+    minGroup,
+    totalSeats: Math.max(0, soldCount + remainingSeats),
+    remainingSeats
+  }, soldCount);
 }
 
 function createSqlRecordId(prefix) {
@@ -1879,6 +1962,18 @@ function buildServicePeriodCreateRecord(record, operatorId, now) {
     owner: operatorId,
     _openid: operatorId
   });
+}
+
+function shouldFallbackLegacyServicePeriodFields(error) {
+  const message = normalizeText(error && error.message).toLowerCase();
+  return message.includes("totalseats");
+}
+
+function stripOptionalTotalSeatFields(record) {
+  const nextRecord = Object.assign({}, record);
+  delete nextRecord.totalSeats;
+  delete nextRecord.totalSeatsInt;
+  return nextRecord;
 }
 
 async function deactivateServicePeriodsByServiceSlug(serviceSlug) {
@@ -2614,7 +2709,9 @@ function buildServiceSummary(service, creatorNameMap, periodStatsMap, orderStats
     soldSeats: normalizeNumber(orderStats.soldSeats),
     nextDepartureDate: normalizeText(periodStats.nextDate),
     remainingSeats: normalizeNumber(periodStats.remainingSeats),
-    pendingSectionCount: pendingSummary.pendingSectionCount
+    pendingSectionCount: pendingSummary.pendingSectionCount,
+    createdAt: normalizeNumber(service && service.createdAt),
+    updatedAt: normalizeNumber(service && service.updatedAt)
   };
 }
 
@@ -2759,7 +2856,12 @@ function mapIdeaDetailRecord(idea, authorNameMap) {
   };
 }
 
-function mapServicePeriodRecord(record) {
+function mapServicePeriodRecord(record, soldCount = resolvePeriodSoldCount(record)) {
+  const normalizedSoldCount = Math.max(0, soldCount);
+  const totalSeats = resolvePeriodTotalSeats(record, normalizedSoldCount);
+  const remainingSeats = resolvePeriodRemainingSeats(record, normalizedSoldCount);
+  const status = resolveDisplayServicePeriodStatus(record, normalizedSoldCount);
+
   return {
     _id: normalizeText(record && record._id),
     periodCode: normalizeText(record && record.periodCode),
@@ -2776,12 +2878,43 @@ function mapServicePeriodRecord(record) {
     dateEnd: normalizeText(record && record.dateEnd),
     price: normalizeNumber(record && record.price),
     minGroup: normalizeNumber(record && record.minGroup, 1),
-    remainingSeats: normalizeNumber(record && record.remainingSeats),
-    status: normalizeText(record && record.status) || "available",
-    badge: normalizeText(record && record.badge),
+    totalSeats,
+    soldCount: normalizedSoldCount,
+    remainingSeats,
+    status,
     createdAt: normalizeNumber(record && record.createdAt),
     updatedAt: normalizeNumber(record && record.updatedAt)
   };
+}
+
+async function getSoldCountByPeriodCode(periodCode) {
+  const normalizedPeriodCode = normalizeText(periodCode);
+  if (!normalizedPeriodCode) {
+    return 0;
+  }
+
+  const rows = await queryRows(
+    "SELECT SUM(COALESCE(`peopleCountInt`, `peopleCount`, 0)) AS `soldCount` FROM `TravelOrder` WHERE `servicePeriodCode` = {{periodCode}} AND COALESCE(`status`, '') <> 'canceled'",
+    { periodCode: normalizedPeriodCode }
+  );
+
+  return resolvePeriodSoldCount(rows[0], 0);
+}
+
+async function getSoldCountByPeriodCodeMap() {
+  const rows = await queryRows(
+    "SELECT `servicePeriodCode`, SUM(COALESCE(`peopleCountInt`, `peopleCount`, 0)) AS `soldCount` FROM `TravelOrder` WHERE COALESCE(`status`, '') <> 'canceled' GROUP BY `servicePeriodCode`"
+  );
+
+  return rows.reduce((map, row) => {
+    const periodCode = normalizeText(row.servicePeriodCode);
+    if (!periodCode) {
+      return map;
+    }
+
+    map[periodCode] = resolvePeriodSoldCount(row, 0);
+    return map;
+  }, {});
 }
 
 async function getPeriodStatsMap() {
@@ -2894,7 +3027,7 @@ function formatDashboardStatusLabel(status) {
     case "confirmed":
       return "确定成行";
     case "soldout":
-      return "名额已满";
+      return "已报满";
     case "closed":
       return "已截止";
     case "inactive":
@@ -3806,7 +3939,9 @@ async function listCreators(payload) {
       tags: normalizeCreatorTags(creator.tags),
       destinationSlugs: uniqueStrings(creator.destinationSlugs),
       destinationCount: normalizeArray(creator.destinationSlugs).length,
-      serviceCount: services.filter((service) => listCreatorRefs(creator).includes(normalizeText(service.creatorId))).length
+      serviceCount: services.filter((service) => listCreatorRefs(creator).includes(normalizeText(service.creatorId))).length,
+      createdAt: normalizeNumber(creator && creator.createdAt),
+      updatedAt: normalizeNumber(creator && creator.updatedAt)
     }));
 }
 
@@ -3848,7 +3983,9 @@ async function listDestinations(payload) {
           .map((creator) => normalizeText(creator.slug))
           .filter(Boolean),
         creatorCount: creators.filter((creator) => normalizeArray(creator.destinationSlugs).includes(slug)).length,
-        serviceCount: services.filter((service) => normalizeArray(service.destinationSlugs).includes(slug)).length
+        serviceCount: services.filter((service) => normalizeArray(service.destinationSlugs).includes(slug)).length,
+        createdAt: normalizeNumber(destination && destination.createdAt),
+        updatedAt: normalizeNumber(destination && destination.updatedAt)
       };
     });
 }
@@ -3897,7 +4034,9 @@ async function listIdeas(payload) {
         status: buildStatusTag(idea),
         authorName: authorMap[normalizeText(idea.authorId)] || "",
         destinationCount: normalizeArray(idea.destinationSlugs).length,
-        summary: normalizeText(idea.summary)
+        summary: normalizeText(idea.summary),
+        createdAt: normalizeNumber(idea && idea.createdAt),
+        updatedAt: normalizeNumber(idea && idea.updatedAt)
       };
     });
 }
@@ -3906,9 +4045,12 @@ async function listServicePeriods(payload) {
   const keyword = normalizeText(payload && payload.keyword).toLowerCase();
   const serviceSlug = normalizeText(payload && payload.serviceSlug);
   const limit = clampLimit(payload && payload.limit, 100);
-  const rows = await queryRows(
-    "SELECT `serviceSlug`, `serviceName`, `periodCode`, `versionName`, `durationDays`, `dateStart`, `dateEnd`, `price`, `minGroup`, `remainingSeats`, `status`, `updatedAt` FROM `ServicePeriod` ORDER BY `dateStart` DESC LIMIT 500"
-  );
+  const [rows, soldCountMap] = await Promise.all([
+    queryRows(
+      "SELECT `serviceSlug`, `serviceName`, `periodCode`, `versionName`, `durationDays`, `dateStart`, `dateEnd`, `price`, `minGroup`, `remainingSeats`, `status`, `updatedAt` FROM `ServicePeriod` ORDER BY `dateStart` DESC LIMIT 500"
+    ),
+    getSoldCountByPeriodCodeMap()
+  ]);
 
   return rows
     .filter((row) => {
@@ -3919,29 +4061,19 @@ async function listServicePeriods(payload) {
       return matchesKeyword([row.serviceName, row.serviceSlug, row.periodCode, row.versionName], keyword);
     })
     .slice(0, limit)
-    .map((row) => ({
-      periodCode: normalizeText(row.periodCode),
-      serviceSlug: normalizeText(row.serviceSlug),
-      serviceName: normalizeText(row.serviceName),
-      versionName: normalizeText(row.versionName),
-      durationDays: Math.max(
-        1,
-        normalizePositiveInteger(row.durationDays, calcDurationDaysFromDates(row.dateStart, row.dateEnd))
-      ),
-      dateStart: normalizeText(row.dateStart),
-      dateEnd: normalizeText(row.dateEnd),
-      price: normalizeNumber(row.price),
-      minGroup: normalizeNumber(row.minGroup, 1),
-      remainingSeats: normalizeNumber(row.remainingSeats),
-      status: normalizeText(row.status) || "available",
-      updatedAt: normalizeText(row.updatedAt)
-    }));
+    .map((row) => Object.assign(
+      mapServicePeriodRecord(row, soldCountMap[normalizeText(row.periodCode)] || 0),
+      {
+        updatedAt: normalizeNumber(row.updatedAt)
+      }
+    ));
 }
 
 async function getServicePeriodDetail(payload) {
   const record = await findServicePeriodByCode(payload && payload.periodCode);
   assertCondition(record, "未找到对应团期");
-  return mapServicePeriodRecord(record);
+  const soldCount = await getSoldCountByPeriodCode(record.periodCode);
+  return mapServicePeriodRecord(record, soldCount);
 }
 
 async function saveServicePeriod(payload, adminUser) {
@@ -3950,9 +4082,27 @@ async function saveServicePeriod(payload, adminUser) {
   let periodCode = normalizeText(payload && payload.periodCode);
   const serviceSlug = normalizeText(payload && payload.serviceSlug);
   const service = await findServiceDocBySlug(serviceSlug);
+  const requestedVersionName = normalizeText(payload && payload.versionName);
 
   assertCondition(service, "请选择已存在的路线");
-  const versionDefinition = findServiceVersionDefinition(service, payload && payload.versionName);
+  let versionDefinition = findServiceVersionDefinition(service, requestedVersionName);
+  if (!versionDefinition && existing) {
+    const existingVersionName = normalizeText(existing && existing.versionName);
+    const shouldKeepExistingVersion = !requestedVersionName || requestedVersionName === existingVersionName;
+
+    if (shouldKeepExistingVersion && existingVersionName) {
+      versionDefinition = {
+        versionName: existingVersionName,
+        durationDays: Math.max(
+          1,
+          normalizePositiveInteger(
+            existing && existing.durationDays,
+            calcDurationDaysFromDates(existing && existing.dateStart, existing && existing.dateEnd)
+          )
+        )
+      };
+    }
+  }
   assertCondition(versionDefinition, "请选择路线中已定义的版本");
 
   const dateStart = validateDateString(payload && payload.dateStart, "出发日期");
@@ -3975,7 +4125,16 @@ async function saveServicePeriod(payload, adminUser) {
   }
 
   const minGroup = Math.max(1, normalizePositiveInteger(payload && payload.minGroup, 1));
-  const remainingSeats = Math.max(0, normalizePositiveInteger(payload && payload.remainingSeats, 0));
+  const soldCount = existing ? await getSoldCountByPeriodCode(originalPeriodCode || periodCode) : 0;
+  if (existing) {
+    const currentDisplayStatus = resolveDisplayServicePeriodStatus(existing, soldCount);
+    assertCondition(currentDisplayStatus !== "inactive", "已下架团期不可编辑，只能查看或删除");
+  }
+  const totalSeats = Math.max(
+    0,
+    normalizePositiveInteger(payload && payload.totalSeats, normalizePositiveInteger(payload && payload.remainingSeats, 0))
+  );
+  const remainingSeats = Math.max(0, totalSeats - soldCount);
   const operatorId = normalizeText(adminUser && (adminUser.uid || adminUser.id));
   const now = Date.now();
   const record = {
@@ -3994,27 +4153,38 @@ async function saveServicePeriod(payload, adminUser) {
     priceDec: toDecimalString(price),
     minGroup,
     minGroupInt: minGroup,
+    totalSeats,
+    totalSeatsInt: totalSeats,
     remainingSeats,
     remainingSeatsInt: remainingSeats,
-    status: resolveServicePeriodStatus(payload && payload.status, service),
-    badge: normalizeText(payload && payload.badge),
+    status: resolveServicePeriodStatus(payload && payload.status, service, remainingSeats, dateStart, dateEnd, soldCount, minGroup),
+    badge: "",
     updatedAt: now,
     updateBy: operatorId
   };
 
   if (!existing) {
     const createRecord = buildServicePeriodCreateRecord(record, operatorId, now);
-    const { error } = await rdb.from("ServicePeriod").insert(createRecord);
+    let { error } = await rdb.from("ServicePeriod").insert(createRecord);
+    if (error && shouldFallbackLegacyServicePeriodFields(error)) {
+      ({ error } = await rdb.from("ServicePeriod").insert(stripOptionalTotalSeatFields(createRecord)));
+    }
     if (error) {
       throw new Error(error.message || "创建团期失败");
     }
     return getServicePeriodDetail({ periodCode });
   }
 
-  const { error } = await rdb
+  let { error } = await rdb
     .from("ServicePeriod")
     .update(record)
     .eq("periodCode", originalPeriodCode);
+  if (error && shouldFallbackLegacyServicePeriodFields(error)) {
+    ({ error } = await rdb
+      .from("ServicePeriod")
+      .update(stripOptionalTotalSeatFields(record))
+      .eq("periodCode", originalPeriodCode));
+  }
 
   if (error) {
     throw new Error(error.message || "更新团期失败");
@@ -4223,21 +4393,11 @@ function shouldRestoreSeatsForDeletedOrder(status) {
   return ["pending", "paid", "traveling"].includes(normalizeText(status));
 }
 
-function resolvePeriodStatusByRemainingSeats(currentStatus, remainingSeats) {
-  const normalizedStatus = normalizeText(currentStatus);
-  if (normalizedStatus === "inactive" || normalizedStatus === "closed") {
-    return normalizedStatus || "inactive";
-  }
-
-  if (remainingSeats <= 0) {
-    return "soldout";
-  }
-
-  if (normalizedStatus === "confirmed") {
-    return "confirmed";
-  }
-
-  return "available";
+function resolvePeriodStatusByRemainingSeats(record, remainingSeats) {
+  const normalizedRemainingSeats = Math.max(0, normalizeNumber(remainingSeats, 0));
+  return resolveDisplayServicePeriodStatus(Object.assign({}, record, {
+    remainingSeats: normalizedRemainingSeats
+  }), Math.max(0, resolvePeriodTotalSeats(record) - normalizedRemainingSeats));
 }
 
 async function restoreDeletedOrderSeatsIfNeeded(orderRecord) {
@@ -4262,7 +4422,7 @@ async function restoreDeletedOrderSeatsIfNeeded(orderRecord) {
 
   const currentRemainingSeats = normalizeNumber(periodRecord.remainingSeats, 0);
   const nextRemainingSeats = currentRemainingSeats + peopleCount;
-  const nextStatus = resolvePeriodStatusByRemainingSeats(periodRecord.status, nextRemainingSeats);
+  const nextStatus = resolvePeriodStatusByRemainingSeats(periodRecord, nextRemainingSeats);
   const { error } = await rdb
     .from("ServicePeriod")
     .update({
@@ -4513,6 +4673,8 @@ exports.__test__ = {
   generateServiceSlug,
   getNextSlugSequence,
   listOrders,
+  resolvePeriodStatusByRemainingSeats,
+  resolveServicePeriodStatus,
   resolveUserOrderOpenids
 };
 

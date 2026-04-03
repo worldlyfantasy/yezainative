@@ -165,6 +165,15 @@ test("adminGateway creates SQL service period records with a generated _id", () 
   assert.equal(record.periodCode, "qinghai-loop-20260405-01");
 });
 
+test("service period manual status only keeps available or inactive while soldout remains inventory-driven", () => {
+  const { __test__ } = loadAdminGatewayModule();
+
+  assert.equal(__test__.resolveServicePeriodStatus("soldout", { status: "active" }, 6), "available");
+  assert.equal(__test__.resolveServicePeriodStatus("available", { status: "active" }, 0), "soldout");
+  assert.equal(__test__.resolveServicePeriodStatus("confirmed", { status: "active" }, 6), "available");
+  assert.equal(__test__.resolveServicePeriodStatus("available", { status: "inactive" }, 6), "inactive");
+});
+
 test("slug helpers follow legacy-style creator, destination, and service patterns", () => {
   const { __test__ } = loadAdminGatewayModule();
 
