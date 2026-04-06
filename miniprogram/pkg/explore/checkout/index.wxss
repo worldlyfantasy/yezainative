@@ -28,6 +28,14 @@
   text-align: right;
 }
 
+.checkout-summary__helper {
+  display: block;
+  margin-top: 16rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #8a5a38;
+}
+
 /* ---------- 出行人信息 ---------- */
 .checkout-travelers-block {
   min-height: 200rpx;

@@ -1,6 +1,7 @@
 const { getDestinationDetailData } = require("../../../repositories/content-repository");
 const { isFavorited, toggleFavorite } = require("../../../repositories/transaction-repository");
 const { setPendingCreatorFilter, goTopLevel, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
+const { openIdea } = require("../../../services/idea-navigation");
 const { getCurrentUser } = require("../../../services/user");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../utils/favorite-notice");
 
@@ -19,6 +20,7 @@ Page({
   },
 
   async onLoad(options) {
+    this.isPageActive = true;
     try {
       const payload = await getDestinationDetailData(options.slug);
       if (!payload) {
@@ -34,14 +36,12 @@ Page({
         return;
       }
 
-      const favorited = await isFavorited("destinations", payload.destination.slug);
-
       this.setData(
         Object.assign({}, payload, {
-          loading: false,
-          "destination.isFavorited": favorited
+          loading: false
         })
       );
+      this.loadFavoriteState(payload.destination && payload.destination.slug);
     } catch (error) {
       console.error("Failed to load destination detail", error);
       this.setData({ loading: false });
@@ -53,7 +53,27 @@ Page({
   },
 
   onUnload() {
+    this.isPageActive = false;
     clearFavoriteNotice(this, "favoriteNoticeState", true);
+  },
+
+  async loadFavoriteState(slug) {
+    if (!slug) {
+      return;
+    }
+
+    try {
+      const favorited = await isFavorited("destinations", slug);
+      if (!this.isPageActive || !this.data.destination || this.data.destination.slug !== slug) {
+        return;
+      }
+
+      this.setData({
+        "destination.isFavorited": favorited
+      });
+    } catch (error) {
+      console.error("Failed to resolve destination favorite status", error);
+    }
   },
 
   goBack() {
@@ -73,12 +93,7 @@ Page({
   },
 
   onStoryTap(event) {
-    const slug = event.currentTarget.dataset.slug;
-    if (slug) {
-      wx.navigateTo({
-        url: `/pkg/content/idea-detail/index?slug=${slug}`
-      });
-    }
+    openIdea(event.currentTarget.dataset);
   },
 
   goCreatorList() {

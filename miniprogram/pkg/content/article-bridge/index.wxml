@@ -1,0 +1,17 @@
+<view wx:if="{{errorText}}" class="bridge-page bridge-page--center">
+  <view class="bridge-card">
+    <text class="bridge-title">无法打开原文</text>
+    <text class="bridge-desc">{{errorText}}</text>
+    <text wx:if="{{bridgeHintText}}" class="bridge-hint">{{bridgeHintText}}</text>
+  </view>
+</view>
+
+<web-view wx:elif="{{src}}" src="{{src}}"></web-view>
+
+<view wx:else class="bridge-page bridge-page--center">
+  <view class="bridge-card">
+    <text class="bridge-title">{{loadingText}}</text>
+    <text wx:if="{{fallbackTitle}}" class="bridge-desc">{{fallbackTitle}}</text>
+    <text wx:if="{{bridgeHintText}}" class="bridge-hint">{{bridgeHintText}}</text>
+  </view>
+</view>

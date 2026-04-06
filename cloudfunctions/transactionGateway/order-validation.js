@@ -32,9 +32,7 @@ function normalizeMobileNumber(value) {
 }
 
 function normalizeContactPhone(value) {
-  return normalizeText(value)
-    .replace(/\s+/g, "")
-    .replace(/^\+?86(?=1[3-9]\d{9}$)/, "");
+  return normalizeMobileNumber(value);
 }
 
 function isValidDateParts(year, month, day) {
@@ -87,16 +85,7 @@ function isValidMainlandMobile(value) {
 }
 
 function isValidContactPhone(value) {
-  const normalized = normalizeContactPhone(value);
-  if (!normalized) {
-    return false;
-  }
-
-  if (isValidMainlandMobile(normalized)) {
-    return true;
-  }
-
-  return /^(0\d{2,3}-?\d{7,8})(-\d{1,6})?$/.test(normalized);
+  return isValidMainlandMobile(normalizeContactPhone(value));
 }
 
 function inferDocumentTypeFromNumber(value) {
@@ -119,13 +108,13 @@ function inferDocumentTypeFromNumber(value) {
 function buildTravelerDocumentDisplayText(traveler) {
   const source = traveler && typeof traveler === "object" ? traveler : {};
   const documentNumber = normalizeDocumentNumber(
-    source.documentNumber || source.idCard || source.idNo
+    source.documentNumber || source.idCard || source.idNo || source.i
   );
   if (!documentNumber) {
     return "";
   }
 
-  const documentType = normalizeDocumentType(source.documentType) || inferDocumentTypeFromNumber(documentNumber);
+  const documentType = normalizeDocumentType(source.documentType || source.t) || inferDocumentTypeFromNumber(documentNumber);
   const label = getDocumentTypeLabel(documentType);
   return label ? `${label} ${documentNumber}` : documentNumber;
 }
@@ -134,14 +123,14 @@ function normalizeTravelerRecord(traveler, options) {
   const source = traveler && typeof traveler === "object" ? traveler : {};
   const shouldInferDocumentType = !options || options.inferDocumentType !== false;
   const documentNumber = normalizeDocumentNumber(
-    source.documentNumber || source.idCard || source.idNo
+    source.documentNumber || source.idCard || source.idNo || source.i
   );
   const documentType =
-    normalizeDocumentType(source.documentType) ||
+    normalizeDocumentType(source.documentType || source.t) ||
     (shouldInferDocumentType ? inferDocumentTypeFromNumber(documentNumber) : "");
 
   return {
-    name: normalizeText(source.name),
+    name: normalizeText(source.name || source.n),
     documentType,
     documentTypeLabel: getDocumentTypeLabel(documentType),
     documentNumber,
@@ -150,9 +139,9 @@ function normalizeTravelerRecord(traveler, options) {
       documentNumber
     }),
     idCard: documentNumber,
-    phone: normalizeMobileNumber(source.phone),
-    wechat: normalizeText(source.wechat),
-    note: normalizeText(source.note)
+    phone: normalizeMobileNumber(source.phone || source.p),
+    wechat: normalizeText(source.wechat || source.w),
+    note: normalizeText(source.note || source.o)
   };
 }
 
@@ -244,11 +233,11 @@ function validateOrderParticipants({ travelers, contact, peopleCount }) {
   }
 
   if (!normalizeText(normalizedContact.phone)) {
-    return "请填写联系电话";
+    return "请填写联系人手机号";
   }
 
   if (!isValidContactPhone(normalizedContact.phone)) {
-    return "请输入正确的联系电话";
+    return "请输入正确的联系人手机号";
   }
 
   if (!normalizedTravelers.length || normalizedTravelers.length !== Number(peopleCount)) {

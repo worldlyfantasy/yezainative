@@ -1,35 +1,31 @@
 <view class="page-shell">
   <text class="page-eyebrow">创作者档案</text>
-  <text class="page-subtitle">他们有自己的节奏与价值观，我们负责透明呈现。选择所在土地或创作者类型，即可筛选合适的同行者。</text>
+  <text class="page-subtitle">他们有自己的节奏与价值观，我们负责透明呈现。按创作者类型和目的地区域筛选，就能更快找到合适的同行者。</text>
 
   <view class="section-block filter-shell creators-filter-shell">
     <view class="filter-item creator-filter-item">
       <text class="filter-label">创作者类型</text>
       <picker
-        wx:if="{{styleLabels.length > 1}}"
         class="filter-picker-trigger"
         mode="selector"
-        range="{{styleLabels}}"
+        range="{{styleLabels.length ? styleLabels : ['全部']}}"
         value="{{styleIndex}}"
         bindchange="onStyleChange"
       >
         <view class="filter-picker creator-filter-picker">{{styleLabels[styleIndex] || '全部'}}</view>
       </picker>
-      <view wx:else class="filter-picker creator-filter-picker creator-filter-picker--static">全部</view>
     </view>
     <view class="filter-item creator-filter-item">
-      <text class="filter-label">所在土地</text>
+      <text class="filter-label">目的地区域</text>
       <picker
-        wx:if="{{destinationLabels.length > 1}}"
         class="filter-picker-trigger"
         mode="selector"
-        range="{{destinationLabels}}"
-        value="{{destinationIndex}}"
-        bindchange="onDestinationChange"
+        range="{{regionLabels.length ? regionLabels : ['全部']}}"
+        value="{{regionIndex}}"
+        bindchange="onRegionChange"
       >
-        <view class="filter-picker creator-filter-picker">{{destinationLabels[destinationIndex] || '全部'}}</view>
+        <view class="filter-picker creator-filter-picker">{{regionLabels[regionIndex] || '全部'}}</view>
       </picker>
-      <view wx:else class="filter-picker creator-filter-picker creator-filter-picker--static">全部</view>
     </view>
   </view>
 

@@ -11,7 +11,7 @@
       <swiper-item wx:for="{{heroSlides}}" wx:key="id">
         <view class="hero__slide hero__slide--{{item.variant}} {{item.tone === 'muted' ? 'hero__slide--muted' : ''}}" bindtap="onHeroTap" data-slug="{{item.targetIdeaSlug}}">
           <block wx:if="{{item.variant === 'photo'}}">
-            <image class="hero__image" src="{{item.image}}" mode="aspectFill" binderror="onHeroImageError" data-src="{{item.image}}" data-id="{{item.id}}"></image>
+            <image class="hero__image" src="{{item.image}}" mode="aspectFill" lazy-load="{{index > 0}}" binderror="onHeroImageError" data-src="{{item.image}}" data-id="{{item.id}}"></image>
             <view wx:if="{{item.showMask !== false}}" class="hero__mask"></view>
           </block>
           <block wx:else>
@@ -61,6 +61,15 @@
           </view>
           <text class="section-link" bindtap="goServices">查看全部 →</text>
         </view>
+        <view class="service-tabs service-tabs--top">
+          <text
+            wx:for="{{serviceTabs}}"
+            wx:key="key"
+            class="service-tab {{item.key === activeServiceTab ? 'service-tab--active' : ''}}"
+            data-tab="{{item.key}}"
+            bindtap="onServiceTabChange"
+          >{{item.label}}</text>
+        </view>
         <scroll-view class="trip-scroll" scroll-x="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
           <view class="trip-scroll__track">
             <view
@@ -71,7 +80,7 @@
               data-slug="{{item.slug}}"
             >
               <view class="trip-card__cover-wrap">
-                <image wx:if="{{item.cover}}" class="trip-card__cover" src="{{item.cover}}" mode="aspectFill"></image>
+                <image wx:if="{{item.cover}}" class="trip-card__cover" src="{{item.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
                 <view class="trip-card__mask"></view>
                 <view class="trip-card__cover-meta">
                   <text class="trip-card__title">{{item.name}}</text>
@@ -82,15 +91,6 @@
             </view>
           </view>
         </scroll-view>
-        <view class="service-tabs service-tabs--bottom">
-          <text
-            wx:for="{{serviceTabs}}"
-            wx:key="key"
-            class="service-tab {{item.key === activeServiceTab ? 'service-tab--active' : ''}}"
-            data-tab="{{item.key}}"
-            bindtap="onServiceTabChange"
-          >{{item.label}}</text>
-        </view>
       </view>
       <image
         class="home-section-divider divider--human"

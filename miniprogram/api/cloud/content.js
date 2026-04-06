@@ -29,6 +29,10 @@ function getHomePageData() {
   return callContentGateway("getHomePageData");
 }
 
+function getJourneyPageData() {
+  return callContentGateway("getJourneyPageData");
+}
+
 function getCreatorsPageData(filters) {
   return callContentGateway("getCreatorsPageData", { filters: filters || {} });
 }
@@ -63,13 +67,34 @@ function getServiceDetailData(slug) {
   return callContentGateway("getServiceDetailData", { slug });
 }
 
+function getServiceDetailSummaryData(slug) {
+  return callContentGateway("getServiceDetailSummaryData", { slug });
+}
+
+function getServiceBookingData(slug) {
+  return callContentGateway("getServiceBookingData", { slug });
+}
+
+function getServiceConsultData(slug) {
+  return callContentGateway("getServiceConsultData", { slug });
+}
+
+function getServiceDetailContentData(slug) {
+  return callContentGateway("getServiceDetailContentData", { slug });
+}
+
 module.exports = {
   getHomePageData,
+  getJourneyPageData,
   getCreatorsPageData,
   getCreatorDetailData,
   getDestinationsPageData,
   getDestinationDetailData,
   getIdeasPageData,
   getIdeaDetailData,
+  getServiceBookingData,
+  getServiceConsultData,
+  getServiceDetailSummaryData,
+  getServiceDetailContentData,
   getServiceDetailData
 };

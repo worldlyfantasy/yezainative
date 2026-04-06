@@ -13,12 +13,35 @@ function pickFirstString(candidates) {
   return "";
 }
 
+function isCloudFileId(value) {
+  return /^cloud:\/\/[^/]+\.[^/]+\/.+$/.test(pickFirstString([value]));
+}
+
+function buildPublicUrlFromCloudFileId(value) {
+  const normalized = pickFirstString([value]);
+  const matched = normalized.match(/^cloud:\/\/[^/]+\.([^/]+)\/(.+)$/);
+  if (!matched) {
+    return "";
+  }
+
+  const bucket = matched[1];
+  const filePath = matched[2];
+  if (!bucket || !filePath) {
+    return "";
+  }
+
+  return `https://${bucket}.tcb.qcloud.la/${filePath}`;
+}
+
 function getImageAsset(value) {
   if (typeof value === "string") {
     const normalized = value.trim();
+    const resolved = isCloudFileId(normalized)
+      ? (buildPublicUrlFromCloudFileId(normalized) || normalized)
+      : normalized;
     return normalized
       ? {
-          original: normalized,
+          original: resolved,
           card: "",
           detail: ""
         }
@@ -50,15 +73,24 @@ function getImageAsset(value) {
     detail,
     card
   ]);
+  const resolvedOriginal = isCloudFileId(original)
+    ? (buildPublicUrlFromCloudFileId(original) || original)
+    : original;
+  const resolvedCard = isCloudFileId(card)
+    ? (buildPublicUrlFromCloudFileId(card) || card)
+    : card;
+  const resolvedDetail = isCloudFileId(detail)
+    ? (buildPublicUrlFromCloudFileId(detail) || detail)
+    : detail;
 
-  if (!original && !card && !detail) {
+  if (!resolvedOriginal && !resolvedCard && !resolvedDetail) {
     return null;
   }
 
   return {
-    original,
-    card,
-    detail
+    original: resolvedOriginal,
+    card: resolvedCard,
+    detail: resolvedDetail
   };
 }
 

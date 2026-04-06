@@ -7,16 +7,108 @@ const {
   normalizeIdeaAssetFields,
   normalizeServiceAssetFields
 } = require("./image-ref");
-const {
-  DESTINATION_REGION_OPTIONS,
-  normalizeDestinationRegionCode,
-  resolveDestinationRegionCode,
-  getDestinationRegionLabel
-} = require("./destination-regions");
+
+const DESTINATION_REGION_OPTIONS = [
+  { label: "藏区", value: "cn_tibetan" },
+  { label: "新疆", value: "cn_xinjiang" },
+  { label: "西北", value: "cn_great_northwest" },
+  { label: "江浙沪", value: "cn_jiang_zhe_hu" },
+  { label: "华中山水", value: "cn_central_landscape" },
+  { label: "云贵川", value: "cn_yun_gui_chuan" },
+  { label: "华南海岛", value: "cn_south_islands" },
+  { label: "京津冀", value: "cn_jing_jin_ji" },
+  { label: "中原", value: "cn_central_plain" },
+  { label: "东北", value: "cn_northeast_region" },
+  { label: "内蒙古", value: "cn_inner_mongolia" },
+  { label: "日韩", value: "intl_japan_korea" },
+  { label: "东南亚", value: "intl_southeast_asia" },
+  { label: "南亚", value: "intl_south_asia" },
+  { label: "中东", value: "intl_middle_east" },
+  { label: "欧洲", value: "intl_europe" },
+  { label: "美洲", value: "intl_americas" },
+  { label: "非洲", value: "intl_africa" },
+  { label: "大洋洲", value: "intl_oceania" }
+];
+
+const LEGACY_DESTINATION_REGION_CODE_ALIASES = {
+  "cn_north": "cn_jing_jin_ji",
+  "cn_northeast": "cn_northeast_region",
+  "cn_east": "cn_jiang_zhe_hu",
+  "cn_central": "cn_central_landscape",
+  "cn_south": "cn_south_islands",
+  "cn_southwest": "cn_yun_gui_chuan",
+  "cn_northwest": "cn_great_northwest",
+  "greater_china_hmt": "",
+  "asia_east": "intl_japan_korea",
+  "asia_southeast": "intl_southeast_asia",
+  "asia_south": "intl_south_asia",
+  "asia_central": "",
+  "asia_west_middle_east": "intl_middle_east",
+  "europe": "intl_europe",
+  "africa": "intl_africa",
+  "north_america": "intl_americas",
+  "latin_america": "intl_americas",
+  "oceania": "intl_oceania"
+};
+
+const LEGACY_DESTINATION_REGION_BY_SLUG = {
+  "aba-highlands": "cn_tibetan",
+  "qiandong-valley": "cn_yun_gui_chuan",
+  "minbei-creek": "cn_jiang_zhe_hu",
+  "hexicorridor": "cn_great_northwest",
+  "enxi-gorge": "cn_central_landscape",
+  "nanjiang-dune": "cn_xinjiang",
+  "songhua-river": "cn_northeast_region",
+  "lancang-source": "cn_tibetan",
+  "qiongbay-salt": "cn_south_islands",
+  "yunnan-rainforest": "cn_yun_gui_chuan",
+  "wuyi-ancient": "cn_jiang_zhe_hu",
+  "qinghai-lake": "cn_tibetan"
+};
+
+const DESTINATION_REGION_LABEL_MAP = DESTINATION_REGION_OPTIONS.reduce((map, item) => {
+  map[item.value] = item.label;
+  return map;
+}, {});
+
+function normalizeDestinationRegionCode(value, fallbackValue = "") {
+  const code = String(value || fallbackValue || "").trim();
+  const normalizedCode = Object.prototype.hasOwnProperty.call(DESTINATION_REGION_LABEL_MAP, code)
+    ? code
+    : (LEGACY_DESTINATION_REGION_CODE_ALIASES[code] || "");
+  return Object.prototype.hasOwnProperty.call(DESTINATION_REGION_LABEL_MAP, normalizedCode) ? normalizedCode : "";
+}
+
+function inferDestinationRegionCodeBySlug(slug) {
+  return normalizeDestinationRegionCode(LEGACY_DESTINATION_REGION_BY_SLUG[String(slug || "").trim()] || "");
+}
+
+function resolveDestinationRegionCode(value, slug, fallbackValue = "") {
+  const explicitCode = Object.prototype.hasOwnProperty.call(DESTINATION_REGION_LABEL_MAP, String(value || "").trim())
+    ? String(value || "").trim()
+    : "";
+  const explicitFallbackCode = Object.prototype.hasOwnProperty.call(DESTINATION_REGION_LABEL_MAP, String(fallbackValue || "").trim())
+    ? String(fallbackValue || "").trim()
+    : "";
+
+  return (
+    explicitCode
+    || explicitFallbackCode
+    || inferDestinationRegionCodeBySlug(slug)
+    || normalizeDestinationRegionCode(value)
+    || normalizeDestinationRegionCode(fallbackValue)
+  );
+}
+
+function getDestinationRegionLabel(code) {
+  const normalizedCode = normalizeDestinationRegionCode(code);
+  return normalizedCode ? DESTINATION_REGION_LABEL_MAP[normalizedCode] : "";
+}
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
+const _ = db.command;
 const sqlApp = cloudbase.init({
   env: process.env.TCB_ENV || cloud.DYNAMIC_CURRENT_ENV
 });
@@ -25,6 +117,8 @@ const runSQL = models.$runSQL || models.runSQL;
 const CONFIG_COLLECTION = "app_configs";
 const CONTENT_CACHE_TTL_MS = 5 * 60 * 1000;
 const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000;
+const HOME_PAGE_CACHE_TTL_MS = 60 * 1000;
+const JOURNEY_PAGE_CACHE_TTL_MS = 30 * 1000;
 const COLLECTIONS = {
   creators: "creators",
   destinations: "destinations",
@@ -67,19 +161,116 @@ const IDEA_THEME_OPTIONS = [
   { key: "inner-growth", label: "内在成长" }
 ];
 const CUSTOM_IDEA_THEME_KEY = "custom";
+const IDEA_SOURCE_TYPES = ["mini", "wechat", "hybrid"];
+const DEFAULT_PUBLIC_IDEA_SOURCE_TYPE = "mini";
+const DEFAULT_IDEA_READ_MORE_TEXT = "阅读全文";
 const IDEA_THEME_LABEL_MAP = IDEA_THEME_OPTIONS.reduce((map, item) => {
   map[item.key] = item.label;
   return map;
 }, {});
-const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+const CREATOR_CARD_COLLECTION_FIELDS = {
+  id: true,
+  slug: true,
+  name: true,
+  avatar: true,
+  stance: true,
+  tags: true,
+  status: true
+};
+const CREATOR_NAME_COLLECTION_FIELDS = {
+  id: true,
+  slug: true,
+  name: true,
+  status: true
+};
+const DESTINATION_CARD_COLLECTION_FIELDS = {
+  id: true,
+  slug: true,
+  name: true,
+  regionCode: true,
+  cover: true,
+  description: true,
+  status: true
+};
+const DESTINATION_NAME_COLLECTION_FIELDS = {
+  slug: true,
+  name: true,
+  status: true
+};
+const SERVICE_LIST_COLLECTION_FIELDS = {
+  id: true,
+  slug: true,
+  cover: true,
+  type: true,
+  name: true,
+  creatorId: true,
+  creatorRoles: true,
+  destinationSlugs: true,
+  summary: true,
+  durationTag: true,
+  priceLabel: true,
+  styles: true,
+  tags: true,
+  status: true
+};
+const SERVICE_DETAIL_SUMMARY_COLLECTION_FIELDS = {
+  id: true,
+  slug: true,
+  cover: true,
+  coverDetail: true,
+  type: true,
+  name: true,
+  creatorId: true,
+  creatorRoles: true,
+  destinationSlugs: true,
+  summary: true,
+  styles: true,
+  tags: true,
+  gallery: true,
+  galleryCard: true,
+  galleryGroups: true,
+  galleryGroupsCard: true,
+  status: true
+};
+const SERVICE_DETAIL_CONTENT_COLLECTION_FIELDS = Object.assign({}, SERVICE_DETAIL_SUMMARY_COLLECTION_FIELDS, {
+  groupPeriods: true,
+  travelDetail: true
+});
+const SERVICE_BOOKING_COLLECTION_FIELDS = Object.assign({}, SERVICE_DETAIL_SUMMARY_COLLECTION_FIELDS, {
+  groupPeriods: true
+});
+const SERVICE_CONSULT_COLLECTION_FIELDS = {
+  slug: true,
+  travelDetail: true,
+  status: true
+};
+const IDEA_CARD_COLLECTION_FIELDS = {
+  slug: true,
+  title: true,
+  theme: true,
+  themeKey: true,
+  themeLabel: true,
+  summary: true,
+  cover: true,
+  authorId: true,
+  status: true
+};
 let contentDataCache = null;
 let contentDataPromise = null;
 const configValueCache = new Map();
+let homePageCache = null;
+let homePagePromise = null;
+let journeyPageCache = null;
+let journeyPagePromise = null;
 
 function clearGatewayCache() {
   contentDataCache = null;
   contentDataPromise = null;
   configValueCache.clear();
+  homePageCache = null;
+  homePagePromise = null;
+  journeyPageCache = null;
+  journeyPagePromise = null;
 
   return {
     cleared: true,
@@ -178,6 +369,130 @@ async function getSoldCountByPeriodCodeMap(serviceSlug) {
     });
     return {};
   }
+}
+
+async function getAllSoldCountByPeriodCodeMap() {
+  try {
+    if (typeof runSQL !== "function") {
+      throw new Error("models.$runSQL unavailable");
+    }
+
+    const result = await runSQL(
+      "SELECT `servicePeriodCode`, SUM(COALESCE(`peopleCountInt`, `peopleCount`, 0)) AS `soldCount` FROM `TravelOrder` WHERE COALESCE(`status`, '') <> 'canceled' GROUP BY `servicePeriodCode`"
+    );
+
+    return getSQLRows(result).reduce((map, row) => {
+      const periodCode = normalizeText(row && row.servicePeriodCode);
+      if (!periodCode) {
+        return map;
+      }
+
+      map[periodCode] = Math.max(0, normalizeNumber(row && row.soldCount, 0));
+      return map;
+    }, {});
+  } catch (error) {
+    console.error("Failed to list sold counts for all service periods", error);
+    return {};
+  }
+}
+
+function getJourneyPeriodStatusPriority(status) {
+  if (status === "confirmed") {
+    return 0;
+  }
+
+  if (status === "available") {
+    return 1;
+  }
+
+  if (status === "soldout") {
+    return 2;
+  }
+
+  if (status === "closed") {
+    return 3;
+  }
+
+  return 9;
+}
+
+function isCreatorBookablePeriodStatus(status) {
+  return status === "confirmed" || status === "available";
+}
+
+function sortJourneyPeriods(periods) {
+  return (periods || []).slice().sort((left, right) => {
+    const statusDiff = getJourneyPeriodStatusPriority(left && left.status) - getJourneyPeriodStatusPriority(right && right.status);
+    if (statusDiff !== 0) {
+      return statusDiff;
+    }
+
+    return String(left && left.dateStart || "").localeCompare(String(right && right.dateStart || ""));
+  });
+}
+
+function buildPublicGroupPeriods(periods, soldCountMap) {
+  return sortJourneyPeriods(
+    (periods || []).map((period) => {
+      const periodCode = period && (period.periodCode || period.id) ? String(period.periodCode || period.id) : "";
+      const soldCount = soldCountMap && periodCode ? soldCountMap[periodCode] || 0 : 0;
+      const remainingSeats = Number(period && period.remainingSeats) || 0;
+      const totalSeats = Number(period && period.totalSeats) || (remainingSeats + soldCount);
+
+      return buildGroupPeriodDisplay({
+        id: periodCode || String(period && period.id || ""),
+        periodCode,
+        versionName: period && period.versionName ? String(period.versionName) : "",
+        durationDays: Number(period && period.durationDays) || 0,
+        dateStart: period && period.dateStart ? String(period.dateStart) : "",
+        dateEnd: period && period.dateEnd ? String(period.dateEnd) : String(period && period.dateStart || ""),
+        price: Number(period && period.price) || 0,
+        status: period && period.status ? String(period.status) : "available",
+        totalSeats,
+        soldCount,
+        remainingSeats,
+        minGroup: Number(period && period.minGroup) || 1
+      });
+    })
+  );
+}
+
+function buildJourneySearchText(service, creator, relatedDestinations) {
+  return [
+    service && service.name,
+    service && service.summary,
+    creator && creator.name,
+    ...((relatedDestinations || []).map((item) => item && item.name)),
+    ...(service && Array.isArray(service.tags) ? service.tags : []),
+    ...(service && Array.isArray(service.styles) ? service.styles : [])
+  ]
+    .map((item) => normalizeText(item))
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function buildJourneyCard(service, creator, relatedDestinations, activePeriods) {
+  const publicService = buildPublicService(service, {
+    creatorName: creator ? creator.name : ""
+  });
+  const displayPeriod = activePeriods[0] || null;
+  const routeTypes = getServiceRouteTags(service);
+
+  return Object.assign({}, publicService, {
+    routeTypes,
+    primaryRouteType: routeTypes[0] || "",
+    activePeriods,
+    displayPeriod,
+    displayStatus: displayPeriod ? displayPeriod.status : "",
+    displayStatusText: displayPeriod ? displayPeriod.statusText : "",
+    displayDateStart: displayPeriod ? displayPeriod.dateStart : "",
+    displayDateLabel: displayPeriod ? displayPeriod.dateLabel : "",
+    displayDurationLabel: (displayPeriod && displayPeriod.durationLabel) || publicService.durationTag || "",
+    displayVersionLabel: displayPeriod && displayPeriod.versionName ? displayPeriod.versionName : "",
+    destinationNames: (relatedDestinations || []).map((item) => item && item.name).filter(Boolean),
+    searchText: buildJourneySearchText(publicService, creator, relatedDestinations)
+  });
 }
 
 async function listAllSqlServicePeriods() {
@@ -354,6 +669,20 @@ function normalizeIdeaTheme(themeKeyValue, themeLabelValue, isCustomThemeValue) 
   };
 }
 
+function normalizeIdeaSourceType(value) {
+  const normalized = normalizeText(value);
+  if (IDEA_SOURCE_TYPES.includes(normalized)) {
+    return normalized;
+  }
+
+  return DEFAULT_PUBLIC_IDEA_SOURCE_TYPE;
+}
+
+function sanitizeExternalUrl(url) {
+  const normalized = normalizeText(url);
+  return /^https?:\/\//i.test(normalized) ? normalized : "";
+}
+
 function normalizeIdeaThemeDoc(idea) {
   const theme = normalizeIdeaTheme(
     idea && idea.themeKey,
@@ -365,7 +694,16 @@ function normalizeIdeaThemeDoc(idea) {
     theme: theme.themeLabel,
     themeKey: theme.themeKey,
     themeLabel: theme.themeLabel,
-    isCustomTheme: theme.isCustomTheme
+    isCustomTheme: theme.isCustomTheme,
+    sourceType: normalizeIdeaSourceType(idea && idea.sourceType),
+    relatedServiceSlugs: unique((Array.isArray(idea && idea.relatedServiceSlugs) ? idea.relatedServiceSlugs : []).map((item) => String(item || "").trim()).filter(Boolean)),
+    excerptBody: normalizeText(idea && idea.excerptBody),
+    wechatArticleUrl: sanitizeExternalUrl(idea && idea.wechatArticleUrl),
+    wechatArticleTitle: normalizeText(idea && idea.wechatArticleTitle),
+    wechatCover: normalizeText(idea && idea.wechatCover),
+    publishedAt: normalizeNumber(idea && idea.publishedAt, 0),
+    readMoreText: normalizeText(idea && idea.readMoreText) || DEFAULT_IDEA_READ_MORE_TEXT,
+    syncStatus: normalizeText(idea && idea.syncStatus) || "draft"
   });
 }
 
@@ -373,8 +711,7 @@ function formatPeriodDate(dateStr) {
   const date = new Date(dateStr);
   const month = date.getMonth() + 1;
   const day = date.getDate();
-  const week = WEEKDAY_NAMES[date.getDay()];
-  return `${String(month).padStart(2, "0")}/${String(day).padStart(2, "0")} ${week}`;
+  return `${String(month).padStart(2, "0")}/${String(day).padStart(2, "0")}`;
 }
 
 function getShanghaiTodayDateString() {
@@ -496,11 +833,13 @@ function getServiceAdjustmentDisplayText(refundText) {
 }
 
 function getServicePriceLabel(service) {
-  return buildPriceLabelFromPeriods(service && service.groupPeriods);
+  const priceLabel = buildPriceLabelFromPeriods(service && service.groupPeriods);
+  return priceLabel || normalizeText(service && service.priceLabel);
 }
 
 function getServiceDurationTag(service) {
-  return buildDurationLabelFromPeriods(service && service.groupPeriods);
+  const durationTag = buildDurationLabelFromPeriods(service && service.groupPeriods);
+  return durationTag || normalizeText(service && service.durationTag);
 }
 
 function parseServiceDurationDays(value) {
@@ -958,13 +1297,20 @@ function buildServiceTravelDetail(service, tags, photoBaseList) {
   };
 }
 
-async function listCollection(name) {
+async function listCollection(name, options) {
+  const fieldSpec = options && options.fieldSpec ? options.fieldSpec : null;
+
   try {
     const rows = [];
     let offset = 0;
 
     while (true) {
-      const result = await db.collection(name).skip(offset).limit(100).get();
+      let query = db.collection(name);
+      if (fieldSpec) {
+        query = query.field(fieldSpec);
+      }
+
+      const result = await query.skip(offset).limit(100).get();
       const batch = result.data || [];
       rows.push(...batch);
 
@@ -981,14 +1327,216 @@ async function listCollection(name) {
   }
 }
 
-async function findCollectionDocBySlug(collectionName, slug) {
+async function listCollectionHead(name, limit, options) {
+  const fieldSpec = options && options.fieldSpec ? options.fieldSpec : null;
+
+  try {
+    let query = db.collection(name);
+    if (fieldSpec) {
+      query = query.field(fieldSpec);
+    }
+
+    const result = await query.limit(Math.max(0, Number(limit) || 0)).get();
+    return (result.data || []).filter((item) => isPublicContentActive(item));
+  } catch (error) {
+    return [];
+  }
+}
+
+async function listCollectionByFieldValues(name, fieldName, values, options) {
+  const fieldSpec = options && options.fieldSpec ? options.fieldSpec : null;
+  const normalizedValues = unique((values || []).map((value) => normalizeText(value)).filter(Boolean));
+  if (!normalizedValues.length) {
+    return [];
+  }
+
+  try {
+    const docMap = new Map();
+    const batchSize = 20;
+
+    for (let index = 0; index < normalizedValues.length; index += batchSize) {
+      const batchValues = normalizedValues.slice(index, index + batchSize);
+      let query = db.collection(name).where({
+        [fieldName]: _.in(batchValues)
+      });
+      if (fieldSpec) {
+        query = query.field(fieldSpec);
+      }
+
+      const result = await query.get();
+      (result.data || []).forEach((item) => {
+        const key = normalizeText(item && item[fieldName]);
+        if (key) {
+          docMap.set(key, item);
+        }
+      });
+    }
+
+    return normalizedValues
+      .map((value) => docMap.get(value))
+      .filter((item) => item && isPublicContentActive(item));
+  } catch (error) {
+    return [];
+  }
+}
+
+function listCollectionBySlugs(name, slugs, options) {
+  return listCollectionByFieldValues(name, "slug", slugs, options);
+}
+
+async function listCreatorsByRefs(refs, options) {
+  const [creatorsBySlug, creatorsById] = await Promise.all([
+    listCollectionByFieldValues(COLLECTIONS.creators, "slug", refs, options),
+    listCollectionByFieldValues(COLLECTIONS.creators, "id", refs, options)
+  ]);
+  const creatorMap = new Map();
+
+  creatorsBySlug.concat(creatorsById).forEach((creator) => {
+    const creatorId = normalizeText(creator && creator.id);
+    const creatorSlug = normalizeText(creator && creator.slug);
+    const key = creatorSlug || creatorId;
+    if (key && !creatorMap.has(key)) {
+      creatorMap.set(key, creator);
+    }
+  });
+
+  return Array.from(creatorMap.values());
+}
+
+function takeActiveTopUp(items, existingItems, limit) {
+  const selected = Array.isArray(existingItems) ? existingItems.slice() : [];
+  const maxCount = Number.isFinite(limit) ? Math.max(limit, 0) : 0;
+  if (!maxCount) {
+    return [];
+  }
+
+  const existingSlugs = new Set(selected.map((item) => normalizeText(item && item.slug)).filter(Boolean));
+  const sourceItems = Array.isArray(items) ? items : [];
+
+  for (let index = 0; index < sourceItems.length && selected.length < maxCount; index += 1) {
+    const item = sourceItems[index];
+    const slug = normalizeText(item && item.slug);
+    if (!slug || existingSlugs.has(slug) || !isPublicContentActive(item)) {
+      continue;
+    }
+
+    existingSlugs.add(slug);
+    selected.push(item);
+  }
+
+  return selected.slice(0, maxCount);
+}
+
+async function loadHomePageCollectionsWithConfig(homeConfig) {
+  const featuredCreatorSlugs = normalizeArray(homeConfig && homeConfig.featuredCreatorSlugs);
+  const featuredDestinationSlugs = normalizeArray(homeConfig && homeConfig.featuredDestinationSlugs);
+  const featuredIdeaSlugs = normalizeArray(homeConfig && homeConfig.featuredIdeaSlugs);
+  const configuredServiceSlugs = unique(
+    normalizeArray(homeConfig && homeConfig.featuredServiceSlugs)
+      .concat(normalizeArray(homeConfig && homeConfig.recentServiceSlugs))
+      .concat(normalizeArray(homeConfig && homeConfig.specialProjectServiceSlugs))
+  );
+
+  const [
+    exactFeaturedCreators,
+    exactFeaturedDestinations,
+    exactFeaturedIdeas,
+    exactConfiguredServices,
+    fallbackCreators,
+    fallbackDestinations,
+    fallbackIdeas,
+    fallbackServices
+  ] = await Promise.all([
+    listCollectionBySlugs(COLLECTIONS.creators, featuredCreatorSlugs, { fieldSpec: CREATOR_CARD_COLLECTION_FIELDS }),
+    listCollectionBySlugs(COLLECTIONS.destinations, featuredDestinationSlugs, { fieldSpec: DESTINATION_CARD_COLLECTION_FIELDS }),
+    listCollectionBySlugs(COLLECTIONS.ideas, featuredIdeaSlugs, { fieldSpec: IDEA_CARD_COLLECTION_FIELDS }),
+    listCollectionBySlugs(COLLECTIONS.services, configuredServiceSlugs, { fieldSpec: SERVICE_LIST_COLLECTION_FIELDS }),
+    listCollectionHead(COLLECTIONS.creators, 6, { fieldSpec: CREATOR_CARD_COLLECTION_FIELDS }),
+    listCollectionHead(COLLECTIONS.destinations, 8, { fieldSpec: DESTINATION_CARD_COLLECTION_FIELDS }),
+    listCollectionHead(COLLECTIONS.ideas, 6, { fieldSpec: IDEA_CARD_COLLECTION_FIELDS }),
+    listCollectionHead(COLLECTIONS.services, 12, { fieldSpec: SERVICE_LIST_COLLECTION_FIELDS })
+  ]);
+
+  const normalizedFeaturedCreators = exactFeaturedCreators
+    .map(normalizeCreatorAssetFields)
+    .map((creator) => Object.assign({}, creator, {
+      tags: getCreatorTags(creator)
+    }));
+  const normalizedFallbackCreators = fallbackCreators
+    .map(normalizeCreatorAssetFields)
+    .map((creator) => Object.assign({}, creator, {
+      tags: getCreatorTags(creator)
+    }));
+  const normalizedFeaturedDestinations = exactFeaturedDestinations.map(normalizeDestinationContentDoc);
+  const normalizedFallbackDestinations = fallbackDestinations.map(normalizeDestinationContentDoc);
+  const normalizedFeaturedIdeas = exactFeaturedIdeas.map(normalizeIdeaAssetFields).map(normalizeIdeaThemeDoc);
+  const normalizedFallbackIdeas = fallbackIdeas.map(normalizeIdeaAssetFields).map(normalizeIdeaThemeDoc);
+  const normalizedConfiguredServices = exactConfiguredServices.map(normalizeServiceContentDoc);
+  const normalizedFallbackServices = fallbackServices.map(normalizeServiceContentDoc);
+
+  const featuredCreators = takeActiveTopUp(normalizedFallbackCreators, normalizedFeaturedCreators, 3);
+  const featuredDestinations = takeActiveTopUp(normalizedFallbackDestinations, normalizedFeaturedDestinations, 4);
+  const featuredIdeasBase = takeActiveTopUp(normalizedFallbackIdeas, normalizedFeaturedIdeas, 3);
+  const servicePool = takeActiveTopUp(normalizedFallbackServices, normalizedConfiguredServices, 12);
+  const creatorRefs = unique(
+    featuredCreators
+      .map((creator) => creator && (creator.slug || creator.id))
+      .concat(servicePool.map((service) => service && service.creatorId))
+      .concat(featuredIdeasBase.map((idea) => idea && idea.authorId))
+  );
+  const creatorResolverPool = featuredCreators.concat(
+    await listCreatorsByRefs(creatorRefs, { fieldSpec: CREATOR_NAME_COLLECTION_FIELDS })
+  );
+  const featuredIdeas = featuredIdeasBase.map((idea) => {
+    const author = findCreatorByRef(creatorResolverPool, idea.authorId);
+    return Object.assign({}, idea, {
+      authorName: author ? author.name : ""
+    });
+  });
+
+  ensureContentCollections({
+    creators: featuredCreators,
+    destinations: featuredDestinations,
+    services: servicePool,
+    ideas: featuredIdeas
+  });
+
+  return {
+    creators: creatorResolverPool,
+    services: servicePool,
+    featuredCreators,
+    featuredDestinations,
+    featuredIdeas
+  };
+}
+
+async function loadJourneyPageCollections() {
+  const [rawCreators, rawDestinations, rawServices] = await Promise.all([
+    listCollection(COLLECTIONS.creators, { fieldSpec: CREATOR_NAME_COLLECTION_FIELDS }),
+    listCollection(COLLECTIONS.destinations, { fieldSpec: DESTINATION_NAME_COLLECTION_FIELDS }),
+    listCollection(COLLECTIONS.services, { fieldSpec: SERVICE_LIST_COLLECTION_FIELDS })
+  ]);
+
+  return {
+    creators: rawCreators,
+    destinations: rawDestinations,
+    services: rawServices.map(normalizeServiceContentDoc)
+  };
+}
+
+async function findCollectionDocBySlug(collectionName, slug, options) {
   const normalizedSlug = normalizeText(slug);
   if (!normalizedSlug) {
     return null;
   }
 
   try {
-    const result = await db.collection(collectionName).where({ slug: normalizedSlug }).limit(1).get();
+    let query = db.collection(collectionName).where({ slug: normalizedSlug }).limit(1);
+    if (options && options.fieldSpec) {
+      query = query.field(options.fieldSpec);
+    }
+
+    const result = await query.get();
     return result.data && result.data.length ? result.data[0] : null;
   } catch (error) {
     return null;
@@ -1070,12 +1618,65 @@ function normalizeSelectedValue(options, value) {
   return (options || []).some((item) => item && item.value === normalized) ? normalized : "";
 }
 
-function filterCreators(creators, options) {
+function buildDestinationRegionCodeMap(destinations) {
+  return (destinations || []).reduce((map, destination) => {
+    const slug = normalizeText(destination && destination.slug);
+    if (!slug) {
+      return map;
+    }
+
+    map[slug] = resolveDestinationRegionCode(destination && destination.regionCode, slug);
+    return map;
+  }, {});
+}
+
+function getServiceDestinationRegionCodes(service, destinationRegionCodeMap) {
+  return unique(
+    normalizeArray(service && service.destinationSlugs)
+      .map((slug) => normalizeText(slug))
+      .map((slug) => (slug ? normalizeDestinationRegionCode(destinationRegionCodeMap && destinationRegionCodeMap[slug], slug) : ""))
+      .filter(Boolean)
+  );
+}
+
+function getCreatorRelatedServices(creator, services, destinationRegionCodeMap, filters) {
+  const requestedDestination = normalizeText(filters && filters.destination);
+  const requestedRegionCode = normalizeDestinationRegionCode(filters && filters.regionCode);
+
+  return normalizeArray(services).filter((service) => {
+    if (!service || !matchesCreatorRef(creator, service.creatorId)) {
+      return false;
+    }
+
+    const destinationSlugs = normalizeArray(service.destinationSlugs).map((slug) => normalizeText(slug)).filter(Boolean);
+    if (requestedDestination && !destinationSlugs.includes(requestedDestination)) {
+      return false;
+    }
+
+    if (requestedRegionCode) {
+      const regionCodes = getServiceDestinationRegionCodes(service, destinationRegionCodeMap);
+      if (!regionCodes.includes(requestedRegionCode)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
+function filterCreators(creators, services, destinationRegionCodeMap, options) {
   const filters = options || {};
   return (creators || []).filter((creator) => {
-    const matchDestination = filters.destination ? (creator.destinationSlugs || []).includes(filters.destination) : true;
     const matchStyle = filters.style ? getCreatorTags(creator).includes(filters.style) : true;
-    return matchDestination && matchStyle;
+    if (!matchStyle) {
+      return false;
+    }
+
+    if (!filters.destination && !filters.regionCode) {
+      return true;
+    }
+
+    return getCreatorRelatedServices(creator, services, destinationRegionCodeMap, filters).length > 0;
   });
 }
 
@@ -1113,13 +1714,25 @@ function filterServices(services, options) {
   });
 }
 
-function buildCreatorDestinationOptions(destinations, creators, filters) {
-  const matchedCreators = filterCreators(creators, {
-    style: filters && filters.style
+function buildCreatorDestinationOptions(destinations, creators, services, destinationRegionCodeMap, filters) {
+  const matchedCreators = filterCreators(creators, services, destinationRegionCodeMap, {
+    style: filters && filters.style,
+    regionCode: filters && filters.regionCode
   });
-  const destinationSlugSet = new Set(
-    matchedCreators.reduce((result, creator) => result.concat(creator.destinationSlugs || []), [])
-  );
+  const destinationSlugSet = new Set();
+
+  matchedCreators.forEach((creator) => {
+    getCreatorRelatedServices(creator, services, destinationRegionCodeMap, {
+      regionCode: filters && filters.regionCode
+    }).forEach((service) => {
+      normalizeArray(service && service.destinationSlugs).forEach((slug) => {
+        const normalizedSlug = normalizeText(slug);
+        if (normalizedSlug) {
+          destinationSlugSet.add(normalizedSlug);
+        }
+      });
+    });
+  });
 
   return buildOptionList(
     (destinations || []).filter((destination) => destinationSlugSet.has(destination.slug)),
@@ -1127,15 +1740,115 @@ function buildCreatorDestinationOptions(destinations, creators, filters) {
   );
 }
 
-function buildCreatorStyleOptions(creators, filters) {
-  const matchedCreators = filterCreators(creators, {
+function buildCreatorRegionOptions(destinations, creators, services, destinationRegionCodeMap, filters) {
+  const matchedCreators = filterCreators(creators, services, destinationRegionCodeMap, {
+    style: filters && filters.style,
     destination: filters && filters.destination
+  });
+  const regionCodeSet = new Set();
+
+  matchedCreators.forEach((creator) => {
+    getCreatorRelatedServices(creator, services, destinationRegionCodeMap, {
+      destination: filters && filters.destination
+    }).forEach((service) => {
+      getServiceDestinationRegionCodes(service, destinationRegionCodeMap).forEach((regionCode) => {
+        regionCodeSet.add(regionCode);
+      });
+    });
+  });
+
+  return buildOptionList(
+    DESTINATION_REGION_OPTIONS.filter((item) => regionCodeSet.has(item.value))
+  );
+}
+
+function buildCreatorStyleOptions(creators, services, destinationRegionCodeMap, filters) {
+  const matchedCreators = filterCreators(creators, services, destinationRegionCodeMap, {
+    destination: filters && filters.destination,
+    regionCode: filters && filters.regionCode
   });
   const tagSet = new Set(
     matchedCreators.reduce((result, creator) => result.concat(getCreatorTags(creator)), [])
   );
 
   return buildOptionList(CREATOR_TAG_OPTIONS.filter((tag) => tagSet.has(tag)));
+}
+
+function compareDateValueAsc(left, right) {
+  const leftValue = normalizeText(left);
+  const rightValue = normalizeText(right);
+
+  if (leftValue && rightValue) {
+    return leftValue.localeCompare(rightValue);
+  }
+
+  if (leftValue) {
+    return -1;
+  }
+
+  if (rightValue) {
+    return 1;
+  }
+
+  return 0;
+}
+
+function buildCreatorSortMeta(creator, services, destinationRegionCodeMap, soldCountMap, filters) {
+  const relatedServices = getCreatorRelatedServices(creator, services, destinationRegionCodeMap, filters);
+  let nearestActiveDate = "";
+  let nearestRouteDate = "";
+
+  relatedServices.forEach((service) => {
+    const publicPeriods = buildPublicGroupPeriods(service && service.groupPeriods, soldCountMap);
+    const firstActivePeriod = publicPeriods.find((period) => isCreatorBookablePeriodStatus(period && period.status));
+    const firstRoutePeriod = publicPeriods[0] || null;
+
+    if (firstActivePeriod && (!nearestActiveDate || firstActivePeriod.dateStart < nearestActiveDate)) {
+      nearestActiveDate = firstActivePeriod.dateStart;
+    }
+
+    if (firstRoutePeriod && (!nearestRouteDate || firstRoutePeriod.dateStart < nearestRouteDate)) {
+      nearestRouteDate = firstRoutePeriod.dateStart;
+    }
+  });
+
+  return {
+    hasActivePeriod: Boolean(nearestActiveDate),
+    nearestActiveDate,
+    nearestRouteDate,
+    relatedServiceCount: relatedServices.length
+  };
+}
+
+function sortCreatorsForFilters(creators, services, destinationRegionCodeMap, soldCountMap, filters) {
+  return normalizeArray(creators)
+    .map((creator, index) => ({
+      creator,
+      index,
+      sortMeta: buildCreatorSortMeta(creator, services, destinationRegionCodeMap, soldCountMap, filters)
+    }))
+    .sort((left, right) => {
+      if (left.sortMeta.hasActivePeriod !== right.sortMeta.hasActivePeriod) {
+        return left.sortMeta.hasActivePeriod ? -1 : 1;
+      }
+
+      const activeDateDiff = compareDateValueAsc(left.sortMeta.nearestActiveDate, right.sortMeta.nearestActiveDate);
+      if (activeDateDiff !== 0) {
+        return activeDateDiff;
+      }
+
+      const routeDateDiff = compareDateValueAsc(left.sortMeta.nearestRouteDate, right.sortMeta.nearestRouteDate);
+      if (routeDateDiff !== 0) {
+        return routeDateDiff;
+      }
+
+      if (left.sortMeta.relatedServiceCount !== right.sortMeta.relatedServiceCount) {
+        return right.sortMeta.relatedServiceCount - left.sortMeta.relatedServiceCount;
+      }
+
+      return left.index - right.index;
+    })
+    .map((item) => item.creator);
 }
 
 function buildDestinationRegionOptions(destinations, services, filters) {
@@ -1302,31 +2015,26 @@ async function loadContentData() {
 }
 
 async function getHomePageData() {
-  const { creators, destinations, services, ideas } = await loadContentData();
-  const homeConfig = (await getConfigValue("homePage")) || {};
+  if (homePageCache && homePageCache.expiresAt > Date.now()) {
+    return homePageCache.value;
+  }
 
-  const featuredCreatorSlugs = homeConfig.featuredCreatorSlugs || [];
-  const featuredDestinationSlugs = homeConfig.featuredDestinationSlugs || [];
-  const featuredIdeaSlugs = homeConfig.featuredIdeaSlugs || [];
+  if (homePagePromise) {
+    return homePagePromise;
+  }
+
+  homePagePromise = (async () => {
+  const homeConfig = (await getConfigValue("homePage")) || {};
+  const {
+    creators,
+    services,
+    featuredCreators,
+    featuredDestinations,
+    featuredIdeas
+  } = await loadHomePageCollectionsWithConfig(homeConfig);
   const featuredServiceSlugs = homeConfig.featuredServiceSlugs || [];
   const recentServiceSlugs = homeConfig.recentServiceSlugs || [];
   const specialProjectServiceSlugs = homeConfig.specialProjectServiceSlugs || [];
-
-  const featuredCreators = featuredCreatorSlugs.length
-    ? creators.filter((creator) => featuredCreatorSlugs.includes(creator.slug))
-    : creators.slice(0, 3);
-  const featuredDestinations = featuredDestinationSlugs.length
-    ? destinations.filter((destination) => featuredDestinationSlugs.includes(destination.slug))
-    : destinations.slice(0, 4);
-  const featuredIdeas = (featuredIdeaSlugs.length
-    ? ideas.filter((idea) => featuredIdeaSlugs.includes(idea.slug))
-    : ideas.slice(0, 3)
-  ).map((idea) => {
-    const author = findCreatorByRef(creators, idea.authorId);
-    return Object.assign({}, idea, {
-      authorName: author ? author.name : ""
-    });
-  });
 
   const featuredServicesByTab = {
     featured: buildHomeServicesTab(services, featuredServiceSlugs, 0),
@@ -1342,63 +2050,193 @@ async function getHomePageData() {
     });
   });
 
-  return {
+  const payload = {
     heroSlides: normalizeHeroSlides(
       Array.isArray(homeConfig.heroSlides) && homeConfig.heroSlides.length
         ? homeConfig.heroSlides
-        : (ideas[0]
+        : (featuredIdeas[0]
           ? [{
-              id: `hero-${ideas[0].slug}`,
+              id: `hero-${featuredIdeas[0].slug}`,
               variant: "photo",
-              image: ideas[0].cover || "",
+              image: featuredIdeas[0].cover || "",
               mark: "野哉",
-              title: ideas[0].title || "",
-              desc: ideas[0].summary || "",
-              targetIdeaSlug: ideas[0].slug
+              title: featuredIdeas[0].title || "",
+              desc: featuredIdeas[0].summary || "",
+              targetIdeaSlug: featuredIdeas[0].slug
             }]
           : [])
     ),
-    featuredCreators: featuredCreators.length ? featuredCreators : creators.slice(0, 3),
-    featuredDestinations: featuredDestinations.length ? featuredDestinations : destinations.slice(0, 4),
+    featuredCreators,
+    featuredDestinations,
     featuredServicesByTab,
-    featuredIdeas: featuredIdeas.length
-      ? featuredIdeas
-      : ideas.slice(0, 3).map((idea) => {
-          const author = findCreatorByRef(creators, idea.authorId);
-          return Object.assign({}, idea, {
-            authorName: author ? author.name : ""
-          });
-        })
+    featuredIdeas
   };
+  homePageCache = {
+    expiresAt: Date.now() + HOME_PAGE_CACHE_TTL_MS,
+    value: payload
+  };
+  return payload;
+  })()
+    .finally(() => {
+      homePagePromise = null;
+    });
+
+  return homePagePromise;
+}
+
+async function getJourneyPageData() {
+  if (journeyPageCache && journeyPageCache.expiresAt > Date.now()) {
+    return journeyPageCache.value;
+  }
+
+  if (journeyPagePromise) {
+    return journeyPagePromise;
+  }
+
+  journeyPagePromise = (async () => {
+  const { creators, destinations, services } = await loadJourneyPageCollections();
+  const [sqlPeriods, soldCountMap] = await Promise.all([
+    listAllSqlServicePeriods(),
+    getAllSoldCountByPeriodCodeMap()
+  ]);
+  const sqlPeriodsByServiceSlug = groupSqlPeriodsByServiceSlug(sqlPeriods);
+
+  const journeys = services
+    .map((service) => {
+      const sqlServicePeriods = sqlPeriodsByServiceSlug[service.slug];
+      const effectivePeriods = Array.isArray(sqlServicePeriods) && sqlServicePeriods.length
+        ? sqlServicePeriods
+        : filterPublicActivePeriods(service.groupPeriods);
+      const activePeriods = buildPublicGroupPeriods(effectivePeriods, soldCountMap);
+      if (!activePeriods.length) {
+        return null;
+      }
+
+      const creator = findCreatorByRef(creators, service.creatorId);
+      const relatedDestinations = destinations.filter((item) => (service.destinationSlugs || []).includes(item.slug));
+      return buildJourneyCard(service, creator, relatedDestinations, activePeriods);
+    })
+    .filter(Boolean)
+    .sort((left, right) => {
+      const statusDiff =
+        getJourneyPeriodStatusPriority(left && left.displayStatus) -
+        getJourneyPeriodStatusPriority(right && right.displayStatus);
+      if (statusDiff !== 0) {
+        return statusDiff;
+      }
+
+      return String(left && left.displayDateStart || "").localeCompare(String(right && right.displayDateStart || ""));
+    });
+
+  const routeTypeSet = new Set();
+  journeys.forEach((journey) => {
+    (journey.routeTypes || []).forEach((tag) => {
+      routeTypeSet.add(tag);
+    });
+  });
+
+  const payload = {
+    routeTypeOptions: ROUTE_TAG_OPTIONS
+      .filter((tag) => routeTypeSet.has(tag))
+      .map((tag) => ({
+        label: tag,
+        value: tag
+      })),
+    journeys
+  };
+  journeyPageCache = {
+    expiresAt: Date.now() + JOURNEY_PAGE_CACHE_TTL_MS,
+    value: payload
+  };
+  return payload;
+  })()
+    .finally(() => {
+      journeyPagePromise = null;
+    });
+
+  return journeyPagePromise;
 }
 
 async function getCreatorsPageData(filters) {
-  const { creators, destinations } = await loadContentData();
+  const { creators, destinations, services } = await loadContentData();
+  const [soldCountMap] = await Promise.all([
+    getAllSoldCountByPeriodCodeMap()
+  ]);
+  const destinationRegionCodeMap = buildDestinationRegionCodeMap(destinations);
   const requestedFilters = filters || {};
   let style = String(requestedFilters.style || "").trim();
+  let regionCode = normalizeDestinationRegionCode(requestedFilters.regionCode);
   let destination = String(requestedFilters.destination || "").trim();
-  let destinationOptions = buildCreatorDestinationOptions(destinations, creators, { style });
+  let destinationOptions = buildCreatorDestinationOptions(
+    destinations,
+    creators,
+    services,
+    destinationRegionCodeMap,
+    { style, regionCode }
+  );
 
   destination = normalizeSelectedValue(destinationOptions, destination);
 
-  let styleOptions = buildCreatorStyleOptions(creators, { destination });
+  let regionOptions = buildCreatorRegionOptions(
+    destinations,
+    creators,
+    services,
+    destinationRegionCodeMap,
+    { style, destination }
+  );
+  regionCode = normalizeSelectedValue(regionOptions, regionCode);
+
+  let styleOptions = buildCreatorStyleOptions(
+    creators,
+    services,
+    destinationRegionCodeMap,
+    { destination, regionCode }
+  );
   style = normalizeSelectedValue(styleOptions, style);
 
-  destinationOptions = buildCreatorDestinationOptions(destinations, creators, { style });
+  destinationOptions = buildCreatorDestinationOptions(
+    destinations,
+    creators,
+    services,
+    destinationRegionCodeMap,
+    { style, regionCode }
+  );
   destination = normalizeSelectedValue(destinationOptions, destination);
-  styleOptions = buildCreatorStyleOptions(creators, { destination });
+  regionOptions = buildCreatorRegionOptions(
+    destinations,
+    creators,
+    services,
+    destinationRegionCodeMap,
+    { style, destination }
+  );
+  regionCode = normalizeSelectedValue(regionOptions, regionCode);
+  styleOptions = buildCreatorStyleOptions(
+    creators,
+    services,
+    destinationRegionCodeMap,
+    { destination, regionCode }
+  );
 
   const normalizedFilters = {
     destination,
+    regionCode,
     style: normalizeSelectedValue(styleOptions, style)
   };
 
   return {
     destinationOptions,
+    regionOptions,
     styleOptions,
     destinationLabels: destinationOptions.map((item) => item.label),
+    regionLabels: regionOptions.map((item) => item.label),
     styleLabels: styleOptions.map((item) => item.label),
-    creators: filterCreators(creators, normalizedFilters)
+    creators: sortCreatorsForFilters(
+      filterCreators(creators, services, destinationRegionCodeMap, normalizedFilters),
+      services,
+      destinationRegionCodeMap,
+      soldCountMap,
+      normalizedFilters
+    )
   };
 }
 
@@ -1555,17 +2393,31 @@ async function getIdeasPageData(theme, creatorSlug) {
 }
 
 async function getIdeaDetailData(slug) {
-  const { creators } = await loadContentData();
+  const { creators, destinations, services } = await loadContentData();
   const idea = await findPublicIdeaBySlug(slug);
   if (!idea) {
     return null;
   }
 
   const author = findCreatorByRef(creators, idea.authorId);
+  const relatedDestinations = destinations
+    .filter((destination) => (idea.destinationSlugs || []).includes(destination.slug));
+  const relatedServiceSlugs = Array.isArray(idea.relatedServiceSlugs) ? idea.relatedServiceSlugs : [];
+  const relatedServices = services
+    .filter((service) => relatedServiceSlugs.includes(service.slug))
+    .map((service) => {
+      const serviceCreator = findCreatorByRef(creators, service.creatorId);
+      return buildPublicService(service, {
+        creatorName: serviceCreator ? serviceCreator.name : ""
+      });
+    });
+  const detailBody = idea.sourceType === "mini" ? idea.body : (idea.excerptBody || idea.body);
   return {
     idea: Object.assign({}, idea, { isFavorited: false }),
     author,
-    blocks: parseIdeaBody(idea.body)
+    relatedDestinations,
+    relatedServices,
+    blocks: parseIdeaBody(detailBody)
   };
 }
 
@@ -1647,64 +2499,201 @@ function buildServiceGalleryState(service, heroCover) {
   };
 }
 
-async function getServiceDetailData(slug) {
-  const { creators, destinations, services } = await loadContentData();
-  const service = services.find((item) => item.slug === slug);
-  if (!service) {
+function buildServiceDetailGalleryPayload(service, heroCover, options) {
+  const galleryState = buildServiceGalleryState(service, heroCover);
+  const previewLimit = Number.isFinite(options && options.previewLimit)
+    ? Math.max(0, options.previewLimit)
+    : 0;
+  const photoGallery = previewLimit
+    ? galleryState.photoGallery.slice(0, previewLimit)
+    : galleryState.photoGallery;
+
+  return {
+    photoGallery,
+    photoTotal: galleryState.photoBaseList.length,
+    mediaTabs: options && options.includeMediaTabs === false ? [] : galleryState.mediaTabs,
+    photoBaseList: galleryState.photoBaseList
+  };
+}
+
+async function loadServiceDetailBase(slug, serviceFieldSpec) {
+  const rawService = await findCollectionDocBySlug(COLLECTIONS.services, slug, {
+    fieldSpec: serviceFieldSpec
+  });
+  if (!rawService || !isPublicContentActive(rawService)) {
     return null;
   }
 
-  const creator = findCreatorByRef(creators, service.creatorId);
-  const relatedDestinations = destinations.filter((item) => (service.destinationSlugs || []).includes(item.slug));
-  const heroCover = service.coverDetail || service.cover || (relatedDestinations[0] ? (relatedDestinations[0].coverDetail || relatedDestinations[0].cover) : "");
-  const galleryState = buildServiceGalleryState(service, heroCover);
-  const photoGallery = galleryState.photoGallery;
-  const photoBaseList = galleryState.photoBaseList;
-  const photoTotal = photoBaseList.length;
+  const service = normalizeServiceContentDoc(rawService);
+  const [creatorDocs, destinationDocs] = await Promise.all([
+    listCreatorsByRefs(service.creatorId ? [service.creatorId] : [], {
+      fieldSpec: CREATOR_CARD_COLLECTION_FIELDS
+    }),
+    listCollectionBySlugs(COLLECTIONS.destinations, service.destinationSlugs || [], {
+      fieldSpec: DESTINATION_CARD_COLLECTION_FIELDS
+    })
+  ]);
+  const creator = creatorDocs[0] ? normalizeCreatorAssetFields(creatorDocs[0]) : null;
+  const relatedDestinations = destinationDocs.map(normalizeDestinationContentDoc);
+  const heroCover =
+    service.coverDetail ||
+    service.cover ||
+    (relatedDestinations[0] ? (relatedDestinations[0].coverDetail || relatedDestinations[0].cover) : "");
+
+  return {
+    service,
+    creator,
+    relatedDestinations,
+    heroCover
+  };
+}
+
+async function getServiceDetailSummaryData(slug) {
+  const detailBase = await loadServiceDetailBase(slug, SERVICE_DETAIL_SUMMARY_COLLECTION_FIELDS);
+  if (!detailBase) {
+    return null;
+  }
+
+  const galleryPayload = buildServiceDetailGalleryPayload(detailBase.service, detailBase.heroCover, {
+    previewLimit: 3,
+    includeMediaTabs: false
+  });
+
+  return {
+    service: buildPublicService(detailBase.service, {
+      isFavorited: false,
+      creatorRoles: getServiceCreatorRoles(detailBase.service)
+    }),
+    creator: detailBase.creator,
+    relatedDestinations: detailBase.relatedDestinations,
+    heroCover: detailBase.heroCover,
+    photoGallery: galleryPayload.photoGallery,
+    photoTotal: galleryPayload.photoTotal,
+    mediaTabs: [],
+    travelDetail: null,
+    groupPeriods: []
+  };
+}
+
+async function getServiceBookingData(slug) {
+  const detailBase = await loadServiceDetailBase(slug, SERVICE_BOOKING_COLLECTION_FIELDS);
+  if (!detailBase) {
+    return null;
+  }
+
   const [sqlPeriods, soldCountMap] = await Promise.all([
-    listSqlServicePeriods(service.slug),
-    getSoldCountByPeriodCodeMap(service.slug)
+    listSqlServicePeriods(detailBase.service.slug),
+    getSoldCountByPeriodCodeMap(detailBase.service.slug)
   ]);
   const effectivePeriods = Array.isArray(sqlPeriods) && sqlPeriods.length
     ? sqlPeriods
-    : filterPublicActivePeriods(service.groupPeriods);
-  const mediaTabs = galleryState.mediaTabs;
+    : filterPublicActivePeriods(detailBase.service.groupPeriods);
 
   return {
-    service: buildPublicService(service, {
+    service: buildPublicService(detailBase.service, {
       isFavorited: false,
-      creatorRoles: getServiceCreatorRoles(service)
+      creatorRoles: getServiceCreatorRoles(detailBase.service)
     }),
-    travelDetail: service.travelDetail || buildServiceTravelDetail(service, [], photoBaseList),
-    creator,
-    relatedDestinations,
-    heroCover,
-    photoGallery,
-    photoTotal,
-    mediaTabs,
-    groupPeriods: effectivePeriods
-      .map((period) =>
-        buildGroupPeriodDisplay({
-          id: period.periodCode || period.id,
-          periodCode: period.periodCode || period.id || "",
-          versionName: period.versionName || "",
-          durationDays: Number(period.durationDays) || 0,
-          dateStart: period.dateStart || "",
-          dateEnd: period.dateEnd || period.dateStart || "",
-          price: Number(period.price) || 0,
-          status: period.status || "available",
-          totalSeats: Number(period.totalSeats) || (Number(period.remainingSeats) || 0) + (soldCountMap[period.periodCode || period.id || ""] || 0),
-          soldCount: soldCountMap[period.periodCode || period.id || ""] || 0,
-          remainingSeats: Number(period.remainingSeats) || 0,
-          minGroup: Number(period.minGroup) || 1
-        })
-      )
+    creator: detailBase.creator,
+    groupPeriods: effectivePeriods.map((period) =>
+      buildGroupPeriodDisplay({
+        id: period.periodCode || period.id,
+        periodCode: period.periodCode || period.id || "",
+        versionName: period.versionName || "",
+        durationDays: Number(period.durationDays) || 0,
+        dateStart: period.dateStart || "",
+        dateEnd: period.dateEnd || period.dateStart || "",
+        price: Number(period.price) || 0,
+        status: period.status || "available",
+        totalSeats:
+          Number(period.totalSeats) ||
+          (Number(period.remainingSeats) || 0) + (soldCountMap[period.periodCode || period.id || ""] || 0),
+        soldCount: soldCountMap[period.periodCode || period.id || ""] || 0,
+        remainingSeats: Number(period.remainingSeats) || 0,
+        minGroup: Number(period.minGroup) || 1
+      })
+    )
   };
+}
+
+async function getServiceDetailContentData(slug) {
+  const detailBase = await loadServiceDetailBase(slug, SERVICE_DETAIL_CONTENT_COLLECTION_FIELDS);
+  if (!detailBase) {
+    return null;
+  }
+
+  const galleryPayload = buildServiceDetailGalleryPayload(detailBase.service, detailBase.heroCover);
+  const [sqlPeriods, soldCountMap] = await Promise.all([
+    listSqlServicePeriods(detailBase.service.slug),
+    getSoldCountByPeriodCodeMap(detailBase.service.slug)
+  ]);
+  const effectivePeriods = Array.isArray(sqlPeriods) && sqlPeriods.length
+    ? sqlPeriods
+    : filterPublicActivePeriods(detailBase.service.groupPeriods);
+
+  return {
+    travelDetail: detailBase.service.travelDetail || buildServiceTravelDetail(detailBase.service, [], galleryPayload.photoBaseList),
+    photoGallery: galleryPayload.photoGallery,
+    photoTotal: galleryPayload.photoTotal,
+    mediaTabs: galleryPayload.mediaTabs,
+    groupPeriods: effectivePeriods.map((period) =>
+      buildGroupPeriodDisplay({
+        id: period.periodCode || period.id,
+        periodCode: period.periodCode || period.id || "",
+        versionName: period.versionName || "",
+        durationDays: Number(period.durationDays) || 0,
+        dateStart: period.dateStart || "",
+        dateEnd: period.dateEnd || period.dateStart || "",
+        price: Number(period.price) || 0,
+        status: period.status || "available",
+        totalSeats:
+          Number(period.totalSeats) ||
+          (Number(period.remainingSeats) || 0) + (soldCountMap[period.periodCode || period.id || ""] || 0),
+        soldCount: soldCountMap[period.periodCode || period.id || ""] || 0,
+        remainingSeats: Number(period.remainingSeats) || 0,
+        minGroup: Number(period.minGroup) || 1
+      })
+    )
+  };
+}
+
+async function getServiceConsultData(slug) {
+  const serviceDoc = await findCollectionDocBySlug(COLLECTIONS.services, slug, {
+    fieldSpec: SERVICE_CONSULT_COLLECTION_FIELDS
+  });
+  if (!serviceDoc || !isPublicContentActive(serviceDoc)) {
+    return null;
+  }
+
+  return {
+    consultWeChatQr:
+      normalizeText(
+        serviceDoc
+        && serviceDoc.travelDetail
+        && serviceDoc.travelDetail.consultWeChatQr
+      ) || ""
+  };
+}
+
+async function getServiceDetailData(slug) {
+  const [summaryPayload, contentPayload] = await Promise.all([
+    getServiceDetailSummaryData(slug),
+    getServiceDetailContentData(slug)
+  ]);
+  if (!summaryPayload) {
+    return null;
+  }
+  if (!contentPayload) {
+    return summaryPayload;
+  }
+
+  return Object.assign({}, summaryPayload, contentPayload);
 }
 
 const handlers = {
   clearCache: () => clearGatewayCache(),
   getHomePageData: (payload) => getHomePageData(payload),
+  getJourneyPageData: () => getJourneyPageData(),
   getCreatorsPageData: (payload) => getCreatorsPageData(payload.filters),
   getCreatorDetailData: (payload) => getCreatorDetailData(payload.slug),
   getDestinationsPageData: (payload) => getDestinationsPageData({
@@ -1715,6 +2704,10 @@ const handlers = {
   getDestinationDetailData: (payload) => getDestinationDetailData(payload.slug, payload.filters),
   getIdeasPageData: (payload) => getIdeasPageData(payload.theme, payload.creatorSlug),
   getIdeaDetailData: (payload) => getIdeaDetailData(payload.slug),
+  getServiceBookingData: (payload) => getServiceBookingData(payload.slug),
+  getServiceConsultData: (payload) => getServiceConsultData(payload.slug),
+  getServiceDetailSummaryData: (payload) => getServiceDetailSummaryData(payload.slug),
+  getServiceDetailContentData: (payload) => getServiceDetailContentData(payload.slug),
   getServiceDetailData: (payload) => getServiceDetailData(payload.slug)
 };
 

@@ -1,0 +1,76 @@
+<view class="journey-route-card {{compact ? 'journey-route-card--compact' : ''}}" bindtap="handleTap">
+  <block wx:if="{{compact}}">
+    <image wx:if="{{journey.cover}}" class="journey-route-card__thumb" src="{{journey.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
+    <view wx:else class="journey-route-card__thumb journey-route-card__thumb--empty"></view>
+    <view class="journey-route-card__compact-body">
+      <view class="journey-route-card__compact-head">
+        <text class="journey-route-card__compact-title">{{journey.name}}</text>
+        <view
+          wx:if="{{journey.displayStatusText}}"
+          class="journey-route-card__badge journey-route-card__badge--compact journey-route-card__badge--{{journey.displayStatusTheme}}"
+        >{{journey.displayStatusText}}</view>
+      </view>
+      <view class="journey-route-card__compact-foot">
+        <text class="journey-route-card__compact-meta">创作者 {{journey.creatorName || '野哉'}}</text>
+        <view class="journey-route-card__compact-foot-right">
+          <text class="journey-route-card__compact-price">{{journey.priceText}}</text>
+          <text class="journey-route-card__compact-arrow">›</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="journey-route-card__plate">
+      <view class="journey-route-card__cover-shell">
+        <image wx:if="{{journey.cover}}" class="journey-route-card__cover" src="{{journey.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
+        <view wx:else class="journey-route-card__cover journey-route-card__cover--empty"></view>
+        <view class="journey-route-card__cover-badges">
+          <view
+            wx:if="{{journey.displayStatusText}}"
+            class="journey-route-card__badge journey-route-card__badge--{{journey.displayStatusTheme}}"
+          >{{journey.displayStatusText}}</view>
+        </view>
+        <image
+          wx:if="{{journey.primaryRouteTypeWordmark}}"
+          class="journey-route-card__route-wordmark"
+          src="{{journey.primaryRouteTypeWordmark}}"
+          mode="widthFix"
+          lazy-load="{{true}}"
+        ></image>
+      </view>
+
+      <view class="journey-route-card__body">
+        <text class="journey-route-card__title">{{journey.name}}</text>
+        <text class="journey-route-card__meta">创作者 {{journey.creatorName || '野哉'}}</text>
+        <text wx:if="{{journey.summary}}" class="journey-route-card__summary">{{journey.summary}}</text>
+        <view class="journey-route-card__foot">
+          <view
+            class="journey-route-card__departure"
+            data-action="departure"
+            data-departure-date="{{journey.displayPeriod.dateStart}}"
+            mark:action="departure"
+            mark:departureDate="{{journey.displayPeriod.dateStart}}"
+            hover-class="journey-route-card__departure--pressed"
+          >
+            <text
+              class="journey-route-card__departure-label"
+              data-action="departure"
+              data-departure-date="{{journey.displayPeriod.dateStart}}"
+              mark:action="departure"
+              mark:departureDate="{{journey.displayPeriod.dateStart}}"
+            >最近出发</text>
+            <text
+              class="journey-route-card__departure-date"
+              data-action="departure"
+              data-departure-date="{{journey.displayPeriod.dateStart}}"
+              mark:action="departure"
+              mark:departureDate="{{journey.displayPeriod.dateStart}}"
+            >{{journey.displayDepartureDatesText || journey.displayDateText}}</text>
+          </view>
+          <text class="journey-route-card__price">{{journey.priceText}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

@@ -22,9 +22,29 @@ Component({
       type: Boolean,
       value: true
     },
+    showSummary: {
+      type: Boolean,
+      value: true
+    },
+    showCreator: {
+      type: Boolean,
+      value: true
+    },
+    showCover: {
+      type: Boolean,
+      value: true
+    },
+    compact: {
+      type: Boolean,
+      value: false
+    },
     linkText: {
       type: String,
       value: "查看这段路"
+    },
+    linkVariant: {
+      type: String,
+      value: "text"
     }
   },
   observers: {

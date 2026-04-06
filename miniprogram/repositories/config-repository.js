@@ -5,7 +5,8 @@ const {
   mapServiceDetailPageConfig,
   mapPaymentResultPageConfig,
   mapOrderDetailPageConfig,
-  mapFavoritesPageConfig
+  mapFavoritesPageConfig,
+  mapArticleBridgePageConfig
 } = require("../mappers/config");
 const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000;
 const responseCache = new Map();
@@ -63,11 +64,16 @@ function getFavoritesPageConfig() {
   return invoke("getFavoritesPageConfig", mapFavoritesPageConfig);
 }
 
+function getArticleBridgePageConfig() {
+  return invoke("getArticleBridgePageConfig", mapArticleBridgePageConfig);
+}
+
 module.exports = {
   getHowItWorksPageConfig,
   getCheckoutPageConfig,
   getServiceDetailPageConfig,
   getPaymentResultPageConfig,
   getOrderDetailPageConfig,
-  getFavoritesPageConfig
+  getFavoritesPageConfig,
+  getArticleBridgePageConfig
 };

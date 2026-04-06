@@ -76,15 +76,14 @@ function buildActiveTrips(orders) {
 async function getMyPageData() {
   const user = await getCurrentUser();
   const loggedIn = Boolean(user);
-  const recentOrders = loggedIn ? await getRecentOrders(2) : [];
-  const activeTripCandidates = loggedIn ? await getRecentOrders(8) : [];
+  const recentOrderCandidates = loggedIn ? await getRecentOrders(8) : [];
 
   return {
     loggedIn,
     user,
     shortcuts: PROFILE_SHORTCUTS,
-    recentOrders,
-    activeTrips: loggedIn ? buildActiveTrips(activeTripCandidates) : []
+    recentOrders: recentOrderCandidates.slice(0, 2),
+    activeTrips: loggedIn ? buildActiveTrips(recentOrderCandidates) : []
   };
 }
 

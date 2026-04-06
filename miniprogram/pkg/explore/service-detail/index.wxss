@@ -514,21 +514,19 @@
 
 .period-date__start,
 .period-date__end {
-  display: block;
+  display: inline-block;
   font-size: 24rpx;
   line-height: 1.4;
   color: #2b241d;
-  white-space: normal;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
+  white-space: nowrap;
 }
 
-.period-date__start {
-  margin-bottom: 2rpx;
-}
-
-.period-date__end {
+.period-date__range {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
   margin-bottom: 12rpx;
+  white-space: nowrap;
 }
 
 .period-date__info {
@@ -579,6 +577,14 @@
   align-items: center;
   gap: 18rpx;
   padding: 10rpx 0 4rpx;
+}
+
+.period-sheet__helper {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #8a5a38;
 }
 
 .period-sheet__footer {

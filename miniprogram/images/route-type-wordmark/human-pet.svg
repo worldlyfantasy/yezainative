@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 74 23">
+  <rect width="74" height="17" x="0" y="3" rx="8.5" fill="#d15e14"/>
+  <g fill="#fff" transform="translate(8 2)">
+    <circle cx="10" cy="4.8" r="2.8"/>
+    <path d="M6 12c0-2.5 1.8-4.6 4-4.6s4 2.1 4 4.6v5H11.6v-4.5h-.9V20H9v-7.5h-.9V17H6Z"/>
+    <circle cx="21.2" cy="7" r="2"/>
+    <circle cx="17.3" cy="9.8" r="1.9"/>
+    <circle cx="25.1" cy="9.8" r="1.9"/>
+    <path d="M21.2 11.8c-2.5 0-4.5 1.9-4.5 4.4 0 2.8 2.1 4.6 4.5 4.6s4.5-1.8 4.5-4.6c0-2.5-2-4.4-4.5-4.4Z"/>
+  </g>
+  <text x="41" y="15" fill="#fff" font-family="OPPOSans-B, OPPOSans" font-size="10" text-anchor="middle">人宠</text>
+</svg>

@@ -70,7 +70,15 @@ const defaultConfigs = {
     completedPrimaryText: "再次报名"
   },
   favoritesPage: {
-    loginHint: "登录后可查看和管理你收藏的目的地、人物、行程与故事。"
+    loginHint: "登录后可查看和管理你收藏的人物、行程与故事。"
+  },
+  articleBridgePage: {
+    bridgeBaseUrl: "",
+    bridgePageTitle: "阅读全文",
+    bridgeLoadingText: "正在打开公众号全文…",
+    bridgeFallbackTitle: "如真机无法直接打开，请配置业务域名下的文章中转页地址。",
+    bridgeActionText: "打开原文",
+    bridgeHintText: "请先在微信公众平台把当前小程序与目标公众号完成关联，再使用公众号文章链接。"
   }
 };
 

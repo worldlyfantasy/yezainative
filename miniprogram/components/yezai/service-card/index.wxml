@@ -1,17 +1,20 @@
-<view class="service-card" bindtap="handleTap">
-  <image wx:if="{{service.cover}}" class="service-card__cover" src="{{service.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
+<view class="service-card {{compact ? 'service-card--compact' : ''}}" bindtap="handleTap">
+  <image wx:if="{{showCover && service.cover}}" class="service-card__cover" src="{{service.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
   <view class="service-card__meta">
     <text class="service-card__type">{{service.type}}</text>
     <text class="service-card__duration">{{service.durationTag}}</text>
   </view>
   <text class="service-card__name">{{service.name}}</text>
-  <text class="service-card__summary">{{service.summary}}</text>
+  <text wx:if="{{showSummary && service.summary}}" class="service-card__summary">{{service.summary}}</text>
   <view wx:if="{{showTags && service.tags && service.tags.length}}" class="row-tags service-card__tags">
     <text wx:for="{{service.tags}}" wx:key="*this" class="tag-chip service-card__tag">{{item}}</text>
   </view>
-  <text wx:if="{{creatorName}}" class="service-card__creator">由 {{creatorName}}</text>
+  <text wx:if="{{showCreator && creatorName}}" class="service-card__creator">由 {{creatorName}}</text>
   <view class="service-card__foot">
     <text class="service-card__price">{{resolvedPrice}}</text>
-    <text class="service-card__link">{{linkText}} →</text>
+    <view class="service-card__link-wrap">
+      <text wx:if="{{linkVariant === 'pill'}}" class="service-card__link service-card__link--pill">{{linkText}}</text>
+      <text wx:else class="service-card__link">{{linkText}} →</text>
+    </view>
   </view>
 </view>

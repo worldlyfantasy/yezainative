@@ -14,12 +14,14 @@ const sqlApp = cloudbase.init({
   env: process.env.TCB_ENV || cloud.DYNAMIC_CURRENT_ENV
 });
 const runSQL = (sqlApp.models && (sqlApp.models.$runSQL || sqlApp.models.runSQL)) || null;
+const rdb = typeof sqlApp.rdb === "function" ? sqlApp.rdb() : null;
 const FAVORITES_COLLECTION = "favorites";
 const ORDER_EVENTS_COLLECTION = "order_events";
 const QUERY_BATCH_SIZE = 100;
 const MODEL_QUERY_BATCH_SIZE = 100;
 const SERVICE_PERIOD_UPDATE_RETRY_LIMIT = 5;
 const ORDER_STATUS_UPDATE_RETRY_LIMIT = 3;
+const MAX_ORDER_PEOPLE_COUNT = 3;
 const ORDER_MODEL_NAME = "TravelOrder";
 const SERVICE_PERIOD_MODEL_NAME = "ServicePeriod";
 const ENABLE_CLIENT_PAY_ORDER = process.env.ENABLE_CLIENT_PAY_ORDER === "true";
@@ -58,6 +60,11 @@ function createFavoriteState() {
 
 function createOrderNo(timestamp) {
   return `yz${timestamp}${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function createSqlRecordId(prefix) {
+  const normalizedPrefix = String(prefix || "").replace(/[^a-zA-Z0-9]+/g, "").toLowerCase() || "rec";
+  return `${normalizedPrefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function formatDateTime(timestamp) {
@@ -319,6 +326,41 @@ function stringifyJsonWithMaxLength(value, maxLength) {
     return serialized;
   }
   return serialized.slice(0, maxLength);
+}
+
+function buildPersistedTravelers(travelers, maxLength) {
+  const compactTravelers = (Array.isArray(travelers) ? travelers : []).map((traveler) => {
+    const source = traveler && typeof traveler === "object" ? traveler : {};
+    const compact = {
+      n: truncateString(source.name, 32),
+      i: truncateString(source.documentNumber || source.idCard || source.idNo, 32),
+      p: truncateString(source.phone, 32)
+    };
+
+    if (source.wechat) {
+      compact.w = truncateString(source.wechat, 32);
+    }
+    if (source.note) {
+      compact.o = truncateString(source.note, 32);
+    }
+
+    return compact;
+  });
+
+  const serialized = stringifyJson(compactTravelers);
+  if (!serialized) {
+    return "";
+  }
+  if (!maxLength || serialized.length <= maxLength) {
+    return serialized;
+  }
+
+  const compactWithoutOptionalFields = compactTravelers.map((traveler) => ({
+    n: traveler.n,
+    i: traveler.i,
+    p: traveler.p
+  }));
+  return stringifyJsonWithMaxLength(compactWithoutOptionalFields, maxLength);
 }
 
 function buildPersistedServiceSnapshot(snapshot) {
@@ -744,10 +786,28 @@ async function findServicePeriodById(periodId) {
 }
 
 function resolvePeriodStatus(periodRecord, remainingSeats) {
-  const currentStatus = String(periodRecord && periodRecord.status ? periodRecord.status : "").trim();
+  const legacyStatus = typeof periodRecord === "string" ? periodRecord : "";
+  const normalizedPeriodRecord = (
+    periodRecord
+    && typeof periodRecord === "object"
+    && !Array.isArray(periodRecord)
+  ) ? periodRecord : null;
+  const currentStatus = String(
+    normalizedPeriodRecord && normalizedPeriodRecord.status
+      ? normalizedPeriodRecord.status
+      : legacyStatus
+  ).trim();
   const today = getShanghaiTodayDateString();
-  const dateEnd = String(periodRecord && (periodRecord.dateEnd || periodRecord.dateStart) ? (periodRecord.dateEnd || periodRecord.dateStart) : "").trim();
-  const dateStart = String(periodRecord && periodRecord.dateStart ? periodRecord.dateStart : "").trim();
+  const dateEnd = String(
+    normalizedPeriodRecord && (normalizedPeriodRecord.dateEnd || normalizedPeriodRecord.dateStart)
+      ? (normalizedPeriodRecord.dateEnd || normalizedPeriodRecord.dateStart)
+      : ""
+  ).trim();
+  const dateStart = String(
+    normalizedPeriodRecord && normalizedPeriodRecord.dateStart
+      ? normalizedPeriodRecord.dateStart
+      : ""
+  ).trim();
 
   if (currentStatus === "inactive") {
     return "inactive";
@@ -1022,6 +1082,9 @@ async function createOrder(payload) {
   if (!peopleCount) {
     throw new Error("peopleCount must be a positive integer");
   }
+  if (peopleCount > MAX_ORDER_PEOPLE_COUNT) {
+    throw new Error("peopleCount exceeds max allowed");
+  }
 
   if (clientRequestId) {
     const existingRecord = await findOrderRecordByWhere({
@@ -1054,6 +1117,7 @@ async function createOrder(payload) {
   const payable = settlement.payable;
   const timestamp = Date.now();
   const orderNo = createOrderNo(timestamp);
+  const orderRecordId = createSqlRecordId("order");
   const shortId = String(orderNo).slice(-4);
   const createdAtText = formatDateTime(timestamp);
   const serviceSnapshot = payload.serviceSnapshot || {};
@@ -1081,6 +1145,7 @@ async function createOrder(payload) {
   const travelDateStart = orderServiceSnapshot.travelPeriod.dateStart;
   const travelDateEnd = orderServiceSnapshot.travelPeriod.dateEnd;
   const orderData = {
+    _id: orderRecordId,
     orderNo,
     shortId,
     userOpenid: openid,
@@ -1107,20 +1172,30 @@ async function createOrder(payload) {
     // Keep legacy model fields for compatibility until the CloudBase model is updated.
     travelerName: String(contact.name || "").trim(),
     travelerPhone: String(contact.phone || "").trim(),
-    travelersJson: stringifyJsonWithMaxLength(travelers, 4096),
+    travelersJson: buildPersistedTravelers(travelers, 256),
     serviceSnapshotJson: stringifyJsonWithMaxLength(buildPersistedServiceSnapshot(orderServiceSnapshot), 240),
     creatorSnapshotJson: stringifyJsonWithMaxLength(buildPersistedCreatorSnapshot(creatorSnapshot), 240),
     status: "pending",
+    createdAt: timestamp,
     createdAtText,
-    createdAtTs: timestamp
+    createdAtTs: timestamp,
+    updatedAt: timestamp,
+    createBy: openid,
+    updateBy: openid,
+    owner: openid,
+    _openid: openid
   };
 
   await reserveServicePeriodSeats(periodRecord._id, peopleCount);
 
   try {
-    await getOrderModel().create({
-      data: orderData
-    });
+    if (!rdb) {
+      throw new Error("rdb unavailable");
+    }
+    const { error } = await rdb.from(ORDER_MODEL_NAME).insert(orderData);
+    if (error) {
+      throw error;
+    }
     await appendOrderStatusEvent({
       orderNo,
       userOpenid: openid,
@@ -1158,9 +1233,6 @@ async function createOrder(payload) {
 
   return mapSqlOrder(
     Object.assign(
-      {
-        _id: ""
-      },
       orderData
     )
   );
@@ -1382,9 +1454,12 @@ exports.__test__ = {
   buildFavoriteDestination,
   buildFavoriteIdea,
   buildFavoriteService,
+  createOrder,
   buildOrderServiceSnapshot,
   buildOrderStatusUpdateData,
+  buildPersistedTravelers,
   buildServiceSnapshot,
+  createSqlRecordId,
   filterOrdersByStatus,
   getTravelPeriod,
   mapSqlOrder,

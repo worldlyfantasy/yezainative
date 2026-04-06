@@ -203,7 +203,7 @@
 
 .trip-card {
   width: 540rpx;
-  height: 404rpx;
+  height: 626rpx;
   padding-top: 18rpx;
   padding-bottom: 16rpx;
   border: none;
@@ -218,7 +218,7 @@
 .trip-card__cover-wrap {
   position: relative;
   width: 502rpx;
-  height: 280rpx;
+  height: 502rpx;
   margin: 0 auto;
   border-radius: 18rpx;
   overflow: hidden;
@@ -289,13 +289,11 @@
   align-items: center;
   justify-content: center;
   gap: 20rpx;
-  margin-bottom: 24rpx;
   width: 100%;
 }
 
-.service-tabs--bottom {
-  margin-top: 24rpx;
-  margin-bottom: 2rpx;
+.service-tabs--top {
+  margin-bottom: 24rpx;
 }
 
 .service-tab {

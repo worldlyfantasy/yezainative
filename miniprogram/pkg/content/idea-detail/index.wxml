@@ -24,30 +24,59 @@
   <text class="back-link" bindtap="goBack">← 返回文章列表</text>
 
   <view class="section-block article-card">
+    <image wx:if="{{idea.cover}}" class="article-card__cover" src="{{idea.cover}}" mode="aspectFill"></image>
     <view class="article-card__title-row">
       <text class="page-title article-card__title">{{idea.title}}</text>
-      <favorite-star
-        favorited="{{idea.isFavorited}}"
-        notice-state="{{favoriteNoticeState}}"
-        notice-label="{{favoriteNoticeLabel}}"
-        notice-action-label="{{favoriteNoticeActionLabel}}"
-        notice-mode="{{favoriteNoticeMode}}"
-        bind:toggle="toggleFavorite"
-        bind:noticeaction="handleFavoriteNoticeAction"
-      ></favorite-star>
+      <view class="detail-action-group">
+        <favorite-star
+          favorited="{{idea.isFavorited}}"
+          notice-state="{{favoriteNoticeState}}"
+          notice-label="{{favoriteNoticeLabel}}"
+          notice-action-label="{{favoriteNoticeActionLabel}}"
+          notice-mode="{{favoriteNoticeMode}}"
+          bind:toggle="toggleFavorite"
+          bind:noticeaction="handleFavoriteNoticeAction"
+        ></favorite-star>
+      </view>
     </view>
 
-    <rich-text class="article-rich-text" nodes="{{richTextHtml}}"></rich-text>
+    <view wx:if="{{author && author.name}}" class="article-hero-meta">
+      <view wx:if="{{author && author.name}}" class="article-hero-meta__author">
+        <text class="article-hero-meta__eyebrow">BY</text>
+        <text class="article-hero-meta__name">{{author.name}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{excerptHtml && !isMiniFullArticle}}" class="article-guide-block">
+      <view class="article-guide-block__inner">
+        <text class="article-guide-block__eyebrow">导读</text>
+        <rich-text class="article-rich-text article-rich-text--excerpt" nodes="{{excerptHtml}}"></rich-text>
+        <button wx:if="{{showReadMore}}" class="article-inline-button" bindtap="handleReadMore">{{idea.readMoreText || '阅读全文'}}</button>
+      </view>
+    </view>
+
+    <rich-text wx:if="{{richTextHtml}}" class="article-rich-text" nodes="{{richTextHtml}}"></rich-text>
   </view>
 
-  <view wx:if="{{author}}" class="section-block article-author" bindtap="goCreatorDetail">
-    <image class="article-author__avatar" src="{{author.avatar}}" mode="aspectFill"></image>
-    <view class="article-author__body">
-      <text class="section-title article-author__name">{{author.name}}</text>
-      <text class="page-subtitle article-author__stance">{{author.stance}}</text>
+  <view wx:if="{{relatedServices.length}}" class="section-block article-services">
+    <view class="card-stack article-services__list">
+      <service-card
+        wx:for="{{relatedServices}}"
+        wx:key="slug"
+        class="idea-service-card"
+        service="{{item}}"
+        compact="{{true}}"
+        show-summary="{{false}}"
+        show-tags="{{false}}"
+        show-creator="{{false}}"
+        hide-duration-in-price="{{true}}"
+        link-text="立即报名"
+        link-variant="pill"
+        bind:cardtap="onServiceTap"
+      ></service-card>
     </view>
-    <text class="article-author__arrow">→</text>
   </view>
+
 </view>
 
 <app-tab-bar></app-tab-bar>

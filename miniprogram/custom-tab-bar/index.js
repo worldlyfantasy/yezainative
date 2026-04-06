@@ -17,8 +17,8 @@ Component({
         activeIcon: "/images/panel/tab-creators-active.svg"
       },
       {
-        pagePath: TOP_LEVEL_ROUTES.destinations,
-        text: "土地",
+        pagePath: TOP_LEVEL_ROUTES.journeys,
+        text: "旅程",
         icon: "/images/panel/tab-destinations-inactive.svg",
         activeIcon: "/images/panel/tab-destinations-active.svg"
       },

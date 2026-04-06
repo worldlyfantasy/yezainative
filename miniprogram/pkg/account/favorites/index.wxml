@@ -18,23 +18,6 @@
   </view>
 
   <block wx:elif="{{hasFavorites}}">
-    <view wx:if="{{favoriteDestinations.length}}" class="section-block">
-      <view class="section-head favorites-section__head">
-        <view>
-          <text class="section-eyebrow">土地</text>
-        </view>
-        <text class="favorites-section__meta">{{favoriteDestinations.length}} 个</text>
-      </view>
-      <view class="card-stack">
-        <destination-card
-          wx:for="{{favoriteDestinations}}"
-          wx:key="id"
-          destination="{{item}}"
-          bind:cardtap="onDestinationTap"
-        ></destination-card>
-      </view>
-    </view>
-
     <view wx:if="{{favoriteCreators.length}}" class="section-block">
       <view class="section-head favorites-section__head">
         <view>
@@ -83,6 +66,10 @@
           wx:key="slug"
           class="favorites-idea-card"
           data-slug="{{item.slug}}"
+          data-source-type="{{item.sourceType}}"
+          data-wechat-article-url="{{item.wechatArticleUrl}}"
+          data-wechat-article-title="{{item.wechatArticleTitle}}"
+          data-title="{{item.title}}"
           bindtap="onIdeaTap"
         >
           <text class="section-eyebrow">主题：{{item.theme}}</text>
@@ -96,7 +83,7 @@
 
   <view wx:else class="section-block paper-block">
     <text class="favorites-section__title">还没有收藏内容</text>
-    <text class="page-subtitle favorites-empty__text">去目的地、人物、行程或故事详情页，点一下标题右侧的收藏图标，卡片就会出现在这里。</text>
+    <text class="page-subtitle favorites-empty__text">去人物、行程或故事详情页，点一下标题右侧的收藏图标，卡片就会出现在这里。</text>
   </view>
 </view>
 

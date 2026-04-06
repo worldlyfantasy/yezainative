@@ -94,7 +94,8 @@ const handlers = {
   getServiceDetailPageConfig: () => readConfig("serviceDetailPage"),
   getPaymentResultPageConfig: () => readConfig("paymentResultPage"),
   getOrderDetailPageConfig: () => readConfig("orderDetailPage"),
-  getFavoritesPageConfig: () => readConfig("favoritesPage")
+  getFavoritesPageConfig: () => readConfig("favoritesPage"),
+  getArticleBridgePageConfig: () => readConfig("articleBridgePage")
 };
 
 exports.main = async (event) => {

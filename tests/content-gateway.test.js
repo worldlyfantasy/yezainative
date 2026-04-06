@@ -29,6 +29,9 @@ function loadContentGatewayModule(options = {}) {
             collection(name) {
               const data = collections[name] || {};
               return {
+                field() {
+                  return this;
+                },
                 skip() {
                   return this;
                 },
@@ -38,6 +41,9 @@ function loadContentGatewayModule(options = {}) {
                 get: async () => ({ data: Array.isArray(data.list) ? data.list : [] }),
                 where(query) {
                   return {
+                    field() {
+                      return this;
+                    },
                     limit() {
                       return this;
                     },
@@ -170,6 +176,7 @@ test("contentGateway returns active idea detail from direct slug lookup", async 
             title: "港口笔记",
             status: "active",
             authorId: "author-b",
+            destinationSlugs: ["harbor-city"],
             body: "第一段\n\n第二段"
           }
         ]
@@ -185,6 +192,61 @@ test("contentGateway returns active idea detail from direct slug lookup", async 
   assert.equal(result.ok, true);
   assert.equal(result.data.idea.slug, "harbor-notes");
   assert.equal(result.data.idea.title, "港口笔记");
+  assert.equal(result.data.idea.sourceType, "mini");
+  assert.deepEqual(result.data.relatedDestinations.map((item) => item.slug), ["harbor-city"]);
+});
+
+test("contentGateway exposes hybrid idea detail fields for导读 and external article link", async () => {
+  const gateway = loadContentGatewayModule({
+    collections: {
+      creators: {
+        list: [{ slug: "author-c", name: "作者C", id: "creator-3" }]
+      },
+      destinations: {
+        list: [{ slug: "wuyi-ancient", name: "武夷古道" }]
+      },
+      services: {
+        list: [{ slug: "dummy-service", name: "示例路线", destinationSlugs: ["wuyi-ancient"] }]
+      },
+      ideas: {
+        list: [
+          {
+            slug: "seed-idea",
+            title: "种子故事",
+            status: "active",
+            authorId: "creator-3",
+            body: "种子正文"
+          }
+        ],
+        bySlug: [
+          {
+            slug: "wuyi-writing",
+            title: "在武夷古道写一封给自己的信",
+            status: "active",
+            authorId: "creator-3",
+            sourceType: "hybrid",
+            excerptBody: "这是小程序导读。",
+            wechatArticleUrl: "https://mp.weixin.qq.com/s/example",
+            readMoreText: "阅读全文",
+            destinationSlugs: ["wuyi-ancient"],
+            body: "归档正文"
+          }
+        ]
+      }
+    }
+  });
+
+  const result = await gateway.main({
+    action: "getIdeaDetailData",
+    payload: { slug: "wuyi-writing" }
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.idea.sourceType, "hybrid");
+  assert.equal(result.data.idea.excerptBody, "这是小程序导读。");
+  assert.equal(result.data.idea.wechatArticleUrl, "https://mp.weixin.qq.com/s/example");
+  assert.equal(result.data.idea.readMoreText, "阅读全文");
+  assert.deepEqual(result.data.relatedDestinations.map((item) => item.name), ["武夷古道"]);
 });
 
 test("contentGateway falls back to legacy NoSQL groupPeriods when SQL periods are empty", async () => {
@@ -244,4 +306,119 @@ test("contentGateway falls back to legacy NoSQL groupPeriods when SQL periods ar
   assert.equal(result.ok, true);
   assert.equal(result.data.featuredServicesByTab.featured[0].priceLabel, "¥4280 起");
   assert.equal(result.data.featuredServicesByTab.featured[0].durationTag, "4天");
+});
+
+test("contentGateway filters creator regions by existing routes and sorts region results by active departure date", async () => {
+  const gateway = loadContentGatewayModule({
+    collections: {
+      creators: {
+        list: [
+          { id: "creator-a", slug: "a", name: "阿野", tags: ["自然野行"] },
+          { id: "creator-b", slug: "b", name: "北原", tags: ["自然野行"] },
+          { id: "creator-c", slug: "c", name: "藏川", tags: ["自然野行"] },
+          { id: "creator-d", slug: "d", name: "大漠", tags: ["自然野行"] }
+        ]
+      },
+      destinations: {
+        list: [
+          { slug: "nanjiang-dune", name: "南疆", regionCode: "cn_xinjiang" },
+          { slug: "qinghai-lake", name: "青海湖", regionCode: "cn_tibetan" }
+        ]
+      },
+      services: {
+        list: [
+          { slug: "xj-near", name: "南疆近线", creatorId: "creator-a", destinationSlugs: ["nanjiang-dune"] },
+          { slug: "xj-soldout", name: "南疆满位线", creatorId: "creator-b", destinationSlugs: ["nanjiang-dune"] },
+          { slug: "tibet-route", name: "藏区路线", creatorId: "creator-c", destinationSlugs: ["qinghai-lake"] },
+          { slug: "xj-far", name: "南疆远线", creatorId: "creator-d", destinationSlugs: ["nanjiang-dune"] }
+        ]
+      },
+      ideas: {
+        list: [
+          { slug: "seed-idea", title: "种子故事", status: "active", authorId: "creator-a", body: "正文" }
+        ]
+      }
+    },
+    runSQL: async (sql) => {
+      if (sql.includes("FROM `ServicePeriod`")) {
+        return {
+          data: {
+            executeResultList: [
+              {
+                serviceSlug: "xj-near",
+                periodCode: "XJ-NEAR",
+                dateStart: "2099-05-01",
+                dateEnd: "2099-05-05",
+                price: 4999,
+                minGroup: 5,
+                remainingSeats: 8,
+                status: "available"
+              },
+              {
+                serviceSlug: "xj-soldout",
+                periodCode: "XJ-SOLDOUT",
+                dateStart: "2099-04-15",
+                dateEnd: "2099-04-19",
+                price: 4999,
+                minGroup: 5,
+                remainingSeats: 0,
+                status: "available"
+              },
+              {
+                serviceSlug: "tibet-route",
+                periodCode: "TB-SOLDOUT",
+                dateStart: "2099-07-01",
+                dateEnd: "2099-07-05",
+                price: 6999,
+                minGroup: 5,
+                remainingSeats: 0,
+                status: "available"
+              },
+              {
+                serviceSlug: "xj-far",
+                periodCode: "XJ-FAR",
+                dateStart: "2099-06-01",
+                dateEnd: "2099-06-05",
+                price: 5999,
+                minGroup: 5,
+                remainingSeats: 6,
+                status: "available"
+              }
+            ]
+          }
+        };
+      }
+
+      if (sql.includes("FROM `TravelOrder`")) {
+        return {
+          data: {
+            executeResultList: [
+              { servicePeriodCode: "XJ-SOLDOUT", soldCount: 10 },
+              { servicePeriodCode: "TB-SOLDOUT", soldCount: 10 }
+            ]
+          }
+        };
+      }
+
+      return {
+        data: {
+          executeResultList: []
+        }
+      };
+    }
+  });
+
+  const result = await gateway.main({
+    action: "getCreatorsPageData",
+    payload: {
+      filters: {
+        style: "自然野行",
+        regionCode: "cn_xinjiang"
+      }
+    }
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.data.regionLabels, ["全部", "藏区", "新疆"]);
+  assert.deepEqual(result.data.creators.map((item) => item.slug), ["a", "d", "b"]);
 });

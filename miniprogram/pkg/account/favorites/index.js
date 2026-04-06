@@ -2,6 +2,7 @@ const { getFavoritesPageData } = require("../../../repositories/transaction-repo
 const { getFavoritesPageConfig } = require("../../../repositories/config-repository");
 const { getCurrentUser } = require("../../../services/user");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
+const { openIdea } = require("../../../services/idea-navigation");
 const { isAuditMode } = require("../../../utils/audit");
 
 Page({
@@ -18,11 +19,27 @@ Page({
     hasFavorites: false
   },
 
+  normalizeLoginHint(text) {
+    const fallback = "登录后可查看和管理你收藏的人物、行程与故事。";
+    const source = String(text || "").trim();
+    if (!source) {
+      return fallback;
+    }
+
+    return source.replace(/目的地、?/g, "").replace(/土地、?/g, "") || fallback;
+  },
+
   async onLoad() {
     try {
-      this.setData(await getFavoritesPageConfig());
+      const config = await getFavoritesPageConfig();
+      this.setData({
+        loginHint: this.normalizeLoginHint(config && config.loginHint)
+      });
     } catch (error) {
       console.error("Failed to load favorites page config", error);
+      this.setData({
+        loginHint: this.normalizeLoginHint("")
+      });
     }
   },
 
@@ -55,8 +72,7 @@ Page({
 
       const payload = await getFavoritesPageData();
       const hasFavorites = Boolean(
-        payload.favoriteDestinations.length ||
-          payload.favoriteCreators.length ||
+        payload.favoriteCreators.length ||
           payload.favoriteServices.length ||
           payload.favoriteIdeas.length
       );
@@ -105,8 +121,6 @@ Page({
   },
 
   onIdeaTap(event) {
-    wx.navigateTo({
-      url: `/pkg/content/idea-detail/index?slug=${event.currentTarget.dataset.slug}`
-    });
+    openIdea(event.currentTarget.dataset);
   }
 });

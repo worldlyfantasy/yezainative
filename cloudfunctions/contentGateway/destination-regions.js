@@ -1,37 +1,59 @@
 const DESTINATION_REGION_OPTIONS = [
-  { label: "华北", value: "cn_north" },
-  { label: "东北", value: "cn_northeast" },
-  { label: "华东", value: "cn_east" },
-  { label: "华中", value: "cn_central" },
-  { label: "华南", value: "cn_south" },
-  { label: "西南", value: "cn_southwest" },
-  { label: "西北", value: "cn_northwest" },
-  { label: "港澳台", value: "greater_china_hmt" },
-  { label: "东亚", value: "asia_east" },
-  { label: "东南亚", value: "asia_southeast" },
-  { label: "南亚", value: "asia_south" },
-  { label: "中亚", value: "asia_central" },
-  { label: "西亚/中东", value: "asia_west_middle_east" },
-  { label: "欧洲", value: "europe" },
-  { label: "非洲", value: "africa" },
-  { label: "北美", value: "north_america" },
-  { label: "拉丁美洲", value: "latin_america" },
-  { label: "大洋洲", value: "oceania" }
+  { label: "藏区", value: "cn_tibetan" },
+  { label: "新疆", value: "cn_xinjiang" },
+  { label: "西北", value: "cn_great_northwest" },
+  { label: "江浙沪", value: "cn_jiang_zhe_hu" },
+  { label: "华中山水", value: "cn_central_landscape" },
+  { label: "云贵川", value: "cn_yun_gui_chuan" },
+  { label: "华南海岛", value: "cn_south_islands" },
+  { label: "京津冀", value: "cn_jing_jin_ji" },
+  { label: "中原", value: "cn_central_plain" },
+  { label: "东北", value: "cn_northeast_region" },
+  { label: "内蒙古", value: "cn_inner_mongolia" },
+  { label: "日韩", value: "intl_japan_korea" },
+  { label: "东南亚", value: "intl_southeast_asia" },
+  { label: "南亚", value: "intl_south_asia" },
+  { label: "中东", value: "intl_middle_east" },
+  { label: "欧洲", value: "intl_europe" },
+  { label: "美洲", value: "intl_americas" },
+  { label: "非洲", value: "intl_africa" },
+  { label: "大洋洲", value: "intl_oceania" }
 ];
 
+const LEGACY_DESTINATION_REGION_CODE_ALIASES = {
+  "cn_north": "cn_jing_jin_ji",
+  "cn_northeast": "cn_northeast_region",
+  "cn_east": "cn_jiang_zhe_hu",
+  "cn_central": "cn_central_landscape",
+  "cn_south": "cn_south_islands",
+  "cn_southwest": "cn_yun_gui_chuan",
+  "cn_northwest": "cn_great_northwest",
+  "greater_china_hmt": "",
+  "asia_east": "intl_japan_korea",
+  "asia_southeast": "intl_southeast_asia",
+  "asia_south": "intl_south_asia",
+  "asia_central": "",
+  "asia_west_middle_east": "intl_middle_east",
+  "europe": "intl_europe",
+  "africa": "intl_africa",
+  "north_america": "intl_americas",
+  "latin_america": "intl_americas",
+  "oceania": "intl_oceania"
+};
+
 const LEGACY_DESTINATION_REGION_BY_SLUG = {
-  "aba-highlands": "cn_southwest",
-  "qiandong-valley": "cn_southwest",
-  "minbei-creek": "cn_east",
-  "hexicorridor": "cn_northwest",
-  "enxi-gorge": "cn_central",
-  "nanjiang-dune": "cn_northwest",
-  "songhua-river": "cn_northeast",
-  "lancang-source": "cn_southwest",
-  "qiongbay-salt": "cn_south",
-  "yunnan-rainforest": "cn_southwest",
-  "wuyi-ancient": "cn_east",
-  "qinghai-lake": "cn_northwest"
+  "aba-highlands": "cn_tibetan",
+  "qiandong-valley": "cn_yun_gui_chuan",
+  "minbei-creek": "cn_jiang_zhe_hu",
+  "hexicorridor": "cn_great_northwest",
+  "enxi-gorge": "cn_central_landscape",
+  "nanjiang-dune": "cn_xinjiang",
+  "songhua-river": "cn_northeast_region",
+  "lancang-source": "cn_tibetan",
+  "qiongbay-salt": "cn_south_islands",
+  "yunnan-rainforest": "cn_yun_gui_chuan",
+  "wuyi-ancient": "cn_jiang_zhe_hu",
+  "qinghai-lake": "cn_tibetan"
 };
 
 const DESTINATION_REGION_LABEL_MAP = DESTINATION_REGION_OPTIONS.reduce((map, item) => {
@@ -41,7 +63,10 @@ const DESTINATION_REGION_LABEL_MAP = DESTINATION_REGION_OPTIONS.reduce((map, ite
 
 function normalizeDestinationRegionCode(value, fallbackValue = "") {
   const code = String(value || fallbackValue || "").trim();
-  return Object.prototype.hasOwnProperty.call(DESTINATION_REGION_LABEL_MAP, code) ? code : "";
+  const normalizedCode = Object.prototype.hasOwnProperty.call(DESTINATION_REGION_LABEL_MAP, code)
+    ? code
+    : (LEGACY_DESTINATION_REGION_CODE_ALIASES[code] || "");
+  return Object.prototype.hasOwnProperty.call(DESTINATION_REGION_LABEL_MAP, normalizedCode) ? normalizedCode : "";
 }
 
 function inferDestinationRegionCodeBySlug(slug) {
@@ -49,10 +74,19 @@ function inferDestinationRegionCodeBySlug(slug) {
 }
 
 function resolveDestinationRegionCode(value, slug, fallbackValue = "") {
+  const explicitCode = Object.prototype.hasOwnProperty.call(DESTINATION_REGION_LABEL_MAP, String(value || "").trim())
+    ? String(value || "").trim()
+    : "";
+  const explicitFallbackCode = Object.prototype.hasOwnProperty.call(DESTINATION_REGION_LABEL_MAP, String(fallbackValue || "").trim())
+    ? String(fallbackValue || "").trim()
+    : "";
+
   return (
-    normalizeDestinationRegionCode(value)
-    || normalizeDestinationRegionCode(fallbackValue)
+    explicitCode
+    || explicitFallbackCode
     || inferDestinationRegionCodeBySlug(slug)
+    || normalizeDestinationRegionCode(value)
+    || normalizeDestinationRegionCode(fallbackValue)
   );
 }
 

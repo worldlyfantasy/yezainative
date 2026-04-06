@@ -192,6 +192,13 @@ button::after {
   background: rgba(242, 230, 201, 0.5);
 }
 
+.detail-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 16rpx;
+  flex-shrink: 0;
+}
+
 .filter-shell {
   display: flex;
   flex-direction: column;

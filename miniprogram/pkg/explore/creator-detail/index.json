@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "",
+  "enableShareAppMessage": true,
+  "enableShareTimeline": true,
   "usingComponents": {
     "favorite-star": "/components/yezai/favorite-star/index",
     "service-card": "/components/yezai/service-card/index"

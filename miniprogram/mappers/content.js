@@ -1,3 +1,5 @@
+const { normalizeHeroSlides } = require("../services/image-ref");
+
 function ensureArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -10,7 +12,7 @@ function mapHomePageData(payload) {
   const source = ensureObject(payload);
   const servicesByTab = ensureObject(source.featuredServicesByTab);
   return {
-    heroSlides: ensureArray(source.heroSlides),
+    heroSlides: normalizeHeroSlides(source.heroSlides),
     featuredCreators: ensureArray(source.featuredCreators),
     featuredDestinations: ensureArray(source.featuredDestinations),
     featuredServicesByTab: {
@@ -22,12 +24,22 @@ function mapHomePageData(payload) {
   };
 }
 
+function mapJourneyPageData(payload) {
+  const source = ensureObject(payload);
+  return {
+    routeTypeOptions: ensureArray(source.routeTypeOptions),
+    journeys: ensureArray(source.journeys)
+  };
+}
+
 function mapCreatorsPageData(payload) {
   const source = ensureObject(payload);
   return {
     destinationOptions: ensureArray(source.destinationOptions),
+    regionOptions: ensureArray(source.regionOptions),
     styleOptions: ensureArray(source.styleOptions),
     destinationLabels: ensureArray(source.destinationLabels),
+    regionLabels: ensureArray(source.regionLabels),
     styleLabels: ensureArray(source.styleLabels),
     creators: ensureArray(source.creators)
   };
@@ -94,6 +106,7 @@ function mapIdeaDetailData(payload) {
   return {
     idea: source.idea || null,
     author: source.author || null,
+    relatedServices: ensureArray(source.relatedServices),
     blocks: ensureArray(source.blocks)
   };
 }
@@ -117,13 +130,57 @@ function mapServiceDetailData(payload) {
   };
 }
 
+function mapServiceDetailSummaryData(payload) {
+  return mapServiceDetailData(payload);
+}
+
+function mapServiceBookingData(payload) {
+  if (!payload) {
+    return null;
+  }
+
+  const source = ensureObject(payload);
+  return {
+    service: source.service || null,
+    creator: source.creator || null,
+    groupPeriods: ensureArray(source.groupPeriods)
+  };
+}
+
+function mapServiceConsultData(payload) {
+  const source = ensureObject(payload);
+  return {
+    consultWeChatQr: source.consultWeChatQr || ""
+  };
+}
+
+function mapServiceDetailContentData(payload) {
+  if (!payload) {
+    return null;
+  }
+
+  const source = ensureObject(payload);
+  return {
+    travelDetail: source.travelDetail || null,
+    photoGallery: ensureArray(source.photoGallery),
+    photoTotal: Number(source.photoTotal) || 0,
+    mediaTabs: ensureArray(source.mediaTabs),
+    groupPeriods: ensureArray(source.groupPeriods)
+  };
+}
+
 module.exports = {
   mapHomePageData,
+  mapJourneyPageData,
   mapCreatorsPageData,
   mapCreatorDetailData,
   mapDestinationsPageData,
   mapDestinationDetailData,
   mapIdeasPageData,
   mapIdeaDetailData,
+  mapServiceBookingData,
+  mapServiceConsultData,
+  mapServiceDetailSummaryData,
+  mapServiceDetailContentData,
   mapServiceDetailData
 };

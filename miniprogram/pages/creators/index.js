@@ -1,20 +1,27 @@
 const { getCreatorsPageData } = require("../../repositories/content-repository");
-const { consumePendingCreatorFilter } = require("../../services/navigation");
+const {
+  enablePageShareMenus,
+  createAddToFavorites,
+  createShareAppMessage,
+  createShareTimeline
+} = require("../../utils/share");
 
 Page({
   data: {
     loading: true,
     errorText: "",
-    destinationOptions: [],
-    styleOptions: [],
-    destinationLabels: [],
-    styleLabels: [],
-    destinationIndex: 0,
+    regionOptions: [{ label: "全部", value: "" }],
+    regionLabels: ["全部"],
+    regionIndex: 0,
+    styleOptions: [{ label: "全部", value: "" }],
+    styleLabels: ["全部"],
     styleIndex: 0,
     creators: []
   },
 
   async onLoad(options) {
+    enablePageShareMenus();
+
     this.setData({
       loading: true,
       errorText: ""
@@ -22,18 +29,18 @@ Page({
 
     try {
       const initialFilters = {
-        destination: options.destination || "",
-        style: options.style || ""
+        style: options.style || "",
+        regionCode: options.regionCode || options.region || ""
       };
       const payload = await getCreatorsPageData(initialFilters);
-      const destinationIndex = this.findIndexByValue(payload.destinationOptions, initialFilters.destination);
+      const regionIndex = this.findIndexByValue(payload.regionOptions, initialFilters.regionCode);
       const styleIndex = this.findIndexByValue(payload.styleOptions, initialFilters.style);
 
       this.setData(
         Object.assign({}, payload, {
           loading: false,
           errorText: "",
-          destinationIndex,
+          regionIndex,
           styleIndex
         })
       );
@@ -44,21 +51,6 @@ Page({
         errorText: "创作者列表加载失败，请稍后重试。"
       });
     }
-  },
-
-  onShow() {
-    const pending = consumePendingCreatorFilter();
-    if (!pending.destination && !pending.style) {
-      return;
-    }
-
-    this.setData(
-      {
-        destinationIndex: this.findIndexByValue(this.data.destinationOptions, pending.destination),
-        styleIndex: this.findIndexByValue(this.data.styleOptions, pending.style)
-      },
-      () => this.applyFilters()
-    );
   },
 
   findIndexByValue(list, value) {
@@ -76,21 +68,21 @@ Page({
       errorText: ""
     });
 
-    const destination = this.data.destinationOptions[this.data.destinationIndex] ? this.data.destinationOptions[this.data.destinationIndex].value : "";
+    const regionCode = this.data.regionOptions[this.data.regionIndex] ? this.data.regionOptions[this.data.regionIndex].value : "";
     const style = this.data.styleOptions[this.data.styleIndex] ? this.data.styleOptions[this.data.styleIndex].value : "";
     try {
       const payload = await getCreatorsPageData({
-        destination,
+        regionCode,
         style
       });
       this.setData({
         loading: false,
         errorText: "",
-        destinationOptions: payload.destinationOptions,
+        regionOptions: payload.regionOptions,
+        regionLabels: payload.regionLabels,
+        regionIndex: this.findIndexByValue(payload.regionOptions, regionCode),
         styleOptions: payload.styleOptions,
-        destinationLabels: payload.destinationLabels,
         styleLabels: payload.styleLabels,
-        destinationIndex: this.findIndexByValue(payload.destinationOptions, destination),
         styleIndex: this.findIndexByValue(payload.styleOptions, style),
         creators: payload.creators
       });
@@ -103,19 +95,46 @@ Page({
     }
   },
 
-  onDestinationChange(event) {
-    this.setData(
-      {
-        destinationIndex: Number(event.detail.value)
-      },
-      () => this.applyFilters()
-    );
+  getShareImageUrl() {
+    const creators = this.data.creators || [];
+    return (creators[0] && creators[0].avatar) || "";
+  },
+
+  onShareAppMessage() {
+    return createShareAppMessage({
+      title: "野哉创作者｜人物",
+      pagePath: "/pages/creators/index",
+      imageUrl: this.getShareImageUrl()
+    });
+  },
+
+  onShareTimeline() {
+    return createShareTimeline({
+      title: "野哉创作者｜人物",
+      imageUrl: this.getShareImageUrl()
+    });
+  },
+
+  onAddToFavorites() {
+    return createAddToFavorites({
+      title: "野哉创作者｜人物",
+      imageUrl: this.getShareImageUrl()
+    });
   },
 
   onStyleChange(event) {
     this.setData(
       {
         styleIndex: Number(event.detail.value)
+      },
+      () => this.applyFilters()
+    );
+  },
+
+  onRegionChange(event) {
+    this.setData(
+      {
+        regionIndex: Number(event.detail.value)
       },
       () => this.applyFilters()
     );

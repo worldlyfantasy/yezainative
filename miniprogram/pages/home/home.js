@@ -1,5 +1,12 @@
 const { getHomePageData } = require("../../repositories/content-repository");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../services/navigation");
+const { openIdea } = require("../../services/idea-navigation");
+const {
+  enablePageShareMenus,
+  createAddToFavorites,
+  createShareAppMessage,
+  createShareTimeline
+} = require("../../utils/share");
 const SERVICE_TABS = [
   { key: "featured", label: "野哉精选" },
   { key: "recent", label: "近期出行" },
@@ -25,6 +32,8 @@ Page({
   },
 
   async onLoad() {
+    enablePageShareMenus();
+
     this.setData({
       loading: true,
       errorText: ""
@@ -43,7 +52,6 @@ Page({
           activeServices: this.getServicesByTab(featuredServicesByTab, activeServiceTab)
         })
       );
-      this.resolveHeroSlides(homePageData.heroSlides);
     } catch (error) {
       console.error("Failed to load home page", error);
       this.setData({
@@ -53,45 +61,38 @@ Page({
     }
   },
 
-  resolveHeroSlides(heroSlides) {
-    if (!wx.cloud || !heroSlides || !heroSlides.length) {
-      return;
-    }
+  getShareImageUrl() {
+    const heroSlides = this.data.heroSlides || [];
+    const activeServices = this.data.activeServices || [];
+    const featuredCreators = this.data.featuredCreators || [];
+    const featuredIdeas = this.data.featuredIdeas || [];
 
-    const cloudSlides = heroSlides.filter((slide) => slide.cloudFileID);
-    if (!cloudSlides.length) {
-      return;
-    }
+    return (heroSlides[0] && heroSlides[0].image)
+      || (activeServices[0] && activeServices[0].cover)
+      || (featuredCreators[0] && featuredCreators[0].avatar)
+      || (featuredIdeas[0] && featuredIdeas[0].cover)
+      || "";
+  },
 
-    wx.cloud.getTempFileURL({
-      fileList: cloudSlides.map((slide) => slide.cloudFileID),
-      success: (result) => {
-        const tempURLMap = (result.fileList || []).reduce((map, file) => {
-          if (file.fileID && file.tempFileURL) {
-            map[file.fileID] = file.tempFileURL;
-          } else if (file.fileID) {
-            console.error("Cloud file temp URL missing", file);
-          }
-          return map;
-        }, {});
+  onShareAppMessage() {
+    return createShareAppMessage({
+      title: "野哉 YEZAI｜首页",
+      pagePath: "/pages/home/home",
+      imageUrl: this.getShareImageUrl()
+    });
+  },
 
-        const resolvedSlides = heroSlides.map((slide) => {
-          if (!slide.cloudFileID) {
-            return slide;
-          }
+  onShareTimeline() {
+    return createShareTimeline({
+      title: "野哉 YEZAI｜首页",
+      imageUrl: this.getShareImageUrl()
+    });
+  },
 
-          return Object.assign({}, slide, {
-            image: tempURLMap[slide.cloudFileID] || slide.image || ""
-          });
-        });
-
-        this.setData({
-          heroSlides: resolvedSlides
-        });
-      },
-      fail: (error) => {
-        console.error("Failed to resolve hero slide image", error);
-      }
+  onAddToFavorites() {
+    return createAddToFavorites({
+      title: "野哉 YEZAI｜首页",
+      imageUrl: this.getShareImageUrl()
     });
   },
 
@@ -100,7 +101,7 @@ Page({
   },
 
   goServices() {
-    goTopLevel(TOP_LEVEL_ROUTES.destinations);
+    goTopLevel(TOP_LEVEL_ROUTES.journeys);
   },
 
   goIdeas() {
@@ -160,9 +161,7 @@ Page({
   },
 
   onIdeaTap(event) {
-    wx.navigateTo({
-      url: `/pkg/content/idea-detail/index?slug=${event.detail.slug}`
-    });
+    openIdea(event.detail);
   },
 
   resolveDefaultServiceTab(featuredServicesByTab) {

@@ -41,7 +41,7 @@
 </view>
 
 <view wx:elif="{{service}}" class="page-shell">
-  <text class="back-link" bindtap="goBack">← 返回目的地</text>
+  <text class="back-link" bindtap="goBack">← 返回旅程</text>
 
   <view wx:if="{{heroCover}}" class="section-block service-gallery">
     <view class="service-gallery__hero-wrapper" bindtap="openMediaSheet">
@@ -75,15 +75,17 @@
         <text class="page-eyebrow">{{service.type}}</text>
         <view class="service-hero__title-row">
           <text class="page-title service-hero__title">{{service.name}}</text>
-          <favorite-star
-            favorited="{{service.isFavorited}}"
-            notice-state="{{favoriteNoticeState}}"
-            notice-label="{{favoriteNoticeLabel}}"
-            notice-action-label="{{favoriteNoticeActionLabel}}"
-            notice-mode="{{favoriteNoticeMode}}"
-            bind:toggle="toggleFavorite"
-            bind:noticeaction="handleFavoriteNoticeAction"
-          ></favorite-star>
+          <view class="detail-action-group">
+            <favorite-star
+              favorited="{{service.isFavorited}}"
+              notice-state="{{favoriteNoticeState}}"
+              notice-label="{{favoriteNoticeLabel}}"
+              notice-action-label="{{favoriteNoticeActionLabel}}"
+              notice-mode="{{favoriteNoticeMode}}"
+              bind:toggle="toggleFavorite"
+              bind:noticeaction="handleFavoriteNoticeAction"
+            ></favorite-star>
+          </view>
         </view>
         <view wx:if="{{serviceRouteTags && serviceRouteTags.length}}" class="row-tags service-route-tags">
           <text
@@ -342,8 +344,10 @@
                   <text wx:if="{{item.versionName}}" class="period-date__version">{{item.versionName}}</text>
                   <text wx:if="{{item.durationLabel}}" class="period-date__duration">{{item.durationLabel}}</text>
                 </view>
-                <text class="period-date__start">{{item.startDateLabel}} -</text>
-                <text class="period-date__end">{{item.endDateLabel}}</text>
+                <view class="period-date__range">
+                  <text class="period-date__start">{{item.startDateLabel}} -</text>
+                  <text class="period-date__end">{{item.endDateLabel}}</text>
+                </view>
                 <view class="period-date__meta">
                   <text class="period-date__price">¥{{item.price}}</text>
                   <text class="period-date__status">{{item.statusText}}</text>
@@ -360,6 +364,7 @@
             <text class="stepper__value">{{periodSheetPeople}}</text>
             <button class="stepper__button" bindtap="increaseSheetPeople">+</button>
           </view>
+          <text class="period-sheet__helper">{{periodSheetPeopleLimitText}}</text>
         </view>
       </scroll-view>
       <view class="period-sheet__footer">

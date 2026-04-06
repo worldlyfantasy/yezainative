@@ -21,7 +21,8 @@
       "root": "pkg/content",
       "pages": [
         "ideas/index",
-        "idea-detail/index"
+        "idea-detail/index",
+        "article-bridge/index"
       ]
     },
     {

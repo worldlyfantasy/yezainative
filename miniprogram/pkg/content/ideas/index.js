@@ -1,4 +1,5 @@
 const { getIdeasPageData } = require("../../../repositories/content-repository");
+const { openIdea } = require("../../../services/idea-navigation");
 
 Page({
   data: {
@@ -75,10 +76,6 @@ Page({
   },
 
   onIdeaTap(event) {
-    const slug = event.currentTarget.dataset.slug;
-    if (!slug) return;
-    wx.navigateTo({
-      url: `/pkg/content/idea-detail/index?slug=${slug}`
-    });
+    openIdea(event.currentTarget.dataset);
   }
 });

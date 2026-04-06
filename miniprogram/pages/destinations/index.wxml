@@ -1,49 +1,232 @@
-<view class="page-shell">
-  <text class="page-eyebrow">土地的故事</text>
-  <text class="page-subtitle">它们或许没有喧闹的景点，却有清晰的生活节奏。试着按区域和路线类型筛选，你会看见不同肌理。</text>
-
-  <view class="section-block filter-shell destinations-filter-shell">
-    <view class="filter-item destination-filter-item">
-      <text class="filter-label">路线类型</text>
-      <picker
-        wx:if="{{styleLabels.length > 1}}"
-        class="filter-picker-trigger"
-        mode="selector"
-        range="{{styleLabels}}"
-        value="{{styleIndex}}"
-        bindchange="onStyleChange"
-      >
-        <view class="filter-picker destination-filter-picker">{{styleLabels[styleIndex] || '全部'}}</view>
-      </picker>
-      <view wx:else class="filter-picker destination-filter-picker destination-filter-picker--static">全部</view>
+<view class="journey-page">
+  <view class="page-shell journey-page__shell">
+    <view class="journey-head">
+      <text class="page-eyebrow journey-head__title">旅程档案</text>
+      <view class="journey-date-trigger journey-date-trigger--compact" bindtap="openDateSheet" hover-class="journey-date-trigger--pressed">
+        <view class="journey-date-trigger__icon">
+          <view class="journey-date-trigger__clock">
+            <view class="journey-date-trigger__hand journey-date-trigger__hand--hour"></view>
+            <view class="journey-date-trigger__hand journey-date-trigger__hand--minute"></view>
+          </view>
+        </view>
+        <text class="journey-date-trigger__label">{{selectedDepartureDateLabel || '出行时间'}}</text>
+      </view>
     </view>
-    <view class="filter-item destination-filter-item">
-      <text class="filter-label">所在区域</text>
-      <picker
-        wx:if="{{regionLabels.length > 1}}"
-        class="filter-picker-trigger"
-        mode="selector"
-        range="{{regionLabels}}"
-        value="{{regionIndex}}"
-        bindchange="onRegionChange"
-      >
-        <view class="filter-picker destination-filter-picker">{{regionLabels[regionIndex] || '全部'}}</view>
-      </picker>
-      <view wx:else class="filter-picker destination-filter-picker destination-filter-picker--static">全部</view>
+    <text class="page-subtitle journey-page__subtitle">每一段旅程都有自己的季节、节奏和在地关系，愿你能更快找到愿意靠近的人和土地。</text>
+
+    <view class="journey-filter-stack-anchor">
+      <view class="journey-filter-stack">
+        <view wx:if="{{visibleRouteTypeOptions.length}}" class="journey-type-panel">
+          <scroll-view class="journey-type-panel__scroll" scroll-x="true" enhanced="{{true}}" show-scrollbar="{{false}}">
+            <view class="journey-type-panel__track">
+              <view
+                wx:for="{{visibleRouteTypeOptions}}"
+                wx:key="key"
+                class="journey-type-panel__item {{item.available ? 'journey-type-panel__item--available' : 'journey-type-panel__item--unavailable'}} {{item.selected ? 'journey-type-panel__item--selected' : ''}}"
+                data-value="{{item.key}}"
+                bindtap="onRouteTypeTap"
+              >
+                <view class="journey-type-panel__icon-shell">
+                  <image
+                    wx:if="{{item.icon}}"
+                    class="journey-type-panel__icon"
+                    src="{{item.icon}}"
+                    mode="aspectFit"
+                    lazy-load="{{true}}"
+                  ></image>
+                  <text wx:else class="journey-type-panel__icon-fallback">{{item.shortLabel}}</text>
+                </view>
+                <text class="journey-type-panel__label">{{item.label}}</text>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+
+        <view class="journey-status-row">
+          <scroll-view class="journey-status-bar" scroll-x="true" enhanced="{{true}}" show-scrollbar="{{false}}">
+            <view class="journey-status-bar__track">
+              <view
+                wx:for="{{statusOptions}}"
+                wx:key="key"
+                class="journey-status-bar__item {{item.active ? 'journey-status-bar__item--active' : ''}}"
+                data-status="{{item.key}}"
+                bindtap="onStatusTap"
+                hover-class="journey-status-bar__item--pressed"
+              >{{item.label}}</view>
+            </view>
+          </scroll-view>
+          <text
+            wx:if="{{selectedFilterChips.length}}"
+            class="journey-status-row__clear"
+            bindtap="clearAllFilters"
+          >清空筛选</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{showFloatingFilters}}" class="journey-filter-stack journey-filter-stack--floating">
+      <view wx:if="{{visibleRouteTypeOptions.length}}" class="journey-type-panel">
+        <scroll-view class="journey-type-panel__scroll" scroll-x="true" enhanced="{{true}}" show-scrollbar="{{false}}">
+          <view class="journey-type-panel__track">
+            <view
+              wx:for="{{visibleRouteTypeOptions}}"
+              wx:key="key"
+              class="journey-type-panel__item {{item.available ? 'journey-type-panel__item--available' : 'journey-type-panel__item--unavailable'}} {{item.selected ? 'journey-type-panel__item--selected' : ''}}"
+              data-value="{{item.key}}"
+              bindtap="onRouteTypeTap"
+            >
+              <view class="journey-type-panel__icon-shell">
+                <image
+                  wx:if="{{item.icon}}"
+                  class="journey-type-panel__icon"
+                  src="{{item.icon}}"
+                  mode="aspectFit"
+                  lazy-load="{{true}}"
+                ></image>
+                <text wx:else class="journey-type-panel__icon-fallback">{{item.shortLabel}}</text>
+              </view>
+              <text class="journey-type-panel__label">{{item.label}}</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <view class="journey-status-row">
+        <scroll-view class="journey-status-bar" scroll-x="true" enhanced="{{true}}" show-scrollbar="{{false}}">
+          <view class="journey-status-bar__track">
+            <view
+              wx:for="{{statusOptions}}"
+              wx:key="key"
+              class="journey-status-bar__item {{item.active ? 'journey-status-bar__item--active' : ''}}"
+              data-status="{{item.key}}"
+              bindtap="onStatusTap"
+              hover-class="journey-status-bar__item--pressed"
+            >{{item.label}}</view>
+          </view>
+        </scroll-view>
+        <text
+          wx:if="{{selectedFilterChips.length}}"
+          class="journey-status-row__clear"
+          bindtap="clearAllFilters"
+        >清空筛选</text>
+      </view>
+    </view>
+
+    <view class="journey-result-head">
+      <text class="journey-result-head__count">{{resultCountText}}</text>
+    </view>
+
+    <view wx:if="{{errorText}}" class="paper-block page-feedback journey-page__feedback">
+      <text class="page-feedback__title">加载失败</text>
+      <text class="page-feedback__desc">{{errorText}}</text>
+      <view class="journey-page__feedback-actions">
+        <button class="primary-button journey-page__feedback-button" bindtap="retryLoadJourneyData">重新加载</button>
+        <button
+          wx:if="{{selectedFilterChips.length}}"
+          class="outline-button journey-page__feedback-button"
+          bindtap="clearAllFilters"
+        >清空筛选</button>
+      </view>
+    </view>
+
+    <view wx:elif="{{loading}}" class="journey-loading">
+      <view wx:for="{{[1,2]}}" wx:key="*this" class="journey-loading__card">
+        <view class="journey-loading__cover"></view>
+        <view class="journey-loading__body">
+          <view class="journey-loading__line journey-loading__line--title"></view>
+          <view class="journey-loading__line journey-loading__line--meta"></view>
+          <view class="journey-loading__line journey-loading__line--short"></view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:elif="{{displayJourneys.length}}" class="journey-list">
+      <journey-route-card
+        wx:for="{{displayJourneys}}"
+        wx:key="slug"
+        journey="{{item}}"
+        bind:cardtap="onJourneyTap"
+        bind:departuretap="onJourneyDepartureTap"
+      ></journey-route-card>
+      <view class="journey-list__footer">
+        <text wx:if="{{renderedCountText}}" class="journey-list__footer-text">{{renderedCountText}}</text>
+        <button
+          wx:if="{{hasMoreJourneys}}"
+          class="outline-button journey-list__footer-button"
+          bindtap="onLoadMoreTap"
+        >继续加载</button>
+      </view>
+    </view>
+
+    <view wx:else class="journey-empty">
+      <text class="journey-empty__title">暂时没有匹配的旅程</text>
+      <text class="journey-empty__desc">换一个旅程类型、团期状态试试看</text>
+      <text class="journey-empty__desc">也可以直接清空筛选重新浏览</text>
+      <button class="outline-button journey-empty__button" bindtap="clearAllFilters">清空筛选</button>
     </view>
   </view>
 
-  <view class="section-block">
-    <view wx:if="{{errorText}}" class="paper-block page-feedback">
-      <text class="page-feedback__title">加载失败</text>
-      <text class="page-feedback__desc">{{errorText}}</text>
+  <view wx:if="{{isDateSheetVisible}}" class="journey-date-sheet">
+    <view class="journey-date-sheet__backdrop" bindtap="closeDateSheet"></view>
+    <view class="journey-date-sheet__panel {{isDateSheetAnimating ? 'journey-date-sheet__panel--active' : ''}}">
+      <view class="journey-date-sheet__header journey-date-sheet__header--compact">
+        <view class="journey-date-sheet__close journey-control" bindtap="closeDateSheet" hover-class="journey-control--pressed">×</view>
+      </view>
+
+      <block wx:if="{{hasMarkedDates}}">
+        <scroll-view class="journey-date-sheet__content" scroll-y="true" enhanced="{{true}}" show-scrollbar="{{false}}" enable-flex="{{true}}">
+          <view class="journey-date-sheet__month-row">
+            <text class="journey-date-sheet__month-action {{calendarMonthKeys.length <= 1 ? 'journey-date-sheet__month-action--disabled' : ''}}" bindtap="onPrevCalendarMonth">‹</text>
+            <text class="journey-date-sheet__month-label">{{activeCalendarMonthLabel}}</text>
+            <text class="journey-date-sheet__month-action {{calendarMonthKeys.length <= 1 ? 'journey-date-sheet__month-action--disabled' : ''}}" bindtap="onNextCalendarMonth">›</text>
+          </view>
+
+          <view class="journey-date-sheet__weekdays">
+            <text wx:for="{{calendarWeekdayLabels}}" wx:key="*this" class="journey-date-sheet__weekday">{{item}}</text>
+          </view>
+
+          <view class="journey-date-sheet__calendar">
+            <view wx:for="{{calendarWeeks}}" wx:key="index" class="journey-date-sheet__week">
+              <view
+                wx:for="{{item}}"
+                wx:key="key"
+                class="journey-date-sheet__day {{item.empty ? 'journey-date-sheet__day--empty' : ''}}"
+                data-date="{{item.fullDate}}"
+                bindtap="onCalendarDayTap"
+              >
+                <view class="journey-date-sheet__day-pill {{item.selected ? 'journey-date-sheet__day-pill--selected' : ''}}">
+                  <text class="journey-date-sheet__day-label {{item.marked ? 'journey-date-sheet__day-label--marked' : ''}}">{{item.label}}</text>
+                </view>
+                <view wx:if="{{item.marked}}" class="journey-date-sheet__day-dot"></view>
+              </view>
+            </view>
+          </view>
+
+          <text wx:if="{{sheetHintText}}" class="journey-date-sheet__hint">{{sheetHintText}}</text>
+
+          <view class="journey-date-sheet__list">
+            <view wx:if="{{sheetJourneys.length}}" class="journey-date-sheet__list-inner">
+              <journey-route-card
+                wx:for="{{sheetJourneys}}"
+                wx:key="slug"
+                compact="{{true}}"
+                journey="{{item}}"
+                bind:cardtap="onJourneyTap"
+              ></journey-route-card>
+            </view>
+            <view wx:else class="journey-date-sheet__empty">
+              <text class="journey-date-sheet__empty-text">选一个有标记的日期，看看那天有哪些可报名的旅程。</text>
+            </view>
+          </view>
+        </scroll-view>
+      </block>
+
+      <view wx:else class="journey-date-sheet__empty-state">
+        <text class="journey-date-sheet__empty-title">{{sheetEmptyTitle}}</text>
+        <text class="journey-date-sheet__empty-desc">{{sheetEmptyDesc}}</text>
+      </view>
     </view>
-    <view wx:elif="{{loading}}" class="empty-state">目的地列表加载中...</view>
-    <view wx:elif="{{destinations.length}}" class="card-stack">
-      <destination-card wx:for="{{destinations}}" wx:key="id" destination="{{item}}" bind:cardtap="onDestinationTap"></destination-card>
-    </view>
-    <view wx:else class="empty-state">暂无匹配结果。</view>
   </view>
 </view>
 
-<app-tab-bar></app-tab-bar>
+<app-tab-bar wx:if="{{!isDateSheetVisible}}"></app-tab-bar>

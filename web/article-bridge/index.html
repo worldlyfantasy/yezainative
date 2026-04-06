@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>阅读全文</title>
+    <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5efe3;
+        --card: rgba(255, 250, 244, 0.96);
+        --text: #2b241d;
+        --muted: rgba(95, 82, 70, 0.78);
+        --accent: #8d4d2f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background:
+          radial-gradient(circle at top left, rgba(189, 154, 95, 0.18), transparent 38%),
+          radial-gradient(circle at bottom right, rgba(141, 77, 47, 0.12), transparent 34%),
+          var(--bg);
+        color: var(--text);
+        font-family: "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+      }
+
+      .card {
+        width: min(100%, 520px);
+        padding: 28px 24px;
+        border-radius: 24px;
+        background: var(--card);
+        box-shadow: 0 20px 60px rgba(85, 58, 33, 0.1);
+      }
+
+      .eyebrow {
+        font-size: 12px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(122, 63, 43, 0.72);
+      }
+
+      h1 {
+        margin: 14px 0 0;
+        font-size: 28px;
+        line-height: 1.35;
+      }
+
+      p {
+        margin: 16px 0 0;
+        font-size: 16px;
+        line-height: 1.8;
+        color: var(--muted);
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 24px;
+      }
+
+      button,
+      a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        padding: 0 20px;
+        border-radius: 999px;
+        border: 0;
+        background: var(--accent);
+        color: #fffdf8;
+        font-size: 15px;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .button--ghost {
+        background: rgba(141, 77, 47, 0.08);
+        color: var(--accent);
+      }
+
+      .hint {
+        margin-top: 18px;
+        font-size: 14px;
+        color: rgba(95, 82, 70, 0.66);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="eyebrow">YEZAI ARTICLE BRIDGE</div>
+      <h1 id="title">正在打开全文…</h1>
+      <p id="desc">如果没有自动跳转，请点击下方按钮继续阅读。</p>
+      <div class="actions">
+        <a id="open-link" class="button" href="#" rel="noopener noreferrer">打开原文</a>
+        <button id="retry-button" class="button button--ghost" type="button">重新尝试</button>
+      </div>
+      <p class="hint">当前页面建议部署到 CloudBase 静态托管，并将域名配置到小程序业务域名。</p>
+    </main>
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        const target = (params.get("target") || "").trim();
+        const title = (params.get("title") || "").trim();
+        const safeTarget = /^https?:\/\//i.test(target) ? target : "";
+        const titleNode = document.getElementById("title");
+        const descNode = document.getElementById("desc");
+        const openLink = document.getElementById("open-link");
+        const retryButton = document.getElementById("retry-button");
+        const attemptKey = safeTarget
+          ? "yezai-article-bridge:" + encodeURIComponent(safeTarget)
+          : "";
+
+        if (title) {
+          document.title = title;
+          titleNode.textContent = title;
+        }
+
+        if (!safeTarget) {
+          titleNode.textContent = "原文链接无效";
+          descNode.textContent = "未收到可用的原文地址，请返回小程序后重试。";
+          openLink.removeAttribute("href");
+          openLink.setAttribute("aria-disabled", "true");
+          openLink.style.pointerEvents = "none";
+          openLink.style.opacity = "0.5";
+          retryButton.style.display = "none";
+          return;
+        }
+
+        openLink.href = safeTarget;
+
+        const RETURN_MARK_TTL = 10 * 60 * 1000;
+
+        function markOpened() {
+          if (!attemptKey) {
+            return;
+          }
+          try {
+            window.localStorage.setItem(
+              attemptKey,
+              JSON.stringify({
+                openedAt: Date.now()
+              })
+            );
+          } catch (error) {}
+        }
+
+        function consumeOpenedState() {
+          if (!attemptKey) {
+            return false;
+          }
+          try {
+            const rawValue = window.localStorage.getItem(attemptKey);
+            if (!rawValue) {
+              return false;
+            }
+
+            window.localStorage.removeItem(attemptKey);
+
+            const parsed = JSON.parse(rawValue);
+            const openedAt = Number(parsed && parsed.openedAt);
+            return Number.isFinite(openedAt) && Date.now() - openedAt < RETURN_MARK_TTL;
+          } catch (error) {
+            return false;
+          }
+        }
+
+        function navigateBackToMiniProgram() {
+          const miniProgram = window.wx && window.wx.miniProgram;
+          if (!miniProgram || typeof miniProgram.navigateBack !== "function") {
+            return false;
+          }
+
+          miniProgram.navigateBack({
+            delta: 1
+          });
+          return true;
+        }
+
+        function retryNavigateBack(attemptsLeft) {
+          if (navigateBackToMiniProgram()) {
+            return;
+          }
+
+          if (attemptsLeft <= 0) {
+            descNode.textContent =
+              "自动返回失败。你可以点“返回上一页”回到小程序，或点“打开原文”再次进入文章。";
+            return;
+          }
+
+          window.setTimeout(function () {
+            retryNavigateBack(attemptsLeft - 1);
+          }, 160);
+        }
+
+        function openTarget(useReplace) {
+          markOpened();
+          if (useReplace) {
+            window.location.replace(safeTarget);
+            return;
+          }
+          window.location.href = safeTarget;
+        }
+
+        if (consumeOpenedState()) {
+          descNode.textContent =
+            "正在返回上一页。如果没有自动返回，你也可以手动再次打开原文。";
+          retryButton.textContent = "返回上一页";
+          retryButton.addEventListener("click", function () {
+            if (!navigateBackToMiniProgram()) {
+              window.history.back();
+            }
+          });
+
+          retryNavigateBack(8);
+          return;
+        }
+
+        retryButton.addEventListener("click", function () {
+          openTarget(false);
+        });
+
+        window.setTimeout(function () {
+          openTarget(true);
+        }, 180);
+      })();
+    </script>
+  </body>
+</html>

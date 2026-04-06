@@ -109,7 +109,7 @@ function loadAdminGatewayModule(options = {}) {
         dedupeImageValues: (value) => value,
         ensureImageAssetValue: (value) => value,
         getCloudFilePath: () => "",
-        getImageAssetOriginal: () => "",
+        getImageAssetOriginal: (value) => value,
         getImageAssetVariant: () => "",
         isCloudFileId: () => false,
         listImageAssetRefs: () => [],
@@ -243,6 +243,160 @@ test("generateServicePeriodCode keeps incrementing when the same route and date 
 
   const periodCode = await __test__.generateServicePeriodCode("qinghai-loop", "2026-04-05");
   assert.equal(periodCode, "qinghai-loop-20260405-03");
+});
+
+test("saveIdea allows wechat mode without excerptBody", async () => {
+  const { __test__ } = loadAdminGatewayModule({
+    userDocs: {
+      "idea-doc-1": {
+        _id: "idea-doc-1",
+        id: "idea-1",
+        slug: "modu-lookbook",
+        title: "魔都看展合集",
+        theme: "徒步自然",
+        themeKey: "hiking-nature",
+        themeLabel: "徒步自然",
+        isCustomTheme: false,
+        sourceType: "wechat",
+        summary: "原有摘要",
+        cover: "cloud://cover.jpg",
+        authorId: "creator-1",
+        destinationSlugs: [],
+        relatedServiceSlugs: [],
+        body: "",
+        excerptBody: "",
+        wechatArticleUrl: "https://mp.weixin.qq.com/s/original",
+        status: "active"
+      }
+    },
+    collectionData: {
+      creators: [
+        {
+          _id: "creator-doc-1",
+          id: "creator-1",
+          slug: "cen-gu",
+          name: "岑谷"
+        }
+      ],
+      ideas: [
+        {
+          _id: "idea-doc-1",
+          id: "idea-1",
+          slug: "modu-lookbook",
+          title: "魔都看展合集",
+          theme: "徒步自然",
+          themeKey: "hiking-nature",
+          themeLabel: "徒步自然",
+          isCustomTheme: false,
+          sourceType: "wechat",
+          summary: "原有摘要",
+          cover: "cloud://cover.jpg",
+          authorId: "creator-1",
+          destinationSlugs: [],
+          relatedServiceSlugs: [],
+          body: "",
+          excerptBody: "",
+          wechatArticleUrl: "https://mp.weixin.qq.com/s/original",
+          status: "active"
+        }
+      ]
+    }
+  });
+
+  await assert.doesNotReject(() =>
+    __test__.saveIdea(
+      {
+        _id: "idea-doc-1",
+        id: "idea-1",
+        slug: "modu-lookbook",
+        title: "魔都看展合集",
+        theme: "徒步自然",
+        themeKey: "hiking-nature",
+        themeLabel: "徒步自然",
+        isCustomTheme: false,
+        sourceType: "wechat",
+        status: "active",
+        summary: "更新后的摘要",
+        cover: "cloud://cover.jpg",
+        authorId: "creator-1",
+        destinationSlugs: [],
+        relatedServiceSlugs: [],
+        body: "",
+        excerptBody: "",
+        wechatArticleUrl: "https://mp.weixin.qq.com/s/updated",
+        wechatArticleTitle: "",
+        readMoreText: "阅读全文"
+      },
+      { uid: "admin-1" }
+    )
+  );
+});
+
+test("saveIdea still requires excerptBody for hybrid mode", async () => {
+  const { __test__ } = loadAdminGatewayModule({
+    collectionData: {
+      creators: [
+        {
+          _id: "creator-doc-1",
+          id: "creator-1",
+          slug: "cen-gu",
+          name: "岑谷"
+        }
+      ],
+      ideas: [
+        {
+          _id: "idea-doc-1",
+          id: "idea-1",
+          slug: "modu-lookbook",
+          title: "魔都看展合集",
+          theme: "徒步自然",
+          themeKey: "hiking-nature",
+          themeLabel: "徒步自然",
+          isCustomTheme: false,
+          sourceType: "hybrid",
+          summary: "原有摘要",
+          cover: "cloud://cover.jpg",
+          authorId: "creator-1",
+          destinationSlugs: [],
+          relatedServiceSlugs: [],
+          body: "",
+          excerptBody: "",
+          wechatArticleUrl: "https://mp.weixin.qq.com/s/original",
+          status: "active"
+        }
+      ]
+    }
+  });
+
+  await assert.rejects(
+    () =>
+      __test__.saveIdea(
+        {
+          _id: "idea-doc-1",
+          id: "idea-1",
+          slug: "modu-lookbook",
+          title: "魔都看展合集",
+          theme: "徒步自然",
+          themeKey: "hiking-nature",
+          themeLabel: "徒步自然",
+          isCustomTheme: false,
+          sourceType: "hybrid",
+          status: "active",
+          summary: "更新后的摘要",
+          cover: "cloud://cover.jpg",
+          authorId: "creator-1",
+          destinationSlugs: [],
+          relatedServiceSlugs: [],
+          body: "",
+          excerptBody: "",
+          wechatArticleUrl: "https://mp.weixin.qq.com/s/updated",
+          wechatArticleTitle: "",
+          readMoreText: "阅读全文"
+        },
+        { uid: "admin-1" }
+      ),
+    /混合模式必须填写小程序导读/
+  );
 });
 
 test("deleteUser removes a user when no travel orders are linked", async () => {

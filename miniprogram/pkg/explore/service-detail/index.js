@@ -1,15 +1,26 @@
-const { getServiceDetailData } = require("../../../repositories/content-repository");
+const {
+  getServiceDetailSummaryData,
+  getServiceDetailContentData
+} = require("../../../repositories/content-repository");
 const { getServiceDetailPageConfig } = require("../../../repositories/config-repository");
 const { isFavorited, toggleFavorite } = require("../../../repositories/transaction-repository");
 const { getCurrentUser } = require("../../../services/user");
-const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
+const { goTopLevel, setPendingJourneyFilter, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../utils/favorite-notice");
 const { isAuditMode, pickAuditText } = require("../../../utils/audit");
+const {
+  getExceededOrderPeopleLimitMessage,
+  getInsufficientSeatsMessage,
+  getOrderPeopleLimitMessage,
+  hasEnoughSeats,
+  normalizeOrderPeopleCount
+} = require("../period-seat");
 const {
   normalizeVersionName,
   resolveItineraryVersionState
 } = require("./version-state");
 const { calcDurationLabel } = require("./duration-state");
+const { enablePageShareMenus, createShareAppMessage, createShareTimeline } = require("../../../utils/share");
 
 const SECTION_SCROLL_DURATION = 320;
 
@@ -166,13 +177,14 @@ function buildTravelDetailState(travelDetail, preferredVersionName) {
   };
 }
 
-function buildServiceMetaCards(durationLabel) {
+function buildServiceMetaCards(durationLabel, options) {
+  const canJumpToItinerary = !(options && options.disableDurationAction);
   return [
     {
       key: "duration",
       label: "行程时间",
       value: durationLabel || "行程待确认",
-      clickable: true
+      clickable: canJumpToItinerary
     },
     {
       key: "consultation",
@@ -258,6 +270,7 @@ Page({
     periodSheetDates: [],
     periodSheetSelectedDateId: null,
     periodSheetPeople: 1,
+    periodSheetPeopleLimitText: getOrderPeopleLimitMessage(),
     periodSheetTotalPrice: 0,
     periodSheetCanCheckout: false,
     timelineTitleText: "",
@@ -268,10 +281,17 @@ Page({
 
   async onLoad(options) {
     this.pageScrollTop = 0;
+    this.isPageActive = true;
+    enablePageShareMenus();
 
     try {
+      const slug = String(options && options.slug || "").trim();
+      const contentPromise = getServiceDetailContentData(slug).catch((error) => {
+        console.error("Failed to preload service detail content", error);
+        return null;
+      });
       const [payload, pageConfig] = await Promise.all([
-        getServiceDetailData(options.slug),
+        getServiceDetailSummaryData(slug),
         getServiceDetailPageConfig()
       ]);
       if (!payload) {
@@ -282,46 +302,39 @@ Page({
         });
 
         setTimeout(() => {
-          goTopLevel(TOP_LEVEL_ROUTES.destinations);
+          goTopLevel(TOP_LEVEL_ROUTES.journeys);
         }, 300);
         return;
       }
 
-      const groupPeriods = Array.isArray(payload.groupPeriods) ? payload.groupPeriods : [];
-      const showGroupPeriodVersionTags = hasMultiplePeriodVersions(groupPeriods);
       const originalService = payload.service || {};
-      const initialPeriod = getSelectedPeriod(groupPeriods, null);
-      const detailState = buildTravelDetailState(
-        payload.travelDetail,
-        initialPeriod && initialPeriod.versionName
-      );
-      const mappedMetaCards = buildServiceMetaCards(calcDurationLabel(payload, detailState.travelDetail));
-      const favorited = await isFavorited("services", originalService.slug);
       const routeTags = Array.isArray(originalService.tags)
         ? originalService.tags.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 3)
         : [];
-      const serviceWithState = Object.assign({}, originalService, {
-        isFavorited: favorited
-      });
+      const summaryDetailState = buildTravelDetailState(null, "");
+      const summaryMetaCards = buildServiceMetaCards(
+        calcDurationLabel(payload, summaryDetailState.travelDetail),
+        { disableDurationAction: true }
+      );
 
       this.setData(
         Object.assign(
           {
             loading: false,
-            service: serviceWithState,
+            service: originalService,
             serviceRouteTags: routeTags,
-            serviceMetaCards: mappedMetaCards,
+            serviceMetaCards: summaryMetaCards,
             creator: payload.creator,
-            creatorQuoteText: getCreatorQuoteText(originalService, detailState.travelDetail),
+            creatorQuoteText: getCreatorQuoteText(originalService, null),
             relatedDestinations: payload.relatedDestinations || [],
             heroCover: payload.heroCover || "",
             photoGallery: payload.photoGallery || [],
             photoTotal: payload.photoTotal || 0,
             mediaTabs: payload.mediaTabs || [],
-            groupPeriods,
-            showGroupPeriodVersionTags,
-            selectedPeriodId: initialPeriod ? initialPeriod.id : null,
-            consultWeChatQr: (payload.travelDetail && payload.travelDetail.consultWeChatQr) || pageConfig.consultWeChatQr,
+            groupPeriods: [],
+            showGroupPeriodVersionTags: false,
+            selectedPeriodId: null,
+            consultWeChatQr: pageConfig.consultWeChatQr,
             consultGroupQr: pageConfig.consultGroupQr,
             consultSheetTitle: pageConfig.consultSheetTitle,
             consultCardLabel: pageConfig.consultCardLabel,
@@ -338,14 +351,12 @@ Page({
             isSectionTabsSticky: false,
             isAutoScrolling: false
           },
-          detailState
-        ),
-        () => {
-          if (detailState.travelDetail) {
-            this.scheduleMeasureTravelDetailLayout();
-          }
-        }
+          summaryDetailState
+        )
       );
+
+      this.loadFavoriteState(originalService.slug);
+      this.loadServiceDetailContent(contentPromise, originalService, pageConfig);
     } catch (error) {
       console.error("Failed to load service detail", error);
       this.setData({ loading: false });
@@ -379,6 +390,7 @@ Page({
   },
 
   onUnload() {
+    this.isPageActive = false;
     if (this.autoScrollTimer) {
       clearTimeout(this.autoScrollTimer);
     }
@@ -389,12 +401,108 @@ Page({
     clearFavoriteNotice(this, "checkoutNoticeState", true);
   },
 
+  onShareAppMessage() {
+    const service = this.data.service || {};
+    return createShareAppMessage({
+      title: service.name ? `${service.name}｜野哉旅程` : "野哉旅程",
+      pagePath: "/pkg/explore/service-detail/index",
+      query: {
+        slug: service.slug
+      },
+      imageUrl: this.data.heroCover || service.cover
+    });
+  },
+
+  onShareTimeline() {
+    const service = this.data.service || {};
+    return createShareTimeline({
+      title: service.name ? `${service.name}｜野哉旅程` : "野哉旅程",
+      query: {
+        slug: service.slug
+      },
+      imageUrl: this.data.heroCover || service.cover
+    });
+  },
+
   refreshDurationMetaCard() {
     this.setData({
       serviceMetaCards: buildServiceMetaCards(
-        calcDurationLabel({ groupPeriods: this.data.groupPeriods }, this.data.travelDetail)
+        calcDurationLabel({ groupPeriods: this.data.groupPeriods }, this.data.travelDetail),
+        { disableDurationAction: !this.data.travelDetail }
       )
     });
+  },
+
+  async loadFavoriteState(serviceSlug) {
+    if (!serviceSlug) {
+      return;
+    }
+
+    try {
+      const favorited = await isFavorited("services", serviceSlug);
+      if (!this.isPageActive || !this.data.service || this.data.service.slug !== serviceSlug) {
+        return;
+      }
+
+      this.setData({
+        "service.isFavorited": favorited
+      });
+    } catch (error) {
+      console.error("Failed to load service favorite state", error);
+    }
+  },
+
+  async loadServiceDetailContent(contentPromise, service, pageConfig) {
+    try {
+      const payload = await contentPromise;
+      if (!this.isPageActive || !payload) {
+        return;
+      }
+
+      const groupPeriods = Array.isArray(payload.groupPeriods) ? payload.groupPeriods : [];
+      const showGroupPeriodVersionTags = hasMultiplePeriodVersions(groupPeriods);
+      const selectedPeriod = getSelectedPeriod(groupPeriods, this.data.selectedPeriodId);
+      const detailState = buildTravelDetailState(
+        payload.travelDetail,
+        selectedPeriod && selectedPeriod.versionName
+      );
+      const creatorQuoteText = getCreatorQuoteText(service, detailState.travelDetail);
+
+      this.setData(
+        Object.assign(
+          {
+            creatorQuoteText,
+            travelDetail: detailState.travelDetail,
+            itineraryVersions: detailState.itineraryVersions,
+            activeItineraryVersionKey: detailState.activeItineraryVersionKey,
+            activeItineraryVersionName: detailState.activeItineraryVersionName,
+            displayItinerary: detailState.displayItinerary,
+            costTableGroups: detailState.costTableGroups,
+            activeSectionKey: detailState.activeSectionKey,
+            photoGallery: payload.photoGallery || this.data.photoGallery,
+            photoTotal: payload.photoTotal || this.data.photoTotal,
+            mediaTabs: payload.mediaTabs || [],
+            groupPeriods,
+            showGroupPeriodVersionTags,
+            selectedPeriodId: selectedPeriod ? selectedPeriod.id : null,
+            consultWeChatQr:
+              (payload.travelDetail && payload.travelDetail.consultWeChatQr) || pageConfig.consultWeChatQr
+          },
+          {
+            serviceMetaCards: buildServiceMetaCards(
+              calcDurationLabel({ groupPeriods }, detailState.travelDetail)
+            )
+          }
+        ),
+        () => {
+          if (detailState.travelDetail) {
+            this.scheduleMeasureTravelDetailLayout();
+          }
+        }
+      );
+    } catch (error) {
+      console.error("Failed to load service detail content", error);
+    }
   },
 
   applyItineraryVersion(versionName, options) {
@@ -594,10 +702,7 @@ Page({
   },
 
   goBack() {
-    const destinationSlug = this.data.service.destinationSlugs[0];
-    wx.redirectTo({
-      url: `/pkg/explore/destination-detail/index?slug=${destinationSlug}`
-    });
+    goTopLevel(TOP_LEVEL_ROUTES.journeys);
   },
 
   onTagTap(event) {
@@ -627,19 +732,15 @@ Page({
   },
 
   onRouteTagTap(event) {
-    const destinationSlug = this.data.service
-      && Array.isArray(this.data.service.destinationSlugs)
-      && this.data.service.destinationSlugs.length
-      ? this.data.service.destinationSlugs[0]
-      : "";
-
-    if (!destinationSlug) {
+    const routeTag = String(event.currentTarget.dataset.tag || "").trim();
+    if (!routeTag) {
       return;
     }
 
-    wx.navigateTo({
-      url: `/pkg/explore/destination-detail/index?slug=${destinationSlug}`
+    setPendingJourneyFilter({
+      routeType: routeTag
     });
+    goTopLevel(TOP_LEVEL_ROUTES.journeys);
   },
 
   buildSuitableSheetContent(service, travelDetail) {
@@ -723,7 +824,7 @@ Page({
       periodSheetSelectedDateId: selected ? selected.id : null,
       selectedPeriodId: selected ? selected.id : this.data.selectedPeriodId,
       periodSheetTotalPrice: selected ? selected.price * this.data.periodSheetPeople : 0,
-      periodSheetCanCheckout: isBookablePeriod(selected)
+      periodSheetCanCheckout: isBookablePeriod(selected) && hasEnoughSeats(selected, this.data.periodSheetPeople)
     });
 
     if (selected) {
@@ -760,9 +861,9 @@ Page({
       periodSheetActiveMonth: "",
       periodSheetDates: [],
       periodSheetSelectedDateId: period.id,
-      periodSheetPeople: 1,
+      periodSheetPeople: normalizeOrderPeopleCount(1, 1),
       periodSheetTotalPrice: period.price * 1,
-      periodSheetCanCheckout: isBookablePeriod(period)
+      periodSheetCanCheckout: isBookablePeriod(period) && hasEnoughSeats(period, 1)
     });
     this.updatePeriodSheetDates(activeVersionKey, monthLabel, period.id);
     setTimeout(() => {
@@ -810,7 +911,7 @@ Page({
       selectedPeriodId: period.id,
       periodSheetSelectedDateId: period.id,
       periodSheetTotalPrice: period.price * this.data.periodSheetPeople,
-      periodSheetCanCheckout: isBookablePeriod(period)
+      periodSheetCanCheckout: isBookablePeriod(period) && hasEnoughSeats(period, this.data.periodSheetPeople)
     });
     this.applyItineraryVersion(period.versionName, {
       selectedPeriodId: period.id
@@ -818,12 +919,30 @@ Page({
   },
 
   increaseSheetPeople() {
-    const n = this.data.periodSheetPeople + 1;
     const selected = this.data.periodSheetDates.find((d) => d.id === this.data.periodSheetSelectedDateId);
+    const n = this.data.periodSheetPeople + 1;
+    const peopleLimitError = getExceededOrderPeopleLimitMessage(n);
+    if (peopleLimitError) {
+      wx.showToast({
+        title: peopleLimitError,
+        icon: "none"
+      });
+      return;
+    }
+    const seatError = getInsufficientSeatsMessage(selected, n);
+    if (seatError) {
+      wx.showToast({
+        title: seatError,
+        icon: "none"
+      });
+      return;
+    }
+
     const price = selected ? selected.price * n : 0;
     this.setData({
       periodSheetPeople: n,
-      periodSheetTotalPrice: price
+      periodSheetTotalPrice: price,
+      periodSheetCanCheckout: isBookablePeriod(selected) && hasEnoughSeats(selected, n)
     });
   },
 
@@ -834,7 +953,8 @@ Page({
     const price = selected ? selected.price * n : 0;
     this.setData({
       periodSheetPeople: n,
-      periodSheetTotalPrice: price
+      periodSheetTotalPrice: price,
+      periodSheetCanCheckout: isBookablePeriod(selected) && hasEnoughSeats(selected, n)
     });
   },
 
@@ -847,6 +967,14 @@ Page({
     if (!isBookablePeriod(selected)) {
       wx.showToast({
         title: getPeriodUnavailableMessage(selected),
+        icon: "none"
+      });
+      return;
+    }
+    const seatError = getInsufficientSeatsMessage(selected, this.data.periodSheetPeople);
+    if (seatError) {
+      wx.showToast({
+        title: seatError,
         icon: "none"
       });
       return;
@@ -871,7 +999,7 @@ Page({
     const slug = this.data.service.slug;
     const travelDateStart = selected.dateStart;
     const travelDateEnd = selected.dateEnd || selected.dateStart;
-    const peopleCount = this.data.periodSheetPeople;
+    const peopleCount = normalizeOrderPeopleCount(this.data.periodSheetPeople, 1);
     const unitPrice = selected.price;
     const versionName = selected.versionName ? encodeURIComponent(selected.versionName) : "";
     const periodCode = selected.periodCode || "";

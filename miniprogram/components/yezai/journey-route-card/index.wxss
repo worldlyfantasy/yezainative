@@ -1,0 +1,279 @@
+.journey-route-card {
+  width: 100%;
+}
+
+.journey-route-card__plate {
+  overflow: hidden;
+  border-radius: 36rpx;
+  background:
+    linear-gradient(180deg, rgba(252, 246, 233, 0.96), rgba(247, 238, 219, 0.9));
+  box-shadow:
+    0 20rpx 40rpx rgba(84, 57, 31, 0.07),
+    inset 0 0 0 1rpx rgba(153, 57, 33, 0.08);
+}
+
+.journey-route-card__cover-shell {
+  position: relative;
+  overflow: hidden;
+  margin: 18rpx 18rpx 0;
+  padding-top: 100%;
+  border-radius: 30rpx;
+  background: rgba(217, 205, 179, 0.5);
+}
+
+.journey-route-card__cover {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.journey-route-card__cover--empty,
+.journey-route-card__thumb--empty {
+  background:
+    linear-gradient(135deg, rgba(209, 94, 20, 0.12), rgba(189, 154, 95, 0.06)),
+    rgba(217, 205, 179, 0.6);
+}
+
+.journey-route-card__cover-badges {
+  position: absolute;
+  top: 24rpx;
+  left: 24rpx;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.journey-route-card__badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  min-width: 108rpx;
+  min-height: 54rpx;
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  line-height: 1.4;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow:
+    0 10rpx 18rpx rgba(84, 57, 31, 0.08),
+    inset 0 0 0 1rpx rgba(153, 57, 33, 0.08);
+}
+
+.journey-route-card__badge--confirmed {
+  color: #8a5a38;
+  background: rgba(251, 240, 232, 0.96);
+}
+
+.journey-route-card__badge--available {
+  color: #8a5a38;
+  background: rgba(251, 240, 232, 0.96);
+}
+
+.journey-route-card__badge--soldout {
+  color: #8f7c69;
+  background: rgba(246, 239, 230, 0.94);
+}
+
+.journey-route-card__badge--closed {
+  color: #8f7c69;
+  background: rgba(241, 234, 224, 0.94);
+}
+
+.journey-route-card__badge--route {
+  color: #8a5a38;
+  background: rgba(255, 250, 242, 0.82);
+  box-shadow:
+    0 8rpx 14rpx rgba(84, 57, 31, 0.05),
+    inset 0 0 0 2rpx rgba(153, 57, 33, 0.14);
+}
+
+.journey-route-card__badge--compact {
+  min-width: 0;
+  min-height: 46rpx;
+  padding: 8rpx 16rpx;
+  font-size: 20rpx;
+  box-shadow:
+    0 6rpx 12rpx rgba(84, 57, 31, 0.06),
+    inset 0 0 0 1rpx rgba(153, 57, 33, 0.08);
+}
+
+.journey-route-card__route-wordmark {
+  position: absolute;
+  right: 24rpx;
+  bottom: 24rpx;
+  width: 172rpx;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.journey-route-card__body {
+  padding: 30rpx 28rpx 26rpx;
+  text-align: center;
+}
+
+.journey-route-card__title,
+.journey-route-card__compact-title {
+  display: block;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  color: #2b241d;
+  font-weight: 600;
+}
+
+.journey-route-card__title {
+  font-size: 46rpx;
+  line-height: 1.42;
+}
+
+.journey-route-card__meta,
+.journey-route-card__compact-meta {
+  display: block;
+  color: #746453;
+}
+
+.journey-route-card__meta {
+  margin-top: 4rpx;
+  font-size: 25rpx;
+  line-height: 1.65;
+}
+
+.journey-route-card__summary {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 27rpx;
+  line-height: 1.78;
+  color: #5f5347;
+}
+
+.journey-route-card__foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24rpx;
+  margin-top: 30rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid rgba(153, 57, 33, 0.12);
+}
+
+.journey-route-card__departure {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  align-items: flex-start;
+  padding: 6rpx 0;
+  border-radius: 20rpx;
+  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+}
+
+.journey-route-card__departure--pressed {
+  opacity: 0.84;
+  transform: scale(0.98);
+}
+
+.journey-route-card__departure-label {
+  font-size: 22rpx;
+  line-height: 1.4;
+  letter-spacing: 1rpx;
+  color: #9f3518;
+}
+
+.journey-route-card__departure-date {
+  font-size: 31rpx;
+  line-height: 1.45;
+  font-weight: 600;
+  color: #2b241d;
+}
+
+.journey-route-card__price,
+.journey-route-card__compact-price {
+  font-family: "Georgia", "Times New Roman", serif;
+  font-weight: 700;
+  color: #9f3518;
+}
+
+.journey-route-card__price {
+  font-size: 42rpx;
+  line-height: 1.12;
+}
+
+.journey-route-card--compact .journey-route-card__plate {
+  background: transparent;
+  box-shadow: none;
+}
+
+.journey-route-card--compact {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  padding: 14rpx 18rpx;
+  border-radius: 28rpx;
+  background: rgba(245, 236, 218, 0.82);
+  box-shadow: inset 0 0 0 1rpx rgba(153, 57, 33, 0.08);
+}
+
+.journey-route-card__thumb {
+  width: 148rpx;
+  height: 148rpx;
+  flex: 0 0 148rpx;
+  border-radius: 22rpx;
+  background: rgba(217, 205, 179, 0.5);
+}
+
+.journey-route-card__compact-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 148rpx;
+  padding: 6rpx 0;
+}
+
+.journey-route-card__compact-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.journey-route-card__compact-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 32rpx;
+  line-height: 1.38;
+}
+
+.journey-route-card__compact-meta {
+  font-size: 25rpx;
+  line-height: 1.5;
+}
+
+.journey-route-card__compact-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.journey-route-card__compact-foot-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10rpx;
+}
+
+.journey-route-card__compact-price {
+  font-size: 34rpx;
+  line-height: 1.08;
+}
+
+.journey-route-card__compact-arrow {
+  font-size: 34rpx;
+  line-height: 1;
+  color: #8d7b68;
+}

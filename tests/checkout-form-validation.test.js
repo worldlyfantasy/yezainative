@@ -35,8 +35,8 @@ test("checkout form validation accepts normalized document and phone formats", (
   assert.equal(isValidMainlandMobile("1380000000"), false);
 
   assert.equal(isValidContactPhone("13800000000"), true);
-  assert.equal(isValidContactPhone("010-12345678"), true);
-  assert.equal(isValidContactPhone("0755-1234567-88"), true);
+  assert.equal(isValidContactPhone("+86 138-0000-0000"), true);
+  assert.equal(isValidContactPhone("010-12345678"), false);
   assert.equal(isValidContactPhone("12345"), false);
 });
 
@@ -51,7 +51,7 @@ test("checkout form validation normalizes traveler fields into document type and
 
   assert.equal(normalizeTravelPersonFieldValue("documentNumber", " 11010519491231002x "), "11010519491231002X");
   assert.equal(normalizeTravelPersonFieldValue("phone", "+86 138-0000-0000"), "13800000000");
-  assert.equal(normalizeContactFieldValue("contactPhone", " 010 12345678 "), "01012345678");
+  assert.equal(normalizeContactFieldValue("contactPhone", " +86 138-0000-0000 "), "13800000000");
 
   assert.equal(traveler.name, "阿野");
   assert.equal(traveler.documentType, "passport");
@@ -96,6 +96,6 @@ test("checkout form validation returns field errors and first toast message", ()
   assert.equal(result.travelPersonErrors[0].documentType, "请选择证件类型");
   assert.equal(result.travelPersonErrors[0].documentNumber, "请先选择证件类型");
   assert.equal(result.travelPersonErrors[0].phone, "请输入正确的手机号");
-  assert.equal(result.contactErrors.contactPhone, "请输入正确的联系电话");
+  assert.equal(result.contactErrors.contactPhone, "请输入正确的联系人手机号");
   assert.equal(result.firstErrorMessage, "请完善出行人1的姓名");
 });

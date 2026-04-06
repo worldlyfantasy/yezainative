@@ -1,0 +1,42 @@
+.bridge-page {
+  min-height: 100vh;
+  padding: 64rpx 48rpx;
+  background: #f5efe3;
+}
+
+.bridge-page--center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bridge-card {
+  width: 100%;
+  padding: 40rpx 36rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 250, 244, 0.96);
+  box-shadow: 0 20rpx 60rpx rgba(85, 58, 33, 0.08);
+}
+
+.bridge-title {
+  display: block;
+  font-size: 36rpx;
+  line-height: 1.5;
+  color: #2b241d;
+}
+
+.bridge-desc {
+  display: block;
+  margin-top: 18rpx;
+  font-size: 28rpx;
+  line-height: 1.85;
+  color: #5f5246;
+}
+
+.bridge-hint {
+  display: block;
+  margin-top: 20rpx;
+  font-size: 24rpx;
+  line-height: 1.8;
+  color: rgba(95, 82, 70, 0.72);
+}

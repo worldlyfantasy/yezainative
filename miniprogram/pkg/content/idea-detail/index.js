@@ -4,6 +4,20 @@ const { getCurrentUser } = require("../../../services/user");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../utils/favorite-notice");
 const { renderIdeaBodyRichText } = require("../../../utils/content");
+const { enablePageShareMenus, createShareAppMessage, createShareTimeline } = require("../../../utils/share");
+
+function formatPublishedDate(timestamp) {
+  const value = Number(timestamp);
+  if (!Number.isFinite(value) || value <= 0) {
+    return "";
+  }
+
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}.${month}.${day}`;
+}
 
 Page({
   data: {
@@ -16,10 +30,18 @@ Page({
     favoriteNoticeActionType: "favorites",
     blocks: [],
     richTextHtml: "",
-    author: null
+    excerptHtml: "",
+    author: null,
+    relatedServices: [],
+    publishedDateLabel: "",
+    isMiniFullArticle: true,
+    showReadMore: false
   },
 
   async onLoad(options) {
+    this.isPageActive = true;
+    enablePageShareMenus();
+
     try {
       const payload = await getIdeaDetailData(options.slug);
       if (!payload) {
@@ -35,12 +57,20 @@ Page({
         return;
       }
 
-      const favorited = await isFavorited("ideas", payload.idea.slug);
+      const idea = payload.idea || {};
+      const sourceType = idea.sourceType || "mini";
+      const publishedDateLabel = formatPublishedDate(idea.publishedAt);
+      const excerptHtml = renderIdeaBodyRichText(idea.excerptBody || "");
+      const richTextSource = sourceType === "mini" ? idea.body : "";
       this.setData(Object.assign({}, payload, {
         loading: false,
-        richTextHtml: renderIdeaBodyRichText(payload.idea && payload.idea.body),
-        "idea.isFavorited": favorited
+        excerptHtml,
+        richTextHtml: renderIdeaBodyRichText(richTextSource),
+        publishedDateLabel,
+        isMiniFullArticle: sourceType === "mini",
+        showReadMore: Boolean(idea.wechatArticleUrl) && sourceType !== "mini"
       }));
+      this.loadFavoriteState(idea.slug);
     } catch (error) {
       console.error("Failed to load idea detail", error);
       this.setData({ loading: false });
@@ -52,7 +82,50 @@ Page({
   },
 
   onUnload() {
+    this.isPageActive = false;
     clearFavoriteNotice(this, "favoriteNoticeState", true);
+  },
+
+  async loadFavoriteState(slug) {
+    if (!slug) {
+      return;
+    }
+
+    try {
+      const favorited = await isFavorited("ideas", slug);
+      if (!this.isPageActive || !this.data.idea || this.data.idea.slug !== slug) {
+        return;
+      }
+
+      this.setData({
+        "idea.isFavorited": favorited
+      });
+    } catch (error) {
+      console.error("Failed to resolve idea favorite status", error);
+    }
+  },
+
+  onShareAppMessage() {
+    const idea = this.data.idea || {};
+    return createShareAppMessage({
+      title: idea.title ? `${idea.title}｜野哉故事` : "野哉故事",
+      pagePath: "/pkg/content/idea-detail/index",
+      query: {
+        slug: idea.slug
+      },
+      imageUrl: idea.cover || (this.data.author && this.data.author.avatar)
+    });
+  },
+
+  onShareTimeline() {
+    const idea = this.data.idea || {};
+    return createShareTimeline({
+      title: idea.title ? `${idea.title}｜野哉故事` : "野哉故事",
+      query: {
+        slug: idea.slug
+      },
+      imageUrl: idea.cover || (this.data.author && this.data.author.avatar)
+    });
   },
 
   goBack() {
@@ -71,6 +144,44 @@ Page({
 
     wx.navigateTo({
       url: `/pkg/explore/creator-detail/index?slug=${this.data.author.slug}`
+    });
+  },
+
+  goDestinationDetail(event) {
+    const slug = event.currentTarget.dataset.slug;
+    if (!slug) {
+      return;
+    }
+
+    wx.navigateTo({
+      url: `/pkg/explore/destination-detail/index?slug=${slug}`
+    });
+  },
+
+  onServiceTap(event) {
+    const slug = event && event.detail && event.detail.slug;
+    if (!slug) {
+      return;
+    }
+
+    wx.navigateTo({
+      url: `/pkg/explore/service-detail/index?slug=${slug}`
+    });
+  },
+
+  handleReadMore() {
+    const idea = this.data.idea || {};
+    const articleUrl = idea.wechatArticleUrl;
+    if (!articleUrl) {
+      wx.showToast({
+        title: "未配置原文链接",
+        icon: "none"
+      });
+      return;
+    }
+
+    wx.navigateTo({
+      url: `/pkg/content/article-bridge/index?target=${encodeURIComponent(articleUrl)}&title=${encodeURIComponent(idea.wechatArticleTitle || idea.title || "")}`
     });
   },
 

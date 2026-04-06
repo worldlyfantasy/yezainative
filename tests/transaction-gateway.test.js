@@ -20,6 +20,9 @@ function loadTransactionGatewayModule(options = {}) {
 
   Module._load = function mockLoader(request, parent, isMain) {
     if (request === "wx-server-sdk") {
+      if (options.wxServerSdk) {
+        return options.wxServerSdk;
+      }
       return {
         DYNAMIC_CURRENT_ENV: "test-env",
         init() {},
@@ -48,9 +51,27 @@ function loadTransactionGatewayModule(options = {}) {
     }
 
     if (request === "@cloudbase/node-sdk") {
+      if (options.cloudbaseSdk) {
+        return options.cloudbaseSdk;
+      }
       return {
         init() {
           return {
+            rdb() {
+              return {
+                from() {
+                  return {
+                    insert: async () => ({ error: null }),
+                    update: () => ({
+                      eq: async () => ({ error: null })
+                    }),
+                    delete: () => ({
+                      eq: async () => ({ error: null })
+                    })
+                  };
+                }
+              };
+            },
             models: {}
           };
         }
@@ -221,6 +242,225 @@ test("transactionGateway includes contact and traveler snapshots in order servic
   ]);
 });
 
+test("transactionGateway supports compact traveler snapshots and keeps three travelers within legacy limits", () => {
+  const { __test__ } = loadTransactionGatewayModule();
+  const travelers = [
+    {
+      name: "出行人1",
+      documentType: "idCard",
+      documentNumber: "500227198606090019",
+      phone: "13800000001"
+    },
+    {
+      name: "出行人2",
+      documentType: "idCard",
+      documentNumber: "500227198606090019",
+      phone: "13800000002"
+    },
+    {
+      name: "出行人3",
+      documentType: "idCard",
+      documentNumber: "500227198606090019",
+      phone: "13800000003"
+    }
+  ];
+
+  const persisted = __test__.buildPersistedTravelers(travelers, 256);
+  assert.ok(persisted.length <= 256);
+
+  const mapped = __test__.mapSqlOrder({
+    orderNo: "yz202604030001",
+    userOpenid: "openid-compact",
+    serviceSlug: "compact-service",
+    serviceName: "紧凑结构路线",
+    travelersJson: persisted,
+    travelerName: "联系人",
+    travelerPhone: "13800000000",
+    peopleCountInt: 3,
+    amountDec: "300",
+    payableDec: "300",
+    createdAtTs: Date.UTC(2026, 3, 3, 10, 0, 0),
+    status: "pending"
+  });
+
+  assert.equal(mapped.travelers.length, 3);
+  assert.equal(mapped.travelers[0].name, "出行人1");
+  assert.equal(mapped.travelers[0].documentNumber, "500227198606090019");
+  assert.equal(mapped.travelers[0].phone, "13800000001");
+});
+
+test("transactionGateway createOrder inserts a generated SQL _id for multi-traveler orders", async () => {
+  const insertCalls = [];
+  const orderEvents = [];
+  const periodRecord = {
+    _id: "sp_test_001",
+    serviceSlug: "compact-service",
+    serviceName: "紧凑结构路线",
+    serviceType: "长途旅行",
+    periodCode: "compact-2026-04-10",
+    versionName: "清明团",
+    dateStart: "2026-04-10",
+    dateEnd: "2026-04-12",
+    price: 999,
+    remainingSeats: 8,
+    status: "available"
+  };
+
+  const { __test__ } = loadTransactionGatewayModule({
+    wxServerSdk: {
+      DYNAMIC_CURRENT_ENV: "test-env",
+      init() {},
+      database() {
+        return {
+          collection() {
+            return {
+              add: async ({ data }) => {
+                orderEvents.push(data);
+                return { _id: "evt_1" };
+              },
+              where() {
+                return this;
+              },
+              skip() {
+                return this;
+              },
+              limit() {
+                return this;
+              },
+              get: async () => ({ data: [] })
+            };
+          }
+        };
+      },
+      getWXContext() {
+        return { OPENID: "test-openid" };
+      }
+    },
+    cloudbaseSdk: {
+      init() {
+        return {
+          rdb() {
+            return {
+              from() {
+                return {
+                  insert: async (payload) => {
+                    insertCalls.push(payload);
+                    return { error: null };
+                  },
+                  update: () => ({
+                    eq: async () => ({ error: null })
+                  }),
+                  delete: () => ({
+                    eq: async () => ({ error: null })
+                  })
+                };
+              }
+            };
+          },
+          models: {
+            TravelOrder: {
+              list: async () => ({
+                data: {
+                  records: []
+                }
+              })
+            },
+            ServicePeriod: {
+              list: async ({ filter }) => {
+                const where = filter && filter.where ? filter.where : {};
+                const matchesById = !where._id || where._id.$eq === periodRecord._id;
+                const matchesBySlug = !where.serviceSlug || where.serviceSlug.$eq === periodRecord.serviceSlug;
+                const matchesByDate = !where.dateStart || where.dateStart.$eq === periodRecord.dateStart;
+                const matchesByCode = !where.periodCode || where.periodCode.$eq === periodRecord.periodCode;
+
+                return {
+                  data: {
+                    records: matchesById && matchesBySlug && matchesByDate && matchesByCode
+                      ? [Object.assign({}, periodRecord)]
+                      : []
+                  }
+                };
+              },
+              update: async ({ data, filter }) => {
+                const where = filter && filter.where ? filter.where : {};
+                if (
+                  where._id &&
+                  where._id.$eq === periodRecord._id &&
+                  (!where.remainingSeats || where.remainingSeats.$eq === periodRecord.remainingSeats) &&
+                  (!where.status || where.status.$eq === periodRecord.status)
+                ) {
+                  Object.assign(periodRecord, data);
+                  return {
+                    data: {
+                      count: 1
+                    }
+                  };
+                }
+
+                return {
+                  data: {
+                    count: 0
+                  }
+                };
+              }
+            }
+          }
+        };
+      }
+    }
+  });
+
+  const result = await __test__.createOrder({
+    serviceSlug: "compact-service",
+    travelDateStart: "2026-04-10",
+    peopleCount: 3,
+    contactName: "测试4",
+    contactPhone: "13122276786",
+    travelers: [
+      {
+        name: "出行人1",
+        documentType: "idCard",
+        documentNumber: "11010519491231002X",
+        phone: "13800000001"
+      },
+      {
+        name: "出行人2",
+        documentType: "idCard",
+        documentNumber: "11010519491231002X",
+        phone: "13800000002"
+      },
+      {
+        name: "出行人3",
+        documentType: "idCard",
+        documentNumber: "11010519491231002X",
+        phone: "13800000003"
+      }
+    ]
+  });
+
+  assert.equal(insertCalls.length, 1);
+  assert.match(insertCalls[0]._id, /^order_[a-z0-9]+$/);
+  assert.equal(insertCalls[0]._openid, "test-openid");
+  assert.equal(insertCalls[0].peopleCountInt, 3);
+  assert.equal(result._id, insertCalls[0]._id);
+  assert.equal(periodRecord.remainingSeats, 5);
+  assert.equal(orderEvents.length, 1);
+});
+
+test("transactionGateway rejects orders above the single-order people limit", async () => {
+  const { __test__ } = loadTransactionGatewayModule();
+
+  await assert.rejects(
+    () =>
+      __test__.createOrder({
+        serviceSlug: "compact-service",
+        travelDateStart: "2026-04-10",
+        peopleCount: 4
+      }),
+    /peopleCount exceeds max allowed/
+  );
+});
+
 test("transactionGateway validates traveler document type, document number, and contact phone", () => {
   const { __test__ } = loadTransactionGatewayModule();
 
@@ -229,7 +469,7 @@ test("transactionGateway validates traveler document type, document number, and 
       peopleCount: 1,
       contact: {
         name: "海森",
-        phone: "010-12345678"
+        phone: "+86 138-0000-0000"
       },
       travelers: [
         {
@@ -248,6 +488,25 @@ test("transactionGateway validates traveler document type, document number, and 
       peopleCount: 1,
       contact: {
         name: "海森",
+        phone: "010-12345678"
+      },
+      travelers: [
+        {
+          name: "阿野",
+          documentType: "passport",
+          documentNumber: "E12345678",
+          phone: "13800000000"
+        }
+      ]
+    }),
+    "请输入正确的联系人手机号"
+  );
+
+  assert.equal(
+    __test__.validateOrderParticipants({
+      peopleCount: 1,
+      contact: {
+        name: "海森",
         phone: "12345"
       },
       travelers: [
@@ -259,7 +518,7 @@ test("transactionGateway validates traveler document type, document number, and 
         }
       ]
     }),
-    "请输入正确的联系电话"
+    "请输入正确的联系人手机号"
   );
 
   assert.equal(

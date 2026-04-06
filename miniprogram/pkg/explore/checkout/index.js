@@ -1,8 +1,14 @@
-const { getServiceDetailData } = require("../../../repositories/content-repository");
+const { getServiceBookingData } = require("../../../repositories/content-repository");
 const { getCheckoutPageConfig } = require("../../../repositories/config-repository");
 const { createOrder } = require("../../../repositories/transaction-repository");
 const { ensureLoggedIn } = require("../../../services/user");
 const { isAuditMode } = require("../../../utils/audit");
+const {
+  getExceededOrderPeopleLimitMessage,
+  getInsufficientSeatsMessage,
+  getOrderPeopleLimitMessage,
+  normalizeOrderPeopleCount
+} = require("../period-seat");
 const {
   DOCUMENT_TYPE_PICKER_OPTIONS,
   buildEmptyContactErrors,
@@ -157,6 +163,9 @@ function getSubmitOrderErrorMessage(error) {
   if (message.includes("service period changed too frequently")) {
     return "当前报名太火爆，请稍后再试";
   }
+  if (message.includes("peoplecount exceeds max allowed")) {
+    return getOrderPeopleLimitMessage();
+  }
 
   return raw.length > 60 ? `${raw.slice(0, 60)}…` : raw;
 }
@@ -194,6 +203,7 @@ Page({
     summarySubtotal: "0",
     summaryTotal: "0",
     payableText: "¥0",
+    peopleCountLimitText: getOrderPeopleLimitMessage(),
     periodCode: "",
     travelPersons: [],
     documentTypeOptions: DOCUMENT_TYPE_PICKER_OPTIONS.map((item) => item.label),
@@ -217,7 +227,7 @@ Page({
 
   async onLoad(options) {
     const [payload, pageConfig] = await Promise.all([
-      getServiceDetailData(options.slug),
+      getServiceBookingData(options.slug),
       getCheckoutPageConfig()
     ]);
     if (!payload) {
@@ -233,7 +243,8 @@ Page({
     const travelDateStart = String(options.travelDateStart || options.travelDate || "").trim();
     const travelDateEnd = String(options.travelDateEnd || options.travelDateStart || options.travelDate || "").trim();
     const periodCode = String(options.periodCode || "").trim();
-    const peopleCount = Math.max(1, parseInt(options.peopleCount, 10) || 1);
+    const requestedPeopleCount = Math.max(1, parseInt(options.peopleCount, 10) || 1);
+    const peopleCount = normalizeOrderPeopleCount(requestedPeopleCount, 1);
     const unitPrice = getBasePrice(service, groupPeriods, options.unitPrice);
     const subtotal = unitPrice * peopleCount;
     const total = subtotal;
@@ -252,13 +263,34 @@ Page({
       return;
     }
 
+    const seatError = getInsufficientSeatsMessage(selectedPeriod, peopleCount);
+    if (seatError) {
+      wx.showToast({
+        title: seatError,
+        icon: "none"
+      });
+      setTimeout(() => {
+        wx.redirectTo({
+          url: `/pkg/explore/service-detail/index?slug=${service.slug}`
+        });
+      }, 250);
+      return;
+    }
+
+    const peopleLimitError = getExceededOrderPeopleLimitMessage(requestedPeopleCount);
+    if (peopleLimitError) {
+      wx.showToast({
+        title: peopleLimitError,
+        icon: "none"
+      });
+    }
+
     const versionName = options.versionName ? decodeURIComponent(options.versionName) : (service.type || "");
 
     const travelPersons = buildTravelPersons(peopleCount);
     const travelPersonErrors = buildTravelPersonErrors(peopleCount);
 
     this.setData({
-      travelDetail: payload.travelDetail || null,
       creator: payload.creator || null,
       selectedVersion: versionName,
       selectedDateText: formatTravelDateText(travelDateStart, travelDateEnd),
@@ -275,6 +307,7 @@ Page({
       summarySubtotal: String(subtotal),
       summaryTotal: String(total),
       payableText: `¥${subtotal}`,
+      peopleCountLimitText: getOrderPeopleLimitMessage(),
       periodCode,
       travelPersons,
       travelPersonErrors,
@@ -509,10 +542,27 @@ Page({
         });
         return;
       }
+      const seatError = getInsufficientSeatsMessage(selectedPeriod, this.data.selectedCount);
+      if (seatError) {
+        wx.showToast({
+          title: seatError,
+          icon: "none"
+        });
+        return;
+      }
+      const peopleLimitError = getExceededOrderPeopleLimitMessage(this.data.selectedCount);
+      if (peopleLimitError) {
+        wx.showToast({
+          title: peopleLimitError,
+          icon: "none"
+        });
+        return;
+      }
       const travelDateStart = selectedPeriod ? selectedPeriod.dateStart : this.data.selectedDateStart;
       const travelDateEnd = selectedPeriod
         ? (selectedPeriod.dateEnd || selectedPeriod.dateStart)
         : (this.data.selectedDateEnd || this.data.selectedDateStart);
+      const normalizedPeopleCount = normalizeOrderPeopleCount(this.data.selectedCount, 1);
       const order = await createOrder({
         clientRequestId: this.data.submissionToken,
         serviceSlug: this.data.service.slug,
@@ -520,7 +570,7 @@ Page({
         versionName: selectedPeriod ? selectedPeriod.versionName || this.data.selectedVersion : this.data.selectedVersion,
         travelDateStart,
         travelDateEnd,
-        peopleCount: this.data.selectedCount,
+        peopleCount: normalizedPeopleCount,
         travelPeriod: {
           dateStart: travelDateStart,
           dateEnd: travelDateEnd

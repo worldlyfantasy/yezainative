@@ -19,7 +19,11 @@ Component({
   methods: {
     handleTap() {
       this.triggerEvent("cardtap", {
-        slug: this.properties.idea.slug
+        slug: this.properties.idea.slug,
+        sourceType: this.properties.idea.sourceType,
+        wechatArticleUrl: this.properties.idea.wechatArticleUrl,
+        wechatArticleTitle: this.properties.idea.wechatArticleTitle,
+        title: this.properties.idea.title
       });
     }
   }

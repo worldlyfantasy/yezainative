@@ -28,6 +28,10 @@
         wx:key="slug"
         class="idea-list-item"
         data-slug="{{item.slug}}"
+        data-source-type="{{item.sourceType}}"
+        data-wechat-article-url="{{item.wechatArticleUrl}}"
+        data-wechat-article-title="{{item.wechatArticleTitle}}"
+        data-title="{{item.title}}"
         bindtap="onIdeaTap"
       >
         <view class="idea-list-item__main">

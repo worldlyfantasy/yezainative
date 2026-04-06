@@ -48,11 +48,16 @@ function getFavoritesPageConfig() {
   return callConfigGateway("getFavoritesPageConfig");
 }
 
+function getArticleBridgePageConfig() {
+  return callConfigGateway("getArticleBridgePageConfig");
+}
+
 module.exports = {
   getHowItWorksPageConfig,
   getCheckoutPageConfig,
   getServiceDetailPageConfig,
   getPaymentResultPageConfig,
   getOrderDetailPageConfig,
-  getFavoritesPageConfig
+  getFavoritesPageConfig,
+  getArticleBridgePageConfig
 };

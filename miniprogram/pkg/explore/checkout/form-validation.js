@@ -39,9 +39,7 @@ function normalizeMobileNumber(value) {
 }
 
 function normalizeContactPhone(value) {
-  return normalizeText(value)
-    .replace(/\s+/g, "")
-    .replace(/^\+?86(?=1[3-9]\d{9}$)/, "");
+  return normalizeMobileNumber(value);
 }
 
 function inferDocumentTypeFromNumber(value) {
@@ -147,16 +145,7 @@ function isValidMainlandMobile(value) {
 }
 
 function isValidContactPhone(value) {
-  const normalized = normalizeContactPhone(value);
-  if (!normalized) {
-    return false;
-  }
-
-  if (isValidMainlandMobile(normalized)) {
-    return true;
-  }
-
-  return /^(0\d{2,3}-?\d{7,8})(-\d{1,6})?$/.test(normalized);
+  return isValidMainlandMobile(normalizeContactPhone(value));
 }
 
 function validateDocumentNumber(documentType, documentNumber) {
@@ -240,9 +229,9 @@ function validateContactField(field, value) {
   if (field === "contactPhone") {
     const normalized = normalizeContactPhone(value);
     if (!normalized) {
-      return "请填写联系电话";
+      return "请填写联系人手机号";
     }
-    return isValidContactPhone(normalized) ? "" : "请输入正确的联系电话";
+    return isValidContactPhone(normalized) ? "" : "请输入正确的联系人手机号";
   }
 
   return "";

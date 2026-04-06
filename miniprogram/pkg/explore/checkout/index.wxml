@@ -35,6 +35,7 @@
       <text class="checkout-summary__label">出行人数</text>
       <text class="checkout-summary__value">{{summaryCount}} 人</text>
     </view>
+    <text class="checkout-summary__helper">{{peopleCountLimitText}}</text>
   </view>
 
   <!-- 出行人信息（动态数量） -->
@@ -97,8 +98,8 @@
         <text wx:if="{{contactErrors.contactName}}" class="checkout-field-error">{{contactErrors.contactName}}</text>
       </view>
       <view class="checkout-field-group">
-        <text class="checkout-field-label">联系电话</text>
-        <input class="search-input checkout-field {{contactErrors.contactPhone ? 'checkout-field--error' : ''}}" placeholder="手机号或座机" maxlength="20" data-field="contactPhone" value="{{contactPhone}}" bindinput="onContactInput" bindblur="onContactBlur" />
+        <text class="checkout-field-label">联系人手机号</text>
+        <input class="search-input checkout-field {{contactErrors.contactPhone ? 'checkout-field--error' : ''}}" placeholder="联系人手机号" type="number" maxlength="11" data-field="contactPhone" value="{{contactPhone}}" bindinput="onContactInput" bindblur="onContactBlur" />
         <text wx:if="{{contactErrors.contactPhone}}" class="checkout-field-error">{{contactErrors.contactPhone}}</text>
       </view>
     </view>

@@ -73,11 +73,24 @@ function mapFavoritesPageConfig(payload) {
   };
 }
 
+function mapArticleBridgePageConfig(payload) {
+  const source = ensureObject(payload);
+  return {
+    bridgeBaseUrl: source.bridgeBaseUrl || "",
+    bridgePageTitle: source.bridgePageTitle || "",
+    bridgeLoadingText: source.bridgeLoadingText || "",
+    bridgeFallbackTitle: source.bridgeFallbackTitle || "",
+    bridgeActionText: source.bridgeActionText || "",
+    bridgeHintText: source.bridgeHintText || ""
+  };
+}
+
 module.exports = {
   mapHowItWorksPageConfig,
   mapCheckoutPageConfig,
   mapServiceDetailPageConfig,
   mapPaymentResultPageConfig,
   mapOrderDetailPageConfig,
-  mapFavoritesPageConfig
+  mapFavoritesPageConfig,
+  mapArticleBridgePageConfig
 };

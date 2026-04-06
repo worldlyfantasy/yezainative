@@ -87,6 +87,10 @@
         wx:key="slug"
         class="destination-story-item"
         data-slug="{{item.slug}}"
+        data-source-type="{{item.sourceType}}"
+        data-wechat-article-url="{{item.wechatArticleUrl}}"
+        data-wechat-article-title="{{item.wechatArticleTitle}}"
+        data-title="{{item.title}}"
         bindtap="onStoryTap"
       >
         <view class="destination-story-item__main">

@@ -1,6 +1,6 @@
 {
   "navigationBarTitleText": "",
   "usingComponents": {
-    "destination-card": "/components/yezai/destination-card/index"
+    "journey-route-card": "/components/yezai/journey-route-card/index"
   }
 }

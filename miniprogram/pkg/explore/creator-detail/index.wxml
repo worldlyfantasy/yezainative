@@ -17,7 +17,7 @@
     </view>
   </view>
 
-  <view class="section-block paper-block">
+  <view wx:if="{{creatorRouteTypes.length}}" class="section-block paper-block">
     <view class="skeleton-line skeleton-line--section"></view>
     <view class="skeleton-stack">
       <view class="skeleton-line skeleton-line--long"></view>
@@ -44,15 +44,17 @@
         <text class="page-eyebrow">创作者</text>
         <view class="creator-top__title-row">
           <text class="page-title creator-top__name">{{creator.name}}</text>
-          <favorite-star
-            favorited="{{creator.isFavorited}}"
-            notice-state="{{favoriteNoticeState}}"
-            notice-label="{{favoriteNoticeLabel}}"
-            notice-action-label="{{favoriteNoticeActionLabel}}"
-            notice-mode="{{favoriteNoticeMode}}"
-            bind:toggle="toggleFavorite"
-            bind:noticeaction="handleFavoriteNoticeAction"
-          ></favorite-star>
+          <view class="detail-action-group">
+            <favorite-star
+              favorited="{{creator.isFavorited}}"
+              notice-state="{{favoriteNoticeState}}"
+              notice-label="{{favoriteNoticeLabel}}"
+              notice-action-label="{{favoriteNoticeActionLabel}}"
+              notice-mode="{{favoriteNoticeMode}}"
+              bind:toggle="toggleFavorite"
+              bind:noticeaction="handleFavoriteNoticeAction"
+            ></favorite-star>
+          </view>
         </view>
         <text class="page-subtitle creator-top__stance">{{creator.stance}}</text>
         <view class="creator-top__tags">
@@ -71,17 +73,17 @@
   </view>
 
   <view class="section-block paper-block">
-    <text class="section-title">常在这些地方停留</text>
+    <text class="section-title">常带的旅程类型</text>
     <view class="creator-place-list">
       <view
-        wx:for="{{creatorDestinations}}"
-        wx:key="id"
+        wx:for="{{creatorRouteTypes}}"
+        wx:key="*this"
         class="creator-place-item"
         hover-class="creator-place-item--hover"
-        data-slug="{{item.slug}}"
-        bindtap="onDestinationTap"
+        data-value="{{item}}"
+        bindtap="onRouteTypeTap"
       >
-        <text class="creator-place-item__label">{{item.name}}</text>
+        <text class="creator-place-item__label">{{item}}</text>
         <text class="creator-place-item__icon">↗</text>
       </view>
     </view>
@@ -95,6 +97,10 @@
         wx:key="slug"
         class="creator-story-item"
         data-slug="{{item.slug}}"
+        data-source-type="{{item.sourceType}}"
+        data-wechat-article-url="{{item.wechatArticleUrl}}"
+        data-wechat-article-title="{{item.wechatArticleTitle}}"
+        data-title="{{item.title}}"
         bindtap="onStoryTap"
       >
         <view class="creator-story-item__main">

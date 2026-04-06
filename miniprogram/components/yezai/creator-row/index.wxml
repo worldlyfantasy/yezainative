@@ -1,6 +1,6 @@
 <view class="creator-row" bindtap="onTap">
   <view class="creator-row__main">
-    <image class="creator-row__avatar" src="{{avatar}}" mode="aspectFill"></image>
+    <image class="creator-row__avatar" src="{{avatar}}" mode="aspectFill" lazy-load="{{true}}"></image>
     <view class="creator-row__body">
       <text class="creator-row__name">{{name}}</text>
       <text class="creator-row__description">{{description}}</text>

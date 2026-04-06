@@ -1,5 +1,5 @@
 const { getOrderById, cancelOrder } = require("../../../repositories/transaction-repository");
-const { getServiceDetailData } = require("../../../repositories/content-repository");
+const { getServiceConsultData } = require("../../../repositories/content-repository");
 const { getOrderDetailPageConfig, getServiceDetailPageConfig } = require("../../../repositories/config-repository");
 const { isAuditMode } = require("../../../utils/audit");
 
@@ -63,9 +63,8 @@ Page({
     let serviceConsultWeChatQr = "";
     if (order.serviceSlug) {
       try {
-        const serviceDetail = await getServiceDetailData(order.serviceSlug);
-        serviceConsultWeChatQr =
-          (serviceDetail && serviceDetail.travelDetail && serviceDetail.travelDetail.consultWeChatQr) || "";
+        const serviceConsultData = await getServiceConsultData(order.serviceSlug);
+        serviceConsultWeChatQr = (serviceConsultData && serviceConsultData.consultWeChatQr) || "";
       } catch (error) {
         console.warn("Failed to load service consult qr", error);
       }

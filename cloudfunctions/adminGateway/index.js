@@ -15,11 +15,103 @@ const {
   looksLikeHttpUrl,
   normalizeImageAssetValue
 } = require("./image-assets");
-const {
-  normalizeDestinationRegionCode,
-  resolveDestinationRegionCode,
-  getDestinationRegionLabel
-} = require("./destination-regions");
+
+const DESTINATION_REGION_OPTIONS = [
+  { label: "藏区", value: "cn_tibetan" },
+  { label: "新疆", value: "cn_xinjiang" },
+  { label: "西北", value: "cn_great_northwest" },
+  { label: "江浙沪", value: "cn_jiang_zhe_hu" },
+  { label: "华中山水", value: "cn_central_landscape" },
+  { label: "云贵川", value: "cn_yun_gui_chuan" },
+  { label: "华南海岛", value: "cn_south_islands" },
+  { label: "京津冀", value: "cn_jing_jin_ji" },
+  { label: "中原", value: "cn_central_plain" },
+  { label: "东北", value: "cn_northeast_region" },
+  { label: "内蒙古", value: "cn_inner_mongolia" },
+  { label: "日韩", value: "intl_japan_korea" },
+  { label: "东南亚", value: "intl_southeast_asia" },
+  { label: "南亚", value: "intl_south_asia" },
+  { label: "中东", value: "intl_middle_east" },
+  { label: "欧洲", value: "intl_europe" },
+  { label: "美洲", value: "intl_americas" },
+  { label: "非洲", value: "intl_africa" },
+  { label: "大洋洲", value: "intl_oceania" }
+];
+
+const LEGACY_DESTINATION_REGION_CODE_ALIASES = {
+  "cn_north": "cn_jing_jin_ji",
+  "cn_northeast": "cn_northeast_region",
+  "cn_east": "cn_jiang_zhe_hu",
+  "cn_central": "cn_central_landscape",
+  "cn_south": "cn_south_islands",
+  "cn_southwest": "cn_yun_gui_chuan",
+  "cn_northwest": "cn_great_northwest",
+  "greater_china_hmt": "",
+  "asia_east": "intl_japan_korea",
+  "asia_southeast": "intl_southeast_asia",
+  "asia_south": "intl_south_asia",
+  "asia_central": "",
+  "asia_west_middle_east": "intl_middle_east",
+  "europe": "intl_europe",
+  "africa": "intl_africa",
+  "north_america": "intl_americas",
+  "latin_america": "intl_americas",
+  "oceania": "intl_oceania"
+};
+
+const LEGACY_DESTINATION_REGION_BY_SLUG = {
+  "aba-highlands": "cn_tibetan",
+  "qiandong-valley": "cn_yun_gui_chuan",
+  "minbei-creek": "cn_jiang_zhe_hu",
+  "hexicorridor": "cn_great_northwest",
+  "enxi-gorge": "cn_central_landscape",
+  "nanjiang-dune": "cn_xinjiang",
+  "songhua-river": "cn_northeast_region",
+  "lancang-source": "cn_tibetan",
+  "qiongbay-salt": "cn_south_islands",
+  "yunnan-rainforest": "cn_yun_gui_chuan",
+  "wuyi-ancient": "cn_jiang_zhe_hu",
+  "qinghai-lake": "cn_tibetan"
+};
+
+const DESTINATION_REGION_LABEL_MAP = DESTINATION_REGION_OPTIONS.reduce((map, item) => {
+  map[item.value] = item.label;
+  return map;
+}, {});
+
+function normalizeDestinationRegionCode(value, fallbackValue = "") {
+  const code = String(value || fallbackValue || "").trim();
+  const normalizedCode = Object.prototype.hasOwnProperty.call(DESTINATION_REGION_LABEL_MAP, code)
+    ? code
+    : (LEGACY_DESTINATION_REGION_CODE_ALIASES[code] || "");
+  return Object.prototype.hasOwnProperty.call(DESTINATION_REGION_LABEL_MAP, normalizedCode) ? normalizedCode : "";
+}
+
+function inferDestinationRegionCodeBySlug(slug) {
+  return normalizeDestinationRegionCode(LEGACY_DESTINATION_REGION_BY_SLUG[String(slug || "").trim()] || "");
+}
+
+function resolveDestinationRegionCode(value, slug, fallbackValue = "") {
+  const explicitCode = Object.prototype.hasOwnProperty.call(DESTINATION_REGION_LABEL_MAP, String(value || "").trim())
+    ? String(value || "").trim()
+    : "";
+  const explicitFallbackCode = Object.prototype.hasOwnProperty.call(DESTINATION_REGION_LABEL_MAP, String(fallbackValue || "").trim())
+    ? String(fallbackValue || "").trim()
+    : "";
+
+  return (
+    explicitCode
+    || explicitFallbackCode
+    || inferDestinationRegionCodeBySlug(slug)
+    || normalizeDestinationRegionCode(value)
+    || normalizeDestinationRegionCode(fallbackValue)
+  );
+}
+
+function getDestinationRegionLabel(code) {
+  const normalizedCode = normalizeDestinationRegionCode(code);
+  return normalizedCode ? DESTINATION_REGION_LABEL_MAP[normalizedCode] : "";
+}
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -101,6 +193,9 @@ const IDEA_THEME_OPTIONS = [
   { key: "inner-growth", label: "内在成长" }
 ];
 const CUSTOM_IDEA_THEME_KEY = "custom";
+const IDEA_SOURCE_TYPES = ["mini", "wechat", "hybrid"];
+const DEFAULT_IDEA_SOURCE_TYPE = "mini";
+const DEFAULT_IDEA_READ_MORE_TEXT = "阅读全文";
 const IDEA_THEME_LABEL_MAP = IDEA_THEME_OPTIONS.reduce((map, item) => {
   map[item.key] = item.label;
   return map;
@@ -514,15 +609,16 @@ function normalizeArray(value) {
 
 function normalizeTravelerSnapshot(value) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  const documentNumber = normalizeText(source.documentNumber || source.idCard || source.idNo);
+  const documentNumber = normalizeText(source.documentNumber || source.idCard || source.idNo || source.i);
+  const documentType = normalizeText(source.documentType || source.t);
   return {
-    name: normalizeText(source.name),
-    phone: normalizeText(source.phone),
-    documentType: normalizeText(source.documentType),
+    name: normalizeText(source.name || source.n),
+    phone: normalizeText(source.phone || source.p),
+    documentType,
     documentNumber,
     idCard: documentNumber,
-    wechat: normalizeText(source.wechat),
-    note: normalizeText(source.note)
+    wechat: normalizeText(source.wechat || source.w),
+    note: normalizeText(source.note || source.o)
   };
 }
 
@@ -902,6 +998,20 @@ function normalizeIdeaTheme(themeKeyValue, themeLabelValue, isCustomThemeValue) 
     themeLabel: rawLabel || (matchedByKey ? matchedByKey.label : ""),
     isCustomTheme: true
   };
+}
+
+function normalizeIdeaSourceType(value) {
+  const normalized = normalizeText(value);
+  if (IDEA_SOURCE_TYPES.includes(normalized)) {
+    return normalized;
+  }
+
+  return DEFAULT_IDEA_SOURCE_TYPE;
+}
+
+function sanitizeExternalUrl(value) {
+  const normalized = normalizeText(value);
+  return /^https?:\/\//i.test(normalized) ? normalized : "";
 }
 
 function uniqueIdentifiers(values) {
@@ -2844,13 +2954,22 @@ function mapIdeaDetailRecord(idea, authorNameMap) {
     themeKey: ideaTheme.themeKey,
     themeLabel: ideaTheme.themeLabel,
     isCustomTheme: ideaTheme.isCustomTheme,
+    sourceType: normalizeIdeaSourceType(idea && idea.sourceType),
     status: buildStatusTag(idea),
     summary: normalizeText(idea && idea.summary),
     cover: getImageAssetOriginal(idea && idea.cover),
     authorId: normalizeText(idea && idea.authorId),
     authorName: authorNameMap[normalizeText(idea && idea.authorId)] || "",
     destinationSlugs: uniqueStrings(idea && idea.destinationSlugs),
+    relatedServiceSlugs: uniqueStrings(idea && idea.relatedServiceSlugs),
     body: normalizeText(idea && idea.body),
+    excerptBody: normalizeText(idea && idea.excerptBody),
+    wechatArticleUrl: sanitizeExternalUrl(idea && idea.wechatArticleUrl),
+    wechatArticleTitle: normalizeText(idea && idea.wechatArticleTitle),
+    wechatCover: getImageAssetOriginal(idea && idea.wechatCover),
+    publishedAt: normalizeNumber(idea && idea.publishedAt),
+    readMoreText: normalizeText(idea && idea.readMoreText) || DEFAULT_IDEA_READ_MORE_TEXT,
+    syncStatus: normalizeText(idea && idea.syncStatus) || "draft",
     createdAt: normalizeNumber(idea && idea.createdAt),
     updatedAt: normalizeNumber(idea && idea.updatedAt)
   };
@@ -3827,6 +3946,7 @@ async function saveIdea(payload, adminUser) {
   const existing = await findContentDoc(COLLECTIONS.ideas, payload);
   const title = normalizeText(payload && payload.title);
   const requestedSlug = normalizeText(payload && payload.slug).toLowerCase();
+  const sourceType = normalizeIdeaSourceType(payload && payload.sourceType);
   const slug = existing
     ? normalizeText(existing.slug).toLowerCase()
     : (requestedSlug || await generateIdeaSlug(title));
@@ -3863,6 +3983,26 @@ async function saveIdea(payload, adminUser) {
   const operatorId = normalizeText(adminUser && (adminUser.uid || adminUser.id));
   const now = Date.now();
   const normalizedPayload = await normalizeIdeaImagePayload(payload, slug);
+  const body = normalizeText(normalizedPayload && normalizedPayload.body);
+  const excerptBody = normalizeText(normalizedPayload && normalizedPayload.excerptBody);
+  const wechatArticleUrl = sanitizeExternalUrl(normalizedPayload && normalizedPayload.wechatArticleUrl);
+  const wechatArticleTitle = normalizeText(normalizedPayload && normalizedPayload.wechatArticleTitle);
+  const publishedAt = normalizeNumber(normalizedPayload && normalizedPayload.publishedAt, 0);
+  const readMoreText = normalizeText(normalizedPayload && normalizedPayload.readMoreText) || DEFAULT_IDEA_READ_MORE_TEXT;
+  const syncStatus = normalizeText(normalizedPayload && normalizedPayload.syncStatus) || "draft";
+
+  if (sourceType === "mini") {
+    assertCondition(body, "小程序全文模式必须填写正文内容");
+  }
+
+  if (sourceType === "hybrid") {
+    assertCondition(excerptBody, "混合模式必须填写小程序导读");
+  }
+
+  if (sourceType === "wechat" || sourceType === "hybrid") {
+    assertCondition(wechatArticleUrl, "公众号导流或混合模式必须填写原文链接");
+  }
+
   const nextDoc = {
     id: existing
       ? normalizeText(existing.id)
@@ -3873,11 +4013,20 @@ async function saveIdea(payload, adminUser) {
     themeKey: ideaTheme.themeKey,
     themeLabel: ideaTheme.themeLabel,
     isCustomTheme: ideaTheme.isCustomTheme,
+    sourceType,
     summary: normalizeText(normalizedPayload && normalizedPayload.summary),
     cover: getImageAssetOriginal(normalizedPayload && normalizedPayload.cover),
     authorId: normalizeText(matchedAuthor && matchedAuthor.id) || normalizeText(normalizedPayload && normalizedPayload.authorId),
     destinationSlugs: uniqueStrings(normalizedPayload && normalizedPayload.destinationSlugs),
-    body: normalizeText(normalizedPayload && normalizedPayload.body),
+    relatedServiceSlugs: uniqueStrings(normalizedPayload && normalizedPayload.relatedServiceSlugs),
+    body,
+    excerptBody,
+    wechatArticleUrl,
+    wechatArticleTitle,
+    wechatCover: getImageAssetOriginal(normalizedPayload && normalizedPayload.wechatCover),
+    publishedAt: publishedAt > 0 ? publishedAt : now,
+    readMoreText,
+    syncStatus: syncStatus === "published" ? "published" : "draft",
     status: normalizeStatus(normalizedPayload && normalizedPayload.status, SERVICE_STATUSES, buildStatusTag(existing || normalizedPayload)),
     updatedAt: now,
     updatedBy: operatorId
@@ -4031,6 +4180,7 @@ async function listIdeas(payload) {
         themeKey: ideaTheme.themeKey,
         themeLabel: ideaTheme.themeLabel,
         isCustomTheme: ideaTheme.isCustomTheme,
+        sourceType: normalizeIdeaSourceType(idea && idea.sourceType),
         status: buildStatusTag(idea),
         authorName: authorMap[normalizeText(idea.authorId)] || "",
         destinationCount: normalizeArray(idea.destinationSlugs).length,
@@ -4675,7 +4825,8 @@ exports.__test__ = {
   listOrders,
   resolvePeriodStatusByRemainingSeats,
   resolveServicePeriodStatus,
-  resolveUserOrderOpenids
+  resolveUserOrderOpenids,
+  saveIdea
 };
 
 exports.main = async (event) => {

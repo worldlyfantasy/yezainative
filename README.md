@@ -4,8 +4,8 @@
 
 ## 当前环境
 
-- CloudBase 环境：`yezai-3gr73wd48057512e`
-- 环境别名：`yezai`
+- CloudBase 环境：`yezai-3gr73wd48057512e-10f17b581`
+- 环境别名：`yezai-3gr73wd48057512e`
 - 地域：`ap-shanghai`
 - 小程序根目录：`miniprogram`
 - 云函数根目录：`cloudfunctions`
@@ -174,6 +174,27 @@ TCB_SECRET_ID=xxx TCB_SECRET_KEY=xxx node scripts/backfill-image-assets.js
 - `services / creators / destinations / ideas / app_configs(homePage.heroSlides)` 都支持回填
 - 脚本可重复执行，已有完整 `{ original, card, detail }` 的图片会直接跳过
 
+## 公众号全文打开页
+
+小程序“阅读全文”通过 `pkg/content/article-bridge/index` 打开 `web-view`。
+
+- 默认会在 `web-view` 里直接打开关联公众号文章本身。
+- 只有在 `articleBridgePage.bridgeBaseUrl` 已配置时，才会优先打开业务域名下的 H5 中转页，再跳转到公众号文章。
+
+上线前需要确认：
+
+1. 当前小程序已经和目标公众号完成关联。
+2. `wechatArticleUrl` 填的是可访问的公众号文章链接。
+3. 真机如果无法直接打开，请把 `web/article-bridge/index.html` 部署到静态托管，并把该域名加入小程序业务域名后，填写到 `articleBridgePage.bridgeBaseUrl`。
+
+默认配置项：
+
+- `articleBridgePage.bridgePageTitle`
+- `articleBridgePage.bridgeLoadingText`
+- `articleBridgePage.bridgeFallbackTitle`
+- `articleBridgePage.bridgeActionText`
+- `articleBridgePage.bridgeHintText`
+
 ## 草稿图片清理
 
 `maintenanceGateway` 负责清理 `content/services/draft/` 下超期且未被数据库引用的草稿图。
@@ -226,6 +247,6 @@ node scripts/run-core-self-check.js
 
 ## 控制台入口
 
-- 云函数管理：[Cloud Functions](https://tcb.cloud.tencent.com/dev?envId=yezai-3gr73wd48057512e#/function/list)
-- MySQL 数据库：[MySQL](https://tcb.cloud.tencent.com/dev?envId=yezai-3gr73wd48057512e#/db/mysql/table/default/)
-- 数据模型：[Data Models](https://tcb.cloud.tencent.com/dev?envId=yezai-3gr73wd48057512e#/lowcode/model)
+- 云函数管理：[Cloud Functions](https://tcb.cloud.tencent.com/dev?envId=yezai-3gr73wd48057512e-10f17b581#/function/list)
+- MySQL 数据库：[MySQL](https://tcb.cloud.tencent.com/dev?envId=yezai-3gr73wd48057512e-10f17b581#/db/mysql/table/default/)
+- 数据模型：[Data Models](https://tcb.cloud.tencent.com/dev?envId=yezai-3gr73wd48057512e-10f17b581#/lowcode/model)
