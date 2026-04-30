@@ -1,0 +1,154 @@
+<view class="page-shell assets-page">
+  <view class="assets-header">
+    <text class="page-title assets-title">野哉分享家</text>
+    <text class="page-subtitle">邀请新用户扫描你的二维码或填写备用码，新用户获得最高150元优惠券，而你在该用户完成第一次旅程后获得100元现金奖励。</text>
+  </view>
+
+  <view wx:if="{{loggedIn && ownReferralCode}}" class="section-block paper-block referral-share-card">
+    <view class="referral-qr-box" bindtap="previewReferralQrCode">
+      <image wx:if="{{shareQrCodeFileID}}" class="referral-qr-box__image" src="{{shareQrCodeFileID}}" mode="aspectFit" show-menu-by-longpress="{{true}}"></image>
+      <text wx:else class="referral-qr-box__placeholder">生成中</text>
+    </view>
+    <view class="referral-share-card__content">
+      <view class="referral-share-card__actions">
+        <button class="referral-action-button referral-action-button--secondary" bindtap="saveReferralQrCode">保存二维码</button>
+        <button class="referral-action-button referral-action-button--primary {{!shareQrCodeFileID ? 'referral-action-button--disabled' : ''}}" open-type="share" disabled="{{!shareQrCodeFileID}}">转发二维码</button>
+      </view>
+      <view class="referral-code-row" bindtap="copyReferralCode">
+        <text class="referral-code-row__label">备用码</text>
+        <text class="referral-code-row__value">{{ownReferralCode}}</text>
+        <text class="referral-code-row__copy">复制</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{loggedIn}}" class="paper-block referral-code-entry-card">
+    <text class="referral-code-entry-card__title">输入备用码</text>
+    <view class="referral-code-entry-card__form">
+      <view class="referral-code-entry-card__input-wrap">
+        <input class="referral-code-entry-card__input" value="{{referralCodeDraft}}" maxlength="16" placeholder="输入朋友的备用码或扫码" bindinput="onReferralCodeInput" confirm-type="done" bindconfirm="submitReferralCode" />
+        <view class="referral-code-entry-card__scan {{submittingReferralCode ? 'referral-code-entry-card__scan--disabled' : ''}}" bindtap="scanReferralQrCode" aria-label="扫码填写备用码">
+          <view class="referral-code-entry-card__scan-icon">
+            <text class="referral-code-entry-card__scan-corner referral-code-entry-card__scan-corner--tl"></text>
+            <text class="referral-code-entry-card__scan-corner referral-code-entry-card__scan-corner--tr"></text>
+            <text class="referral-code-entry-card__scan-corner referral-code-entry-card__scan-corner--bl"></text>
+            <text class="referral-code-entry-card__scan-corner referral-code-entry-card__scan-corner--br"></text>
+            <text class="referral-code-entry-card__scan-line"></text>
+          </view>
+        </view>
+      </view>
+      <view class="referral-code-entry-card__button {{submittingReferralCode ? 'referral-code-entry-card__button--disabled' : ''}}" bindtap="submitReferralCode">{{submittingReferralCode ? '确认中' : '确认'}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="section-block paper-block assets-state-block">
+    <text class="section-title">正在同步资产</text>
+    <text class="page-subtitle">稍等片刻。</text>
+  </view>
+
+  <view wx:elif="{{!loggedIn}}" class="section-block paper-block assets-state-block">
+    <text class="section-title">登录后查看分享家资产</text>
+    <text class="page-subtitle">登录后会显示你的优惠券和现金奖励。</text>
+  </view>
+
+  <view wx:else class="section-block assets-panel">
+    <view class="assets-tabs-block">
+      <section-tabs sections="{{tabSections}}" activeKey="{{activeTab}}" compact="{{true}}" bind:tabtap="onTabTap"></section-tabs>
+    </view>
+
+    <block wx:if="{{activeTab === 'coupons'}}">
+      <view wx:if="{{coupons.length}}" class="assets-list">
+        <view wx:for="{{coupons}}" wx:key="id" class="paper-block assets-coupon-card assets-coupon-card--{{item.status}}">
+          <image class="assets-coupon-card__bg" src="{{item.backgroundImage}}" mode="aspectFit"></image>
+          <view class="assets-coupon-card__content">
+            <view class="assets-coupon-card__top">
+              <view class="assets-coupon-card__value">
+                <text class="assets-coupon-card__currency">¥</text>
+                <text class="assets-coupon-card__amount">{{item.amount}}</text>
+              </view>
+              <text wx:if="{{item.showStatusBadge}}" class="assets-list-card__badge">{{item.statusLabel}}</text>
+            </view>
+            <text class="assets-coupon-card__title">{{item.title}}</text>
+            <view class="assets-coupon-card__meta">
+              <text>满 {{item.threshold}} 元可用</text>
+              <text wx:if="{{item.stackUsageText}}"> · {{item.stackUsageText}}</text>
+            </view>
+            <text class="assets-coupon-card__expires">有效期至 {{item.expiresAtText || '--'}}</text>
+          </view>
+        </view>
+      </view>
+      <view wx:else class="paper-block assets-empty-block">
+        <text class="section-eyebrow">优惠券</text>
+        <text class="section-title">还没有分享家活动券</text>
+        <text class="page-subtitle">通过分享家活动获得的券会显示在这里。</text>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="paper-block assets-payout-card" bindtap="jumpToPayoutAccountPage">
+        <view class="assets-payout-card__main">
+          <text class="section-eyebrow">收款信息</text>
+          <text wx:if="{{payoutAccountSummaryText}}" class="page-subtitle">{{payoutAccountSummaryText}}</text>
+        </view>
+        <text class="assets-payout-card__action">{{payoutAccountActionLabel}}</text>
+      </view>
+
+      <view wx:if="{{rewards.length}}" class="assets-list">
+        <view wx:for="{{rewards}}" wx:key="id" class="paper-block assets-reward-card assets-reward-card--{{item.rewardVisualStatus}}" aria-label="{{item.displayStatusLabel}}，现金奖励{{item.rewardAmount}}元，记账{{item.earnedAtText || item.settlementMonth || '--'}}">
+          <image class="assets-reward-card__bg" src="{{item.backgroundImage}}" mode="aspectFit"></image>
+          <view class="assets-reward-card__content">
+            <view class="assets-reward-card__main">
+              <view class="assets-reward-card__value">
+                <text class="assets-reward-card__currency">¥</text>
+                <text class="assets-reward-card__amount">{{item.rewardAmount}}</text>
+              </view>
+              <text class="assets-reward-card__title">{{item.serviceName || '野哉分享家邀请奖励'}}</text>
+              <text class="assets-reward-card__meta">记账 {{item.earnedAtText || item.settlementMonth || '--'}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <text class="assets-reward-help-text">如果对现金奖励的机制或其他有疑问的，请联系zhayeye@yezai.me</text>
+    </block>
+  </view>
+</view>
+
+<view wx:if="{{rewardGiftVisible}}" class="reward-gift-mask">
+  <view class="reward-gift-modal reward-gift-modal--{{rewardGiftStage}}">
+    <view class="reward-gift-visual">
+      <image class="reward-gift-visual__image" src="images/cash-reward-gift.png" mode="aspectFit"></image>
+      <view wx:if="{{rewardGiftStage === 'celebrating' || rewardGiftStage === 'result'}}" class="reward-gift-confetti">
+        <text wx:for="{{rewardGiftConfetti}}" wx:key="*this" class="reward-gift-confetti__piece reward-gift-confetti__piece--{{item}}"></text>
+      </view>
+      <view wx:if="{{rewardGiftStage === 'celebrating' || rewardGiftStage === 'result'}}" class="reward-gift-coins">
+        <text wx:for="{{rewardGiftCoins}}" wx:key="*this" class="reward-gift-coin reward-gift-coin--{{item}}">¥</text>
+      </view>
+    </view>
+
+    <block wx:if="{{rewardGiftStage === 'result'}}">
+      <text class="reward-gift-modal__eyebrow">现金奖励</text>
+      <text class="reward-gift-modal__title">{{rewardGiftView.title}}</text>
+      <text class="reward-gift-modal__desc">{{rewardGiftView.desc}}</text>
+      <view class="reward-gift-card">
+        <image class="reward-gift-card__bg" src="/images/rewards/reward-bg-pending.png" mode="aspectFit"></image>
+        <view class="reward-gift-card__content">
+          <view class="reward-gift-card__value">
+            <text class="reward-gift-card__currency">¥</text>
+            <text class="reward-gift-card__amount">{{rewardGiftView.totalAmount}}</text>
+          </view>
+          <text class="reward-gift-card__title">野哉分享家邀请奖励</text>
+          <text class="reward-gift-card__meta">已记入现金奖励</text>
+        </view>
+      </view>
+      <button class="primary-button reward-gift-modal__button" bindtap="closeRewardGift">查看现金奖励</button>
+    </block>
+
+    <block wx:else>
+      <text class="reward-gift-modal__title">{{rewardGiftStage === 'opening' ? '正在打开现金礼盒' : rewardGiftView.stageTitle}}</text>
+      <text class="reward-gift-modal__desc">{{rewardGiftStage === 'opening' ? '现金奖励正在入账。' : rewardGiftView.stageDesc}}</text>
+      <button wx:if="{{rewardGiftStage === 'pending'}}" class="primary-button reward-gift-modal__button" bindtap="openRewardGift">打开礼盒</button>
+    </block>
+  </view>
+</view>
+
+<app-tab-bar></app-tab-bar>

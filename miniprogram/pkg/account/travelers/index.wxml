@@ -1,0 +1,130 @@
+<view class="page-shell travelers-page">
+  <text class="back-link" bindtap="goBack">← 返回我的</text>
+  <text class="page-eyebrow">出行人档案</text>
+
+  <view class="section-block paper-block travelers-hero">
+    <text class="page-subtitle">这里维护的是你自己的常用出行人档案。保存后，报名页会优先复用这些资料，减少重复填写。</text>
+    <button class="outline-button travelers-add-button" bindtap="openCreateEditor">新增出行人</button>
+  </view>
+
+  <view wx:if="{{loading}}" class="section-block paper-block">
+    <text class="section-title">正在读取出行人</text>
+    <text class="page-subtitle">请稍等片刻，云端档案正在同步。</text>
+  </view>
+
+  <view wx:elif="{{!loggedIn}}" class="section-block paper-block">
+    <text class="section-title">登录后管理出行人</text>
+    <text class="page-subtitle">登录后可保存常用同行资料，报名时会自动复用这些信息。</text>
+  </view>
+
+  <view wx:elif="{{errorText}}" class="section-block paper-block page-feedback">
+    <text class="page-feedback__title">加载失败</text>
+    <text class="page-feedback__desc">{{errorText}}</text>
+  </view>
+
+  <block wx:elif="{{travelers.length}}">
+    <view class="section-block travelers-list">
+      <view wx:for="{{travelers}}" wx:key="profileId" class="traveler-card">
+        <view class="traveler-card__head">
+          <view class="traveler-card__head-main">
+            <text class="traveler-card__title">{{item.name}}</text>
+          </view>
+          <view class="traveler-card__head-actions">
+            <view class="traveler-card__action-trigger traveler-card__action-trigger--compact" data-profile-id="{{item.profileId}}" bindtap="openEditEditor">
+              <text class="traveler-card__action-label">编辑</text>
+            </view>
+            <view class="traveler-card__action-trigger traveler-card__action-trigger--compact traveler-card__action-trigger--danger" data-profile-id="{{item.profileId}}" bindtap="confirmDelete">
+              <text class="traveler-card__action-label">删除</text>
+            </view>
+          </view>
+        </view>
+        <view class="traveler-card__grid">
+          <text class="traveler-card__row">性别：{{item.gender === 'male' ? '男' : (item.gender === 'female' ? '女' : '待补充')}}</text>
+          <text class="traveler-card__row">生日：{{item.birthday || '待补充'}}</text>
+          <text class="traveler-card__row">微信：{{item.wechat || '待补充'}}</text>
+          <text class="traveler-card__row">电话：{{item.phoneMasked || item.phone}}</text>
+          <text class="traveler-card__row traveler-card__row--full">邮箱：{{item.email || '待补充'}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <view wx:else class="section-block paper-block">
+    <text class="section-title">还没有保存的出行人</text>
+    <text class="page-subtitle">先新增一个常用档案，后续在报名页里就可以直接选用，不用重复填写。</text>
+  </view>
+
+  <view wx:if="{{editorVisible}}" class="traveler-editor-overlay">
+    <view class="traveler-editor-backdrop" bindtap="closeEditor"></view>
+    <view class="traveler-editor-sheet">
+      <view class="traveler-editor-sheet__head">
+        <text class="traveler-editor-sheet__title">{{editorMode === 'edit' ? '编辑出行人' : '新增出行人'}}</text>
+        <text class="traveler-editor-sheet__close" bindtap="closeEditor">×</text>
+      </view>
+
+      <view class="traveler-form-group">
+        <text class="traveler-form-group__label">姓名</text>
+        <input class="search-input traveler-form-group__input {{formErrors.name ? 'traveler-form-group__input--error' : ''}}" placeholder="与证件一致的真实姓名" data-field="name" value="{{form.name}}" bindinput="onInput" />
+        <text wx:if="{{formErrors.name}}" class="traveler-form-group__error">{{formErrors.name}}</text>
+      </view>
+
+      <view class="traveler-form-row">
+        <view class="traveler-form-group traveler-form-row__item">
+          <text class="traveler-form-group__label">手机号</text>
+          <input class="search-input traveler-form-group__input {{formErrors.phone ? 'traveler-form-group__input--error' : ''}}" type="number" maxlength="11" placeholder="常用手机号" data-field="phone" value="{{form.phone}}" bindinput="onInput" />
+          <text wx:if="{{formErrors.phone}}" class="traveler-form-group__error">{{formErrors.phone}}</text>
+        </view>
+
+        <view class="traveler-form-group traveler-form-row__item">
+          <text class="traveler-form-group__label">性别</text>
+          <picker mode="selector" range="{{genderOptions}}" value="{{form.genderIndex}}" bindchange="onGenderChange">
+            <view class="filter-picker traveler-form-group__picker {{form.gender ? '' : 'traveler-form-group__picker--placeholder'}}">{{form.gender ? genderOptions[form.genderIndex] : '请选择'}}</view>
+          </picker>
+        </view>
+      </view>
+
+      <view class="traveler-form-row">
+        <view class="traveler-form-group traveler-form-row__item">
+          <text class="traveler-form-group__label">生日</text>
+          <picker mode="date" value="{{form.birthday}}" bindchange="onBirthdayChange">
+            <view class="filter-picker traveler-form-group__picker {{form.birthday ? '' : 'traveler-form-group__picker--placeholder'}}">{{form.birthday || '请选择生日'}}</view>
+          </picker>
+        </view>
+
+        <view class="traveler-form-group traveler-form-row__item">
+          <text class="traveler-form-group__label">微信号</text>
+          <input class="search-input traveler-form-group__input" placeholder="便于行前联系" data-field="wechat" value="{{form.wechat}}" bindinput="onInput" />
+        </view>
+      </view>
+
+      <view class="traveler-form-row">
+        <view class="traveler-form-group traveler-form-row__item">
+          <text class="traveler-form-group__label">证件类型</text>
+          <picker mode="selector" range="{{documentOptions}}" value="{{form.documentTypeIndex}}" bindchange="onDocumentTypeChange">
+            <view class="filter-picker traveler-form-group__picker {{form.documentType ? '' : 'traveler-form-group__picker--placeholder'}} {{formErrors.documentType ? 'traveler-form-group__input--error' : ''}}">{{form.documentType ? documentOptions[form.documentTypeIndex] : '可后续补充'}}</view>
+          </picker>
+          <text wx:if="{{formErrors.documentType}}" class="traveler-form-group__error">{{formErrors.documentType}}</text>
+        </view>
+
+        <view class="traveler-form-group traveler-form-row__item">
+          <text class="traveler-form-group__label">证件号码</text>
+          <input class="search-input traveler-form-group__input {{formErrors.documentNumber ? 'traveler-form-group__input--error' : ''}}" placeholder="可先留空，报名时补齐" data-field="documentNumber" value="{{form.documentNumber}}" bindinput="onInput" />
+          <text wx:if="{{formErrors.documentNumber}}" class="traveler-form-group__error">{{formErrors.documentNumber}}</text>
+        </view>
+      </view>
+
+      <view class="traveler-form-group">
+        <text class="traveler-form-group__label">邮箱</text>
+        <input class="search-input traveler-form-group__input {{formErrors.email ? 'traveler-form-group__input--error' : ''}}" placeholder="用于后续收行前通知" data-field="email" value="{{form.email}}" bindinput="onInput" />
+        <text wx:if="{{formErrors.email}}" class="traveler-form-group__error">{{formErrors.email}}</text>
+      </view>
+
+      <view class="traveler-editor-sheet__footer">
+        <button class="outline-button traveler-editor-sheet__button" bindtap="closeEditor">取消</button>
+        <button class="primary-button traveler-editor-sheet__button traveler-editor-sheet__button--primary" bindtap="saveTraveler" disabled="{{saving}}">{{saving ? '保存中...' : '保存出行人'}}</button>
+      </view>
+    </view>
+  </view>
+</view>
+
+<app-tab-bar wx:if="{{!editorVisible}}"></app-tab-bar>

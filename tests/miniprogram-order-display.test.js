@@ -4,6 +4,7 @@ const Module = require("node:module");
 const path = require("node:path");
 
 const transactionMeta = require("../miniprogram/constants/transaction-meta");
+const { EMPTY_TRIP_STATE_IMAGE } = require("../miniprogram/config/profile-page");
 const userServiceModulePath = path.resolve(
   __dirname,
   "../miniprogram/services/user.js"
@@ -47,6 +48,10 @@ function loadUserService(mocks) {
 
     if (request === "../repositories/transaction-repository") {
       return mocks.transactionRepository;
+    }
+
+    if (request === "../repositories/config-repository") {
+      return mocks.configRepository;
     }
 
     if (request === "./navigation") {
@@ -102,6 +107,52 @@ test("transaction-meta builds display fields and filters confirmed orders by tri
       ["yz202603260123"]
     );
   });
+});
+
+test("transaction-meta normalizes order cover, price rows, and display service type", () => {
+  const order = transactionMeta.buildOrderCard({
+    orderNo: "yz202603260888",
+    status: "pending",
+    amount: 3280,
+    discount: 0,
+    payable: 3280,
+    peopleCount: 1,
+    serviceType: "带团旅行",
+    cover: {
+      card: "trip-cover-card.jpg",
+      detail: "trip-cover-detail.jpg"
+    },
+    travelPeriod: {
+      dateStart: "2026-04-15",
+      dateEnd: "2026-04-18"
+    }
+  });
+
+  assert.equal(order.cover, "trip-cover-card.jpg");
+  assert.equal(order.serviceType, "长途旅行");
+  assert.equal(order.showRoomingPreference, true);
+  assert.equal(order.peopleCountText, "1人");
+  assert.equal(order.unitPriceText, "¥3280");
+  assert.equal(order.discountText, "¥0");
+  assert.equal(order.totalPriceText, "¥3280");
+});
+
+test("transaction-meta hides rooming preference for one-day routes", () => {
+  const order = transactionMeta.buildOrderCard({
+    orderNo: "yz202603260889",
+    status: "pending",
+    amount: 680,
+    payable: 680,
+    peopleCount: 1,
+    serviceType: "在地体验",
+    travelPeriod: {
+      dateStart: "2026-04-15",
+      dateEnd: "2026-04-15"
+    }
+  });
+
+  assert.equal(order.serviceType, "在地体验");
+  assert.equal(order.showRoomingPreference, false);
 });
 
 test("user service builds active trips for miniapp profile page", async () => {
@@ -183,6 +234,11 @@ test("user service builds active trips for miniapp profile page", async () => {
         return orders.slice(0, limit);
       }
     },
+    configRepository: {
+      getProfilePageConfig: async () => {
+        throw new Error("profile page image should come from front-end config");
+      }
+    },
     navigation: {
       TOP_LEVEL_ROUTES: {
         profile: "/pages/profile/index"
@@ -205,5 +261,6 @@ test("user service builds active trips for miniapp profile page", async () => {
     assert.equal(pageData.activeTrips[0].serviceCover, "snapshot-cover.jpg");
     assert.equal(pageData.activeTrips[1].tripPhaseLabel, "在进行");
     assert.equal(pageData.activeTrips[1].creatorRoleText, "创作者 · 带领者");
+    assert.equal(pageData.emptyTripStateImage, EMPTY_TRIP_STATE_IMAGE);
   });
 });

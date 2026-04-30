@@ -1,6 +1,27 @@
+const CLOUD_ENV_ID = "yezai-3gr73wd48057512e-10f17b581";
+let cloudInitialized = false;
+
+function ensureCloudReady() {
+  if (!wx.cloud || typeof wx.cloud.callFunction !== "function") {
+    return false;
+  }
+  if (!cloudInitialized) {
+    try {
+      wx.cloud.init({
+        env: CLOUD_ENV_ID,
+        traceUser: true
+      });
+    } catch (error) {
+      // ignore duplicated init in page-level fallback
+    }
+    cloudInitialized = true;
+  }
+  return true;
+}
+
 function callUserGateway(action, payload) {
   return new Promise((resolve, reject) => {
-    if (!wx.cloud || typeof wx.cloud.callFunction !== "function") {
+    if (!ensureCloudReady()) {
       reject(new Error("wx.cloud.callFunction is unavailable"));
       return;
     }
@@ -41,8 +62,27 @@ function updateProfile(profile) {
   });
 }
 
+function listTravelerProfiles() {
+  return callUserGateway("listTravelerProfiles");
+}
+
+function upsertTravelerProfile(profile) {
+  return callUserGateway("upsertTravelerProfile", {
+    profile: profile || {}
+  });
+}
+
+function deleteTravelerProfile(profileId) {
+  return callUserGateway("deleteTravelerProfile", {
+    profileId: String(profileId || "").trim()
+  });
+}
+
 module.exports = {
   getCurrentUser,
   login,
-  updateProfile
+  updateProfile,
+  listTravelerProfiles,
+  upsertTravelerProfile,
+  deleteTravelerProfile
 };

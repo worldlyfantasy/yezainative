@@ -1,8 +1,10 @@
 const cloud = require("wx-server-sdk");
 const cloudbase = require("@cloudbase/node-sdk");
 const {
-  normalizeContact,
+  normalizeEmergencyContact,
+  normalizeOrderContact,
   normalizeTravelerRecord,
+  normalizeTravelerSource,
   normalizeTravelers,
   validateOrderParticipants
 } = require("./order-validation");
@@ -17,11 +19,15 @@ const runSQL = (sqlApp.models && (sqlApp.models.$runSQL || sqlApp.models.runSQL)
 const rdb = typeof sqlApp.rdb === "function" ? sqlApp.rdb() : null;
 const FAVORITES_COLLECTION = "favorites";
 const ORDER_EVENTS_COLLECTION = "order_events";
+const CONFIG_COLLECTION = "app_configs";
+const REFERRAL_RELATIONS_COLLECTION = "referral_relations";
+const CASH_REWARD_LEDGERS_COLLECTION = "cash_reward_ledgers";
+const COUPON_ASSETS_COLLECTION = "user_coupon_assets";
 const QUERY_BATCH_SIZE = 100;
 const MODEL_QUERY_BATCH_SIZE = 100;
 const SERVICE_PERIOD_UPDATE_RETRY_LIMIT = 5;
 const ORDER_STATUS_UPDATE_RETRY_LIMIT = 3;
-const MAX_ORDER_PEOPLE_COUNT = 3;
+const MAX_ORDER_PEOPLE_COUNT = 2;
 const ORDER_MODEL_NAME = "TravelOrder";
 const SERVICE_PERIOD_MODEL_NAME = "ServicePeriod";
 const ENABLE_CLIENT_PAY_ORDER = process.env.ENABLE_CLIENT_PAY_ORDER === "true";
@@ -31,7 +37,17 @@ const CONTENT_COLLECTIONS = {
   services: "services",
   ideas: "ideas"
 };
+const COLLECTIONS = {
+  users: "users"
+};
 const SERVICE_PERIOD_SQL_FIELDS = "`serviceSlug`, `periodCode`, `dateStart`, `dateEnd`, `price`";
+const SUPPORTED_COUPON_RULES = {};
+const DEFAULT_SHARE_REFERRAL_CONFIG = {
+  campaignKey: "yezai_share_referral",
+  campaignName: "野哉分享家",
+  cashRewardAmount: 100,
+  monthlySettlementDay: 20
+};
 
 function getOrderModel() {
   const model = sqlApp.models && sqlApp.models[ORDER_MODEL_NAME];
@@ -93,8 +109,54 @@ function normalizeNumber(value, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function normalizeText(value) {
+  return String(value || "").trim();
+}
+
 function isPlainObject(value) {
   return Boolean(value) && Object.prototype.toString.call(value) === "[object Object]";
+}
+
+function formatSettlementMonth(ts) {
+  const targetTs = normalizeNumber(ts, 0);
+  if (!targetTs) {
+    return "";
+  }
+
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit"
+  });
+  const parts = formatter.formatToParts(new Date(targetTs));
+  const year = parts.find((item) => item.type === "year");
+  const month = parts.find((item) => item.type === "month");
+  if (!year || !month) {
+    return "";
+  }
+  return `${year.value}-${month.value}`;
+}
+
+function deepMerge(base, override) {
+  if (Array.isArray(base)) {
+    return Array.isArray(override) ? override : base.slice();
+  }
+
+  if (!isPlainObject(base)) {
+    return override == null ? base : override;
+  }
+
+  const result = Object.assign({}, base);
+  Object.keys(override || {}).forEach((key) => {
+    const prevValue = result[key];
+    const nextValue = override[key];
+    if (isPlainObject(prevValue) && isPlainObject(nextValue)) {
+      result[key] = deepMerge(prevValue, nextValue);
+      return;
+    }
+    result[key] = nextValue;
+  });
+  return result;
 }
 
 function pickImageRef(value) {
@@ -139,6 +201,73 @@ function normalizePositiveInteger(value) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
 }
 
+function normalizeRoomingMode(value) {
+  const normalized = String(value || "").trim();
+  if (normalized === "withRoommate" || normalized === "singleRoomRequest") {
+    return normalized;
+  }
+  return "random";
+}
+
+function normalizeRoomType(value) {
+  return String(value || "").trim() === "king" ? "king" : "twin";
+}
+
+function normalizeCouponId(value) {
+  const normalized = String(value || "").trim().toUpperCase();
+  return Object.prototype.hasOwnProperty.call(SUPPORTED_COUPON_RULES, normalized) ? normalized : "";
+}
+
+function normalizeCouponSelectionId(value) {
+  return String(value || "").trim();
+}
+
+function splitCouponSelectionIds(value) {
+  return normalizeCouponSelectionId(value)
+    .split(/[,+|]/)
+    .map((item) => normalizeText(item))
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
+function normalizeCouponSnapshot(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const id = normalizeCouponSelectionId(source.id || source.couponId);
+  if (!id) {
+    return {};
+  }
+
+  return {
+    id,
+    title: truncateString(source.title, 32),
+    threshold: normalizeNumber(source.threshold, 0),
+    amountOff: normalizeNumber(source.amountOff, 0)
+  };
+}
+
+function buildOrderExtras(payload) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  const roomingMode = normalizeRoomingMode(source.roomingMode);
+  let roomType = normalizeRoomType(source.roomType);
+  if (roomingMode === "random") {
+    roomType = "twin";
+  }
+  const singleRoomRequested = roomingMode === "singleRoomRequest";
+  return {
+    emergencyContactName: truncateString(source.emergencyContactName, 32),
+    emergencyContactPhone: truncateString(source.emergencyContactPhone, 32),
+    roomingMode,
+    roommateName: truncateString(source.roommateName, 32),
+    roomType,
+    singleRoomPrice: singleRoomRequested ? Math.max(0, normalizeNumber(source.singleRoomPrice, 0)) : 0,
+    singleRoomStatus: singleRoomRequested ? "pending" : "",
+    singleRoomNotice: singleRoomRequested ? truncateString(source.singleRoomNotice, 120) : "",
+    allergyNotes: truncateString(source.allergyNotes, 256),
+    couponId: normalizeCouponSelectionId(source.couponId),
+    couponSnapshot: normalizeCouponSnapshot(source.couponSnapshot)
+  };
+}
+
 async function appendOrderStatusEvent(event) {
   const orderNo = String(event && event.orderNo ? event.orderNo : "").trim();
   const status = String(event && event.status ? event.status : "").trim();
@@ -168,6 +297,173 @@ async function appendOrderStatusEvent(event) {
       error
     });
   }
+}
+
+async function readConfig(key) {
+  const result = await db.collection(CONFIG_COLLECTION).where({ key: normalizeText(key) }).limit(1).get();
+  return result && result.data && result.data.length ? result.data[0] : null;
+}
+
+async function getShareReferralCampaignConfig() {
+  try {
+    const configDoc = await readConfig("shareReferralCampaign");
+    const value = configDoc && isPlainObject(configDoc.value) ? configDoc.value : {};
+    return deepMerge(DEFAULT_SHARE_REFERRAL_CONFIG, value);
+  } catch (error) {
+    console.error("Failed to load share referral campaign config in transactionGateway", error);
+    return DEFAULT_SHARE_REFERRAL_CONFIG;
+  }
+}
+
+async function findUserDocByOpenid(openid) {
+  const normalizedOpenid = normalizeText(openid);
+  if (!normalizedOpenid) {
+    return null;
+  }
+
+  const result = await db.collection(COLLECTIONS.users).where({ openid: normalizedOpenid }).limit(1).get();
+  return result && result.data && result.data.length ? result.data[0] : null;
+}
+
+async function updateCompletedTravelStatsForUser(user, occurredAt = Date.now()) {
+  const userId = normalizeText(user && user._id);
+  if (!userId) {
+    return;
+  }
+
+  const currentCount = Math.max(0, normalizeNumber(user && user.effectiveOrderCount, 0));
+  const currentLastTravelAt = Math.max(0, normalizeNumber(user && user.lastTravelAt, 0));
+  const completedAt = Math.max(currentLastTravelAt, normalizeNumber(occurredAt, Date.now()));
+
+  try {
+    await db.collection(COLLECTIONS.users).doc(userId).update({
+      data: {
+        effectiveOrderCount: Math.max(1, currentCount),
+        effectiveRouteCount: Math.max(1, normalizeNumber(user && user.effectiveRouteCount, 0)),
+        lastTravelAt: completedAt,
+        updatedAt: Date.now()
+      }
+    });
+  } catch (error) {
+    console.error("Failed to update completed travel stats for user", {
+      userId,
+      error
+    });
+  }
+}
+
+async function findActiveReferralRelationByInviteeUserId(inviteeUserId) {
+  const normalizedUserId = normalizeText(inviteeUserId);
+  if (!normalizedUserId) {
+    return null;
+  }
+
+  const result = await db.collection(REFERRAL_RELATIONS_COLLECTION)
+    .where({ inviteeUserId: normalizedUserId, status: "active" })
+    .limit(1)
+    .get();
+  return result && result.data && result.data.length ? result.data[0] : null;
+}
+
+async function findRewardLedgerByOrderNo(orderNo, campaignKey) {
+  const normalizedOrderNo = normalizeText(orderNo);
+  if (!normalizedOrderNo) {
+    return null;
+  }
+
+  const result = await db.collection(CASH_REWARD_LEDGERS_COLLECTION)
+    .where({
+      sourceOrderNo: normalizedOrderNo,
+      campaignKey: normalizeText(campaignKey)
+    })
+    .limit(1)
+    .get();
+  return result && result.data && result.data.length ? result.data[0] : null;
+}
+
+async function findRewardLedgerByRelationId(relationId, campaignKey) {
+  const normalizedRelationId = normalizeText(relationId);
+  if (!normalizedRelationId) {
+    return null;
+  }
+
+  const result = await db.collection(CASH_REWARD_LEDGERS_COLLECTION)
+    .where({
+      relationId: normalizedRelationId,
+      campaignKey: normalizeText(campaignKey)
+    })
+    .limit(1)
+    .get();
+  return result && result.data && result.data.length ? result.data[0] : null;
+}
+
+function buildShareReferralRewardLedger(orderRecord, relation, config, now = Date.now()) {
+  const normalizedNow = normalizeNumber(now, Date.now());
+  const rewardAmount = Math.max(0, normalizeNumber(config && config.cashRewardAmount, DEFAULT_SHARE_REFERRAL_CONFIG.cashRewardAmount));
+  const inviteeOpenid = normalizeText(orderRecord && (orderRecord.userOpenid || orderRecord.openid));
+  const travelDateStart = normalizeText(orderRecord && (orderRecord.travelDateStart || (orderRecord.travelPeriod && orderRecord.travelPeriod.dateStart)));
+  const travelDateEnd = normalizeText(orderRecord && (orderRecord.travelDateEnd || (orderRecord.travelPeriod && orderRecord.travelPeriod.dateEnd)));
+
+  return {
+    campaignKey: normalizeText(config && config.campaignKey) || DEFAULT_SHARE_REFERRAL_CONFIG.campaignKey,
+    campaignName: normalizeText(config && config.campaignName) || DEFAULT_SHARE_REFERRAL_CONFIG.campaignName,
+    inviterUserId: normalizeText(relation && relation.inviterUserId),
+    inviteeUserId: normalizeText(relation && relation.inviteeUserId),
+    relationId: normalizeText(relation && relation._id),
+    inviteeOpenid,
+    sourceOrderNo: normalizeText(orderRecord && orderRecord.orderNo),
+    sourceServiceSlug: normalizeText(orderRecord && orderRecord.serviceSlug),
+    serviceName: normalizeText(orderRecord && orderRecord.serviceName),
+    travelDateStart,
+    travelDateEnd,
+    rewardAmount,
+    grossAmount: rewardAmount,
+    netAmount: rewardAmount,
+    status: "awaiting_account",
+    settlementMonth: formatSettlementMonth(normalizedNow),
+    settlementPlannedDay: Math.max(1, Math.min(28, normalizePositiveInteger(config && config.monthlySettlementDay) || DEFAULT_SHARE_REFERRAL_CONFIG.monthlySettlementDay)),
+    earnedAt: normalizedNow,
+    updatedAt: normalizedNow
+  };
+}
+
+async function syncShareReferralRewardForCompletedOrder(orderRecord) {
+  const normalizedOrder = orderRecord && typeof orderRecord === "object" ? orderRecord : null;
+  const inviteeOpenid = normalizeText(normalizedOrder && (normalizedOrder.userOpenid || normalizedOrder.openid));
+  if (!normalizedOrder || !normalizeText(normalizedOrder.orderNo) || !inviteeOpenid) {
+    return null;
+  }
+
+  const inviteeUser = await findUserDocByOpenid(inviteeOpenid);
+  if (!inviteeUser || !normalizeText(inviteeUser._id)) {
+    return null;
+  }
+
+  await updateCompletedTravelStatsForUser(inviteeUser, Date.now());
+
+  const relation = await findActiveReferralRelationByInviteeUserId(normalizeText(inviteeUser._id));
+  if (!relation) {
+    return null;
+  }
+
+  const campaignConfig = await getShareReferralCampaignConfig();
+  const existingLedger = await findRewardLedgerByOrderNo(normalizeText(normalizedOrder.orderNo), normalizeText(campaignConfig.campaignKey));
+  if (existingLedger) {
+    return existingLedger;
+  }
+  const existingRelationLedger = await findRewardLedgerByRelationId(normalizeText(relation._id), normalizeText(campaignConfig.campaignKey));
+  if (existingRelationLedger) {
+    return existingRelationLedger;
+  }
+
+  const rewardLedger = buildShareReferralRewardLedger(normalizedOrder, relation, campaignConfig, Date.now());
+  const createResult = await db.collection(CASH_REWARD_LEDGERS_COLLECTION).add({
+    data: rewardLedger
+  });
+
+  return Object.assign({
+    _id: createResult && createResult._id ? createResult._id : ""
+  }, rewardLedger);
 }
 
 async function listAllSqlServicePeriods() {
@@ -281,6 +577,57 @@ function isDuplicateKeyError(error) {
   return message.includes("duplicate") || message.includes("unique");
 }
 
+function getErrorMessage(error) {
+  if (!error) {
+    return "";
+  }
+  return String(error.message || error.errMsg || error.error || "").trim();
+}
+
+function extractMissingColumnFromInsertError(error) {
+  const message = getErrorMessage(error);
+  if (!message) {
+    return "";
+  }
+
+  const match = message.match(/column\s+([`"'A-Za-z0-9_]+)\s+not\s+found/i);
+  if (!match || !match[1]) {
+    return "";
+  }
+
+  return String(match[1]).replace(/[`'"]/g, "").trim();
+}
+
+async function insertOrderRecordWithCompatibility(orderData) {
+  if (!rdb) {
+    throw new Error("rdb unavailable");
+  }
+
+  const nextOrderData = { ...(orderData || {}) };
+  const removedColumns = [];
+  let lastError = null;
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const { error } = await rdb.from(ORDER_MODEL_NAME).insert(nextOrderData);
+    if (!error) {
+      return {
+        insertedData: nextOrderData,
+        removedColumns
+      };
+    }
+
+    lastError = error;
+    const missingColumn = extractMissingColumnFromInsertError(error);
+    if (!missingColumn || !Object.prototype.hasOwnProperty.call(nextOrderData, missingColumn)) {
+      throw error;
+    }
+
+    delete nextOrderData[missingColumn];
+    removedColumns.push(missingColumn);
+  }
+
+  throw lastError || new Error("order insert failed");
+}
+
 function parseJsonText(value, fallback) {
   if (value == null || value === "") {
     return fallback;
@@ -328,17 +675,67 @@ function stringifyJsonWithMaxLength(value, maxLength) {
   return serialized.slice(0, maxLength);
 }
 
+function resolvePersistedTravelerSource(value, hasProfileLink) {
+  const normalized = normalizeTravelerSource(value);
+  if (normalized) {
+    return normalized;
+  }
+  return hasProfileLink ? "traveler_profile" : "manual";
+}
+
 function buildPersistedTravelers(travelers, maxLength) {
   const compactTravelers = (Array.isArray(travelers) ? travelers : []).map((traveler) => {
     const source = traveler && typeof traveler === "object" ? traveler : {};
+    const rawDocs = Array.isArray(source.documents) ? source.documents : [];
+    const docPairs = rawDocs
+      .filter((d) => String(d && d.documentType ? d.documentType : "").trim())
+      .filter((d) => String(d && (d.documentNumber || d.idCard) ? d.documentNumber || d.idCard : "").trim())
+      .slice(0, 6)
+      .map((d) => ({
+        t: truncateString(d.documentType, 24),
+        i: truncateString(d.documentNumber || d.idCard || d.idNo || "", 32)
+      }));
+    const first = docPairs[0] || {
+      t: truncateString(source.documentType, 24),
+      i: truncateString(source.documentNumber || source.idCard || source.idNo || "", 32)
+    };
     const compact = {
       n: truncateString(source.name, 32),
-      i: truncateString(source.documentNumber || source.idCard || source.idNo, 32),
+      t: first.t,
+      i: first.i,
       p: truncateString(source.phone, 32)
     };
+    const profileId = truncateString(source.profileId, 64);
+    const travelerRecordId = truncateString(source.travelerRecordId, 64);
+    const travelerSource = resolvePersistedTravelerSource(
+      source.source,
+      Boolean(profileId || travelerRecordId)
+    );
 
+    if (docPairs.length > 1) {
+      compact.ds = docPairs;
+    }
+    if (profileId) {
+      compact.pid = profileId;
+    }
+    if (travelerRecordId) {
+      compact.rid = travelerRecordId;
+    }
+    if (travelerSource) {
+      compact.src = travelerSource;
+    }
+
+    if (source.gender) {
+      compact.g = truncateString(source.gender, 8);
+    }
+    if (source.birthday) {
+      compact.b = truncateString(source.birthday, 16);
+    }
     if (source.wechat) {
       compact.w = truncateString(source.wechat, 32);
+    }
+    if (source.email) {
+      compact.e = truncateString(source.email, 48);
     }
     if (source.note) {
       compact.o = truncateString(source.note, 32);
@@ -357,8 +754,12 @@ function buildPersistedTravelers(travelers, maxLength) {
 
   const compactWithoutOptionalFields = compactTravelers.map((traveler) => ({
     n: traveler.n,
+    t: traveler.t,
     i: traveler.i,
-    p: traveler.p
+    p: traveler.p,
+    pid: traveler.pid,
+    rid: traveler.rid,
+    src: traveler.src
   }));
   return stringifyJsonWithMaxLength(compactWithoutOptionalFields, maxLength);
 }
@@ -366,6 +767,7 @@ function buildPersistedTravelers(travelers, maxLength) {
 function buildPersistedServiceSnapshot(snapshot) {
   const source = snapshot && typeof snapshot === "object" ? snapshot : {};
   const period = source.travelPeriod && typeof source.travelPeriod === "object" ? source.travelPeriod : {};
+  const singleRoom = source.singleRoom && typeof source.singleRoom === "object" ? source.singleRoom : {};
   return {
     serviceSlug: truncateString(source.serviceSlug, 64),
     serviceName: truncateString(source.serviceName, 48),
@@ -373,6 +775,12 @@ function buildPersistedServiceSnapshot(snapshot) {
     travelPeriod: {
       dateStart: truncateString(period.dateStart, 32),
       dateEnd: truncateString(period.dateEnd, 32)
+    },
+    singleRoom: {
+      requested: Boolean(singleRoom.requested),
+      price: Math.max(0, normalizeNumber(singleRoom.price, 0)),
+      status: truncateString(singleRoom.status, 24),
+      notice: truncateString(singleRoom.notice, 60)
     }
   };
 }
@@ -465,7 +873,8 @@ function buildOrderServiceSnapshot({
   requestedTravelPeriod,
   serviceSnapshot,
   contact,
-  travelers
+  travelers,
+  orderExtras
 }) {
   const travelDateStart = periodRecord.dateStart || requestedTravelPeriod.dateStart;
   const travelDateEnd = periodRecord.dateEnd || requestedTravelPeriod.dateEnd || travelDateStart;
@@ -485,7 +894,18 @@ function buildOrderServiceSnapshot({
       name: String(contact && contact.name ? contact.name : "").trim(),
       phone: String(contact && contact.phone ? contact.phone : "").trim()
     },
-    travelers: normalizeTravelers(travelers, null)
+    travelers: normalizeTravelers(travelers, null),
+    roomingMode: normalizeRoomingMode(orderExtras && orderExtras.roomingMode),
+    roommateName: String(orderExtras && orderExtras.roommateName ? orderExtras.roommateName : "").trim(),
+    roomType: normalizeRoomType(orderExtras && orderExtras.roomType),
+    singleRoom: {
+      requested: normalizeRoomingMode(orderExtras && orderExtras.roomingMode) === "singleRoomRequest",
+      price: Math.max(0, normalizeNumber(orderExtras && orderExtras.singleRoomPrice, 0)),
+      status: String(orderExtras && orderExtras.singleRoomStatus ? orderExtras.singleRoomStatus : "").trim(),
+      notice: String(orderExtras && orderExtras.singleRoomNotice ? orderExtras.singleRoomNotice : "").trim()
+    },
+    allergyNotes: String(orderExtras && orderExtras.allergyNotes ? orderExtras.allergyNotes : "").trim(),
+    couponId: String(orderExtras && orderExtras.couponId ? orderExtras.couponId : "").trim()
   };
 }
 
@@ -559,6 +979,10 @@ function mapSqlOrder(record) {
   }
 
   const serviceSnapshot = buildServiceSnapshot(record);
+  const singleRoomSnapshot =
+    serviceSnapshot && serviceSnapshot.singleRoom && typeof serviceSnapshot.singleRoom === "object"
+      ? serviceSnapshot.singleRoom
+      : {};
   const creatorSnapshot = parseJsonText(record.creatorSnapshotJson, {}) || {};
   const travelers = normalizeTravelers(parseJsonText(record.travelersJson, []), null);
   const primaryTraveler = travelers[0] || normalizeTravelerRecord(null);
@@ -585,12 +1009,28 @@ function mapSqlOrder(record) {
     payable,
     peopleCount: normalizePositiveInteger(record.peopleCountInt != null ? record.peopleCountInt : record.peopleCount),
     travelPeriod,
-    contactName: record.travelerName || "",
-    contactPhone: record.travelerPhone || "",
+    orderContactName: record.orderContactName || record.travelerName || "",
+    orderContactPhone: record.orderContactPhone || record.travelerPhone || "",
+    contactName: record.orderContactName || record.travelerName || "",
+    contactPhone: record.orderContactPhone || record.travelerPhone || "",
+    emergencyContactName: record.emergencyContactName || record.orderContactName || record.travelerName || "",
+    emergencyContactPhone: record.emergencyContactPhone || record.orderContactPhone || record.travelerPhone || "",
     contact: {
-      name: record.travelerName || "",
-      phone: record.travelerPhone || ""
+      name: record.orderContactName || record.travelerName || "",
+      phone: record.orderContactPhone || record.travelerPhone || "",
+      emergencyName: record.emergencyContactName || record.orderContactName || record.travelerName || "",
+      emergencyPhone: record.emergencyContactPhone || record.orderContactPhone || record.travelerPhone || ""
     },
+    roomingMode:
+      normalizeRoomingMode(record.roomingMode || (singleRoomSnapshot.requested ? "singleRoomRequest" : "random")),
+    roommateName: String(record.roommateName || "").trim(),
+    roomType: normalizeRoomType(record.roomType),
+    singleRoomPrice: Math.max(0, normalizeNumber(record.singleRoomPriceDec != null ? record.singleRoomPriceDec : (record.singleRoomPrice || singleRoomSnapshot.price), 0)),
+    singleRoomStatus: String(record.singleRoomStatus || singleRoomSnapshot.status || "").trim(),
+    singleRoomNotice: String(record.singleRoomNotice || singleRoomSnapshot.notice || "").trim(),
+    allergyNotes: String(record.allergyNotes || "").trim(),
+    couponId: normalizeCouponId(record.couponId),
+    couponSnapshot: parseJsonText(record.couponSnapshotJson, {}) || {},
     traveler: primaryTraveler,
     primaryTraveler,
     travelers,
@@ -957,16 +1397,218 @@ function isAllowedOrderTransition(currentStatus, nextStatus) {
   return true;
 }
 
-function resolveOrderSettlement(amount) {
+function resolveOrderSettlement(amount, settlementContext) {
   const normalizedAmount = Math.max(0, normalizeNumber(amount, 0));
-  // Never trust client-submitted discount values. Final payable must be fully
-  // resolved by server-side promotion/settlement logic.
-  const discount = 0;
+  const context = settlementContext && typeof settlementContext === "object" ? settlementContext : {};
+  const singleRoomPrice = Math.max(0, normalizeNumber(context.singleRoomPrice, 0));
+  const totalAmount = normalizedAmount + singleRoomPrice;
+  const couponId = normalizeCouponId(context.couponId);
+  const couponRule = couponId ? SUPPORTED_COUPON_RULES[couponId] : null;
+  let discount = 0;
+  if (couponRule && totalAmount >= normalizeNumber(couponRule.threshold, 0)) {
+    discount = Math.max(0, normalizeNumber(couponRule.amountOff, 0));
+  }
+  if (discount > totalAmount) {
+    discount = totalAmount;
+  }
   return {
-    amount: normalizedAmount,
+    amount: totalAmount,
     discount,
-    payable: normalizedAmount - discount
+    payable: totalAmount - discount,
+    couponId
   };
+}
+
+async function findCouponAssetById(assetId) {
+  const normalizedId = normalizeText(assetId);
+  if (!normalizedId) {
+    return null;
+  }
+
+  try {
+    const result = await db.collection(COUPON_ASSETS_COLLECTION).doc(normalizedId).get();
+    return result && result.data ? result.data : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function isActivityCouponAssetUsable(asset, user, totalAmount, now = Date.now()) {
+  if (!asset || !user) {
+    return false;
+  }
+  const userId = normalizeText(user._id);
+  const userOpenid = normalizeText(user.openid);
+  const assetUserId = normalizeText(asset.userId);
+  const assetOpenid = normalizeText(asset.userOpenid);
+  const status = normalizeText(asset.status).toLowerCase();
+  const expiresAt = normalizeNumber(asset.expiresAt, 0);
+  const threshold = Math.max(0, normalizeNumber(asset.threshold, 0));
+
+  return Boolean(
+    status === "active"
+    && (assetUserId === userId || assetOpenid === userOpenid)
+    && (!expiresAt || expiresAt >= now)
+    && totalAmount >= threshold
+  );
+}
+
+function validateActivityCouponStack(assets) {
+  const list = Array.isArray(assets) ? assets : [];
+  if (!list.length) {
+    return false;
+  }
+  if (list.length === 1) {
+    return true;
+  }
+  if (list.length !== 2) {
+    return false;
+  }
+
+  const stackGroups = new Set(list.map((item) => normalizeText(item && item.stackGroup)));
+  const amounts = list.map((item) => Math.max(0, normalizeNumber(item && item.amount, 0))).sort((a, b) => a - b);
+  return stackGroups.size === 1
+    && stackGroups.has("share_referral_phase2")
+    && amounts[0] === 50
+    && amounts[1] === 100;
+}
+
+function buildActivityCouponStorageId(assets) {
+  const list = Array.isArray(assets) ? assets : [];
+  if (!list.length) {
+    return "";
+  }
+  if (validateActivityCouponStack(list)) {
+    return "share_referral_phase2_combo";
+  }
+
+  const couponType = normalizeText(list[0] && list[0].couponType);
+  return truncateString(couponType || "share_referral_activity_coupon", 64);
+}
+
+function buildActivityCouponSnapshot(assets) {
+  const list = Array.isArray(assets) ? assets : [];
+  if (!list.length) {
+    return {};
+  }
+
+  return {
+    id: buildActivityCouponStorageId(list),
+    title: list.length > 1 ? "野哉分享家新人券组合" : truncateString(list[0].title || "野哉分享家新人券", 32),
+    threshold: Math.max(...list.map((item) => Math.max(0, normalizeNumber(item && item.threshold, 0)))),
+    amountOff: list.reduce((total, item) => total + Math.max(0, normalizeNumber(item && item.amount, 0)), 0),
+    couponTypes: list.map((item) => normalizeText(item && item.couponType)).filter(Boolean)
+  };
+}
+
+async function resolveOrderSettlementForUser(amount, settlementContext) {
+  const baseSettlement = resolveOrderSettlement(amount, settlementContext);
+  const context = settlementContext && typeof settlementContext === "object" ? settlementContext : {};
+  const rawCouponId = normalizeCouponSelectionId(context.couponId);
+  if (!rawCouponId || baseSettlement.couponId) {
+    return Object.assign({}, baseSettlement, {
+      couponAssetIds: [],
+      couponSnapshot: baseSettlement.couponId ? normalizeCouponSnapshot(context.couponSnapshot || { id: baseSettlement.couponId }) : {}
+    });
+  }
+
+  const couponAssetIds = splitCouponSelectionIds(rawCouponId);
+  if (!couponAssetIds.length) {
+    return Object.assign({}, baseSettlement, {
+      couponAssetIds: [],
+      couponSnapshot: {}
+    });
+  }
+
+  const user = await findUserDocByOpenid(context.userOpenid);
+  if (!user) {
+    throw new Error("请先登录后再使用活动券");
+  }
+
+  const assets = [];
+  for (const assetId of couponAssetIds) {
+    const asset = await findCouponAssetById(assetId);
+    if (!asset) {
+      throw new Error("优惠券不可用");
+    }
+    assets.push(asset);
+  }
+
+  const uniqueAssetIds = new Set(assets.map((item) => normalizeText(item && item._id)));
+  if (uniqueAssetIds.size !== assets.length) {
+    throw new Error("优惠券不可重复选择");
+  }
+
+  const now = Date.now();
+  const usable = assets.every((asset) => isActivityCouponAssetUsable(asset, user, baseSettlement.amount, now));
+  if (!usable) {
+    throw new Error("优惠券不可用或未达到使用门槛");
+  }
+  if (!validateActivityCouponStack(assets)) {
+    throw new Error("所选优惠券不可叠加使用");
+  }
+
+  const discount = Math.min(
+    baseSettlement.amount,
+    assets.reduce((total, item) => total + Math.max(0, normalizeNumber(item && item.amount, 0)), 0)
+  );
+  const couponSnapshot = buildActivityCouponSnapshot(assets);
+
+  return {
+    amount: baseSettlement.amount,
+    discount,
+    payable: baseSettlement.amount - discount,
+    couponId: couponSnapshot.id,
+    couponAssetIds: Array.from(uniqueAssetIds),
+    couponSnapshot
+  };
+}
+
+async function updateCouponAssetsUsage(couponAssetIds, orderNo, status) {
+  const ids = Array.isArray(couponAssetIds) ? couponAssetIds.map(normalizeText).filter(Boolean) : [];
+  if (!ids.length) {
+    return;
+  }
+
+  const now = Date.now();
+  await Promise.all(ids.map((id) => db.collection(COUPON_ASSETS_COLLECTION).doc(id).update({
+    data: status === "used"
+      ? {
+          status: "used",
+          usedOrderNo: normalizeText(orderNo),
+          usedAt: now,
+          updatedAt: now
+        }
+      : {
+          status: "active",
+          usedOrderNo: "",
+          usedAt: 0,
+          updatedAt: now
+      }
+  })));
+}
+
+async function findCouponAssetIdsByUsedOrderNo(orderNo) {
+  const normalizedOrderNo = normalizeText(orderNo);
+  if (!normalizedOrderNo) {
+    return [];
+  }
+
+  try {
+    const result = await db.collection(COUPON_ASSETS_COLLECTION)
+      .where({ usedOrderNo: normalizedOrderNo })
+      .limit(20)
+      .get();
+    return (result && Array.isArray(result.data) ? result.data : [])
+      .map((item) => normalizeText(item && item._id))
+      .filter(Boolean);
+  } catch (error) {
+    console.error("Failed to find coupon assets by used order", {
+      orderNo: normalizedOrderNo,
+      error
+    });
+    return [];
+  }
 }
 
 function shouldRestoreSeatsForOrderStatus(status) {
@@ -1111,7 +1753,14 @@ async function createOrder(payload) {
     throw new Error("service period price is invalid");
   }
 
-  const settlement = resolveOrderSettlement(unitPrice * peopleCount);
+  const orderExtras = buildOrderExtras(payload);
+  const settlement = await resolveOrderSettlementForUser(unitPrice * peopleCount, {
+    couponId: orderExtras.couponId,
+    couponSnapshot: orderExtras.couponSnapshot,
+    singleRoomPrice: orderExtras.singleRoomPrice,
+    peopleCount,
+    userOpenid: openid
+  });
   const amount = settlement.amount;
   const discount = settlement.discount;
   const payable = settlement.payable;
@@ -1122,13 +1771,15 @@ async function createOrder(payload) {
   const createdAtText = formatDateTime(timestamp);
   const serviceSnapshot = payload.serviceSnapshot || {};
   const creatorSnapshot = payload.creatorSnapshot || {};
-  const contact = normalizeContact(payload);
+  const orderContact = normalizeOrderContact(payload);
+  const emergencyContact = normalizeEmergencyContact(payload);
   const travelers = normalizeTravelers(payload.travelers, payload.traveler, {
     inferDocumentType: false
   });
   const participantError = validateOrderParticipants({
     travelers,
-    contact,
+    orderContact,
+    emergencyContact,
     peopleCount
   });
   if (participantError) {
@@ -1139,8 +1790,9 @@ async function createOrder(payload) {
     periodRecord,
     requestedTravelPeriod,
     serviceSnapshot,
-    contact,
-    travelers
+    contact: orderContact,
+    travelers,
+    orderExtras
   });
   const travelDateStart = orderServiceSnapshot.travelPeriod.dateStart;
   const travelDateEnd = orderServiceSnapshot.travelPeriod.dateEnd;
@@ -1169,10 +1821,31 @@ async function createOrder(payload) {
     discountDec: discount,
     payable,
     payableDec: payable,
-    // Keep legacy model fields for compatibility until the CloudBase model is updated.
-    travelerName: String(contact.name || "").trim(),
-    travelerPhone: String(contact.phone || "").trim(),
-    travelersJson: buildPersistedTravelers(travelers, 256),
+    orderContactName: String(orderContact.name || "").trim(),
+    orderContactPhone: String(orderContact.phone || "").trim(),
+    travelerName: String(orderContact.name || "").trim(),
+    travelerPhone: String(orderContact.phone || "").trim(),
+    emergencyContactName: String(emergencyContact.name || orderExtras.emergencyContactName || "").trim(),
+    emergencyContactPhone: String(emergencyContact.phone || orderExtras.emergencyContactPhone || "").trim(),
+    roomingMode: normalizeRoomingMode(orderExtras.roomingMode),
+    roommateName: String(orderExtras.roommateName || "").trim(),
+    roomType: normalizeRoomType(orderExtras.roomType),
+    singleRoomPrice: Math.max(0, normalizeNumber(orderExtras.singleRoomPrice, 0)),
+    singleRoomPriceDec: Math.max(0, normalizeNumber(orderExtras.singleRoomPrice, 0)),
+    singleRoomStatus: String(orderExtras.singleRoomStatus || "").trim(),
+    singleRoomNotice: String(orderExtras.singleRoomNotice || "").trim(),
+    allergyNotes: String(orderExtras.allergyNotes || "").trim(),
+    couponId: settlement.couponId || "",
+    couponSnapshotJson: stringifyJsonWithMaxLength(
+      settlement.couponSnapshot && Object.keys(settlement.couponSnapshot).length
+        ? settlement.couponSnapshot
+        : {
+            ...orderExtras.couponSnapshot,
+            id: settlement.couponId || ""
+          },
+      240
+    ),
+    travelersJson: buildPersistedTravelers(travelers, 4096),
     serviceSnapshotJson: stringifyJsonWithMaxLength(buildPersistedServiceSnapshot(orderServiceSnapshot), 240),
     creatorSnapshotJson: stringifyJsonWithMaxLength(buildPersistedCreatorSnapshot(creatorSnapshot), 240),
     status: "pending",
@@ -1188,13 +1861,15 @@ async function createOrder(payload) {
 
   await reserveServicePeriodSeats(periodRecord._id, peopleCount);
 
+  let persistedOrderData = orderData;
   try {
-    if (!rdb) {
-      throw new Error("rdb unavailable");
-    }
-    const { error } = await rdb.from(ORDER_MODEL_NAME).insert(orderData);
-    if (error) {
-      throw error;
+    await updateCouponAssetsUsage(settlement.couponAssetIds, orderNo, "used");
+    const { insertedData, removedColumns } = await insertOrderRecordWithCompatibility(orderData);
+    persistedOrderData = insertedData;
+    if (removedColumns.length) {
+      console.warn("Dropped unsupported TravelOrder columns during createOrder insert", {
+        removedColumns
+      });
     }
     await appendOrderStatusEvent({
       orderNo,
@@ -1208,6 +1883,7 @@ async function createOrder(payload) {
 
     try {
       await restoreServicePeriodSeats(periodRecord._id, peopleCount);
+      await updateCouponAssetsUsage(settlement.couponAssetIds, orderNo, "active");
       restoreSucceeded = true;
     } catch (restoreError) {
       console.error("Failed to restore service period seats", restoreError);
@@ -1233,7 +1909,7 @@ async function createOrder(payload) {
 
   return mapSqlOrder(
     Object.assign(
-      orderData
+      persistedOrderData
     )
   );
 }
@@ -1292,6 +1968,22 @@ async function updateOrderStatus(orderId, nextStatus) {
     }
   }
 
+  if (nextStatus === "canceled") {
+    try {
+      const couponAssetIds = await findCouponAssetIdsByUsedOrderNo(targetRecord.orderNo);
+      await updateCouponAssetsUsage(
+        couponAssetIds.length ? couponAssetIds : splitCouponSelectionIds(targetRecord.couponId),
+        targetRecord.orderNo,
+        "active"
+      );
+    } catch (error) {
+      console.error("Failed to restore coupon assets after order cancellation", {
+        orderNo: targetRecord.orderNo,
+        error
+      });
+    }
+  }
+
   await appendOrderStatusEvent({
     orderNo: updatedOrder.orderNo || targetRecord.orderNo,
     userOpenid: openid,
@@ -1299,6 +1991,17 @@ async function updateOrderStatus(orderId, nextStatus) {
     fromStatus: targetRecord.status,
     source: "status_change"
   });
+
+  if (nextStatus === "completed") {
+    try {
+      await syncShareReferralRewardForCompletedOrder(updatedOrder);
+    } catch (error) {
+      console.error("Failed to sync share referral reward after order completion", {
+        orderNo: updatedOrder && updatedOrder.orderNo,
+        error
+      });
+    }
+  }
 
   return updatedOrder;
 }
@@ -1463,11 +2166,17 @@ exports.__test__ = {
   filterOrdersByStatus,
   getTravelPeriod,
   mapSqlOrder,
-  normalizeContact,
+  normalizeEmergencyContact,
+  normalizeOrderContact,
   normalizeTravelers,
   isAllowedOrderTransition,
+  resolveOrderSettlementForUser,
   resolveOrderSettlement,
   resolvePeriodStatus,
+  buildActivityCouponStorageId,
+  buildShareReferralRewardLedger,
+  findCouponAssetIdsByUsedOrderNo,
   shouldRestoreSeatsForOrderStatus,
+  syncShareReferralRewardForCompletedOrder,
   validateOrderParticipants
 };

@@ -2,17 +2,34 @@
   <view class="page-shell journey-page__shell">
     <view class="journey-head">
       <text class="page-eyebrow journey-head__title">旅程档案</text>
-      <view class="journey-date-trigger journey-date-trigger--compact" bindtap="openDateSheet" hover-class="journey-date-trigger--pressed">
+    </view>
+    <text class="page-subtitle journey-page__subtitle">每一段旅途，都有专属的季节、节奏与在地温度。\n愿你在这里，找到想要奔赴的土地和靠近的人。</text>
+
+    <view class="journey-tool-row">
+      <view class="journey-date-trigger" bindtap="openRegionSheet" hover-class="journey-date-trigger--pressed">
+        <view class="journey-date-trigger__icon">
+          <view class="journey-date-trigger__pin">
+            <view class="journey-date-trigger__pin-core"></view>
+          </view>
+        </view>
+        <text class="journey-date-trigger__label">{{selectedDestinationRegionLabel || '路线区域'}}</text>
+        <view
+          wx:if="{{selectedDestinationRegionCode}}"
+          class="journey-date-trigger__clear"
+          catchtap="clearDestinationRegionFilter"
+        >×</view>
+      </view>
+
+      <view class="journey-date-trigger" bindtap="openDateSheet" hover-class="journey-date-trigger--pressed">
         <view class="journey-date-trigger__icon">
           <view class="journey-date-trigger__clock">
             <view class="journey-date-trigger__hand journey-date-trigger__hand--hour"></view>
             <view class="journey-date-trigger__hand journey-date-trigger__hand--minute"></view>
           </view>
         </view>
-        <text class="journey-date-trigger__label">{{selectedDepartureDateLabel || '出行时间'}}</text>
+        <text class="journey-date-trigger__label">出行时间</text>
       </view>
     </view>
-    <text class="page-subtitle journey-page__subtitle">每一段旅程都有自己的季节、节奏和在地关系，愿你能更快找到愿意靠近的人和土地。</text>
 
     <view class="journey-filter-stack-anchor">
       <view class="journey-filter-stack">
@@ -159,10 +176,50 @@
     </view>
 
     <view wx:else class="journey-empty">
-      <text class="journey-empty__title">暂时没有匹配的旅程</text>
-      <text class="journey-empty__desc">换一个旅程类型、团期状态试试看</text>
-      <text class="journey-empty__desc">也可以直接清空筛选重新浏览</text>
-      <button class="outline-button journey-empty__button" bindtap="clearAllFilters">清空筛选</button>
+      <text class="journey-empty__title">{{emptyStateTitle}}</text>
+      <text class="journey-empty__desc">{{emptyStateDescPrimary}}</text>
+      <text wx:if="{{emptyStateDescSecondary}}" class="journey-empty__desc">{{emptyStateDescSecondary}}</text>
+      <view class="journey-empty__actions">
+        <button wx:if="{{showEmptyClearRegionAction}}" class="outline-button journey-empty__button" bindtap="clearDestinationRegionFilter">清空区域</button>
+        <button wx:else class="outline-button journey-empty__button" bindtap="clearAllFilters">清空筛选</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{isRegionSheetVisible}}" class="journey-date-sheet journey-region-sheet">
+    <view class="journey-date-sheet__backdrop" bindtap="closeRegionSheet"></view>
+    <view class="journey-date-sheet__panel journey-region-sheet__panel {{isRegionSheetAnimating ? 'journey-date-sheet__panel--active' : ''}}">
+      <view class="journey-date-sheet__header journey-date-sheet__header--compact">
+        <view class="journey-date-sheet__close journey-control" bindtap="closeRegionSheet" hover-class="journey-control--pressed">×</view>
+      </view>
+
+      <scroll-view class="journey-region-sheet__scroll" scroll-x="true" enhanced="{{true}}" show-scrollbar="{{false}}">
+        <view class="journey-region-sheet__track">
+          <view wx:for="{{regionSheetColumns}}" wx:key="index" class="journey-region-sheet__column">
+            <view
+              wx:for="{{item}}"
+              wx:key="key"
+              class="journey-region-card {{item.available ? 'journey-region-card--available' : 'journey-region-card--unavailable'}} {{item.selected ? 'journey-region-card--selected' : ''}}"
+              data-region="{{item.value}}"
+              bindtap="onRegionTap"
+            >
+              <image
+                wx:if="{{item.image}}"
+                class="journey-region-card__image"
+                src="{{item.image}}"
+                mode="aspectFill"
+                lazy-load="{{true}}"
+              ></image>
+              <view wx:else class="journey-region-card__fallback"></view>
+              <view class="journey-region-card__mask"></view>
+              <view class="journey-region-card__content">
+                <text class="journey-region-card__label">{{item.label}}</text>
+                <text class="journey-region-card__meta">{{item.countText}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
     </view>
   </view>
 
@@ -202,7 +259,7 @@
             </view>
           </view>
 
-          <text wx:if="{{sheetHintText}}" class="journey-date-sheet__hint">{{sheetHintText}}</text>
+          <text wx:if="{{sheetHintText && sheetJourneys.length}}" class="journey-date-sheet__hint">{{sheetHintText}}</text>
 
           <view class="journey-date-sheet__list">
             <view wx:if="{{sheetJourneys.length}}" class="journey-date-sheet__list-inner">
@@ -229,4 +286,4 @@
   </view>
 </view>
 
-<app-tab-bar wx:if="{{!isDateSheetVisible}}"></app-tab-bar>
+<app-tab-bar wx:if="{{!isDateSheetVisible && !isRegionSheetVisible}}"></app-tab-bar>

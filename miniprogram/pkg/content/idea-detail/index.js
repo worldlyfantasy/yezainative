@@ -3,7 +3,7 @@ const { isFavorited, toggleFavorite } = require("../../../repositories/transacti
 const { getCurrentUser } = require("../../../services/user");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../utils/favorite-notice");
-const { renderIdeaBodyRichText } = require("../../../utils/content");
+const { renderIdeaBodyRichText } = require("../utils/content");
 const { enablePageShareMenus, createShareAppMessage, createShareTimeline } = require("../../../utils/share");
 
 function formatPublishedDate(timestamp) {

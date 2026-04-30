@@ -1,6 +1,6 @@
-const { getOrderById, cancelOrder } = require("../../../repositories/transaction-repository");
-const { getServiceConsultData } = require("../../../repositories/content-repository");
+const { getOrderById } = require("../../../repositories/transaction-repository");
 const { getOrderDetailPageConfig, getServiceDetailPageConfig } = require("../../../repositories/config-repository");
+const { buildOrderCard } = require("../../../constants/transaction-meta");
 const { isAuditMode } = require("../../../utils/audit");
 
 Page({
@@ -10,19 +10,15 @@ Page({
     consultSheetVisible: false,
     consultSheetAnimating: false,
     consultWeChatQr: "",
-    consultGroupQr: "",
     consultSheetTitle: "",
     consultCardLabel: "",
     consultCardDesc: "",
     consultFollowupNote: "",
-    creatorContactText: "",
-    serviceContactText: "",
     statusTitleText: "",
     orderIdLabelText: "",
     priceTitleText: "",
     payableLabelText: "",
     pendingPrimaryText: "",
-    pendingSecondaryText: "",
     completedPrimaryText: ""
   },
 
@@ -34,7 +30,6 @@ Page({
     this.setData(
       Object.assign({}, orderDetailPageConfig, {
         consultWeChatQr: serviceDetailPageConfig.consultWeChatQr,
-        consultGroupQr: serviceDetailPageConfig.consultGroupQr,
         consultSheetTitle: serviceDetailPageConfig.consultSheetTitle,
         consultCardLabel: serviceDetailPageConfig.consultCardLabel,
         consultCardDesc: serviceDetailPageConfig.consultCardDesc,
@@ -51,8 +46,8 @@ Page({
   },
 
   async loadOrder(orderId) {
-    const order = await getOrderById(orderId);
-    if (!order) {
+    const rawOrder = await getOrderById(orderId);
+    if (!rawOrder) {
       wx.showToast({
         title: "未找到订单",
         icon: "none"
@@ -60,19 +55,9 @@ Page({
       return;
     }
 
-    let serviceConsultWeChatQr = "";
-    if (order.serviceSlug) {
-      try {
-        const serviceConsultData = await getServiceConsultData(order.serviceSlug);
-        serviceConsultWeChatQr = (serviceConsultData && serviceConsultData.consultWeChatQr) || "";
-      } catch (error) {
-        console.warn("Failed to load service consult qr", error);
-      }
-    }
-
+    const order = buildOrderCard(rawOrder);
     this.setData({
-      order,
-      consultWeChatQr: serviceConsultWeChatQr || this.data.consultWeChatQr
+      order
     });
   },
 
@@ -86,19 +71,6 @@ Page({
       wx.navigateTo({
         url: `/pkg/explore/checkout/index?slug=${order.serviceSlug}`
       });
-    }
-  },
-
-  async handleSecondary() {
-    const { order } = this.data;
-    if (!order) {
-      return;
-    }
-
-    if (order.status === "pending") {
-      await cancelOrder(order.id);
-      await this.loadOrder(order.id);
-      return;
     }
   },
 
@@ -129,5 +101,28 @@ Page({
         consultSheetVisible: false
       });
     }, 260);
+  },
+
+  onConsultQrTap() {
+    const qrUrl = String(this.data.consultWeChatQr || "").trim();
+    if (!qrUrl) {
+      wx.showToast({
+        title: "客服二维码暂不可用",
+        icon: "none"
+      });
+      return;
+    }
+
+    wx.previewImage({
+      current: qrUrl,
+      urls: [qrUrl],
+      showmenu: true,
+      fail: () => {
+        wx.showToast({
+          title: "二维码打开失败",
+          icon: "none"
+        });
+      }
+    });
   }
 });

@@ -2,7 +2,7 @@ const { getArticleBridgePageConfig } = require("../../../repositories/config-rep
 const {
   isExternalHttpUrl,
   buildArticleBridgeSrc
-} = require("../../../services/article-bridge");
+} = require("./bridge");
 
 const DEFAULT_PAGE_TITLE = "阅读全文";
 const DEFAULT_LOADING_TEXT = "正在打开公众号全文…";

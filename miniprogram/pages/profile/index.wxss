@@ -1,5 +1,5 @@
 .profile-page {
-  padding: 24rpx 36rpx 120rpx;
+  padding: 24rpx 36rpx calc(244rpx + env(safe-area-inset-bottom));
 }
 
 .profile-hero {
@@ -85,9 +85,9 @@
   font-size: 28rpx;
   font-weight: 600;
   letter-spacing: 2rpx;
-  color: #f8f1e7;
-  background: linear-gradient(135deg, #9a6840, #7d5231);
-  box-shadow: 0 14rpx 28rpx rgba(90, 64, 40, 0.16);
+  color: #fff9f2;
+  background: #D15E14;
+  box-shadow: 0 14rpx 30rpx rgba(209, 94, 20, 0.18);
 }
 
 /* 未登录：单框 = 底图完整 + 中央乳白区文案与按钮 */
@@ -99,8 +99,8 @@
   position: relative;
   overflow: hidden;
   border-radius: 36rpx;
-  border: 1rpx solid rgba(151, 124, 91, 0.12);
-  box-shadow: 0 24rpx 52rpx rgba(93, 71, 45, 0.08);
+  border: 1rpx solid rgba(153, 57, 33, 0.1);
+  box-shadow: 0 24rpx 52rpx rgba(84, 57, 31, 0.08);
 }
 
 .profile-guest-card__bg {
@@ -154,9 +154,9 @@
   font-size: 26rpx;
   font-weight: 600;
   letter-spacing: 2rpx;
-  color: #f8f1e7;
-  background: linear-gradient(135deg, #9a6840, #7d5231);
-  box-shadow: 0 14rpx 28rpx rgba(90, 64, 40, 0.16);
+  color: #fff9f2;
+  background: #D15E14;
+  box-shadow: 0 14rpx 30rpx rgba(209, 94, 20, 0.18);
 }
 
 .profile-guest-card__button--pressing {
@@ -340,8 +340,8 @@
 }
 
 .profile-identity__nickname-save {
-  color: #f8f1e7;
-  background: linear-gradient(135deg, #9a6840, #7d5231);
+  color: #fff9f2;
+  background: #D15E14;
 }
 
 .profile-identity__nickname-cancel--pressing,
@@ -351,55 +351,54 @@
 
 .profile-entry-grid {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  margin-top: 92rpx;
+  padding: 0 10rpx;
+  gap: 18rpx;
 }
 
-.profile-entry-grid .profile-entry-card:first-child {
-  margin-right: 24rpx;
+.profile-entry-row {
+  display: flex;
+  align-items: stretch;
+  gap: 18rpx;
 }
 
 .profile-entry-card {
   flex: 1;
   min-width: 0;
   position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  min-height: 140rpx;
-  padding: 20rpx 22rpx;
-  border: 1rpx solid rgba(151, 124, 91, 0.16);
-  border-radius: 30rpx;
+  justify-content: space-between;
+  min-height: 152rpx;
+  padding: 24rpx 24rpx 22rpx;
+  border: 1rpx solid rgba(153, 57, 33, 0.08);
+  border-radius: 28rpx;
   background:
-    linear-gradient(180deg, rgba(255, 250, 242, 0.88), rgba(255, 248, 236, 0.7)),
-    linear-gradient(135deg, rgba(214, 190, 153, 0.05), rgba(153, 57, 33, 0.03));
-  box-shadow: 0 18rpx 32rpx rgba(93, 71, 45, 0.06);
+    linear-gradient(180deg, rgba(251, 247, 239, 0.98), rgba(255, 250, 242, 0.88)),
+    linear-gradient(135deg, rgba(232, 216, 191, 0.05), rgba(184, 114, 75, 0.02));
+  box-shadow: 0 10rpx 22rpx rgba(84, 57, 31, 0.035);
   text-align: left;
 }
 
 .profile-entry-card--strong {
   background:
-    linear-gradient(180deg, rgba(249, 237, 215, 0.96), rgba(241, 223, 190, 0.82)),
-    linear-gradient(135deg, rgba(154, 104, 64, 0.06), rgba(153, 57, 33, 0.04));
-  box-shadow: 0 20rpx 36rpx rgba(93, 71, 45, 0.09);
+    linear-gradient(180deg, rgba(247, 236, 212, 0.98), rgba(241, 226, 196, 0.92)),
+    linear-gradient(135deg, rgba(184, 114, 75, 0.08), rgba(153, 57, 33, 0.03));
+  border-color: rgba(209, 94, 20, 0.14);
+  box-shadow: 0 14rpx 28rpx rgba(84, 57, 31, 0.05);
 }
 
 .profile-entry-card__glyph {
   position: absolute;
-  right: 8rpx;
-  bottom: 2rpx;
-  width: 116rpx;
-  height: 116rpx;
-  opacity: 0.45;
+  right: 10rpx;
+  bottom: 4rpx;
+  width: 94rpx;
+  height: 94rpx;
+  opacity: 0.2;
   pointer-events: none;
-}
-
-.profile-entry-card__eyebrow {
-  position: relative;
-  z-index: 1;
-  display: block;
-  font-size: 22rpx;
-  letter-spacing: 3rpx;
-  color: rgba(143, 61, 36, 0.7);
 }
 
 .profile-entry-card__head {
@@ -407,15 +406,13 @@
   z-index: 1;
   width: 100%;
   display: flex;
-  align-items: center;
-  gap: 10rpx;
-  margin-top: 14rpx;
+  align-items: flex-start;
+  gap: 12rpx;
 }
 
 .profile-entry-card__title-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 14rpx;
   flex: 1;
   min-width: 0;
 }
@@ -424,56 +421,31 @@
   display: block;
   font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 34rpx;
-  line-height: 1.28;
+  line-height: 1.18;
+  font-weight: 500;
+  letter-spacing: 0.5rpx;
   color: #2a2119;
-}
-
-.profile-entry-card__leaf {
-  position: relative;
-  width: 28rpx;
-  height: 34rpx;
-  margin-left: 4rpx;
-  flex-shrink: 0;
-  transform: rotate(32deg);
-}
-
-.profile-entry-card__leaf-shape {
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-  border: 2rpx solid #d15e14;
-  border-radius: 90% 10% 90% 10%;
-  background: rgba(209, 94, 20, 0.92);
-}
-
-.profile-entry-card__leaf-vein {
-  position: absolute;
-  top: 7rpx;
-  left: 12rpx;
-  width: 2rpx;
-  height: 18rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 248, 241, 0.92);
-  transform: rotate(14deg);
-  transform-origin: top center;
 }
 
 .profile-entry-card__desc {
   position: relative;
   z-index: 1;
   display: block;
-  margin-top: 10rpx;
-  max-width: 220rpx;
+  margin-top: 12rpx;
+  max-width: 200rpx;
   font-size: 22rpx;
-  line-height: 1.7;
-  color: #66584a;
+  line-height: 1.45;
+  font-weight: 500;
+  letter-spacing: 0.5rpx;
+  color: rgba(92, 78, 66, 0.82);
 }
 
 .profile-entry-card__arrow {
   display: block;
-  font-size: 30rpx;
+  margin-top: 4rpx;
+  font-size: 24rpx;
   line-height: 1;
-  color: rgba(143, 61, 36, 0.72);
+  color: rgba(184, 114, 75, 0.72);
 }
 
 .profile-section-head {
@@ -521,11 +493,11 @@
   align-items: center;
   justify-content: center;
   padding: 24rpx 18rpx;
-  border: 1rpx solid rgba(151, 124, 91, 0.16);
+  border: 1rpx solid rgba(153, 57, 33, 0.12);
   border-right: none;
   border-radius: 24rpx 0 0 24rpx;
   background: linear-gradient(180deg, rgba(255, 250, 242, 0.92), rgba(242, 230, 201, 0.75));
-  box-shadow: 0 12rpx 28rpx rgba(93, 71, 45, 0.05);
+  box-shadow: 0 12rpx 28rpx rgba(84, 57, 31, 0.05);
   text-align: center;
 }
 
@@ -572,10 +544,10 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  border: 1rpx solid rgba(151, 124, 91, 0.14);
+  border: 1rpx solid rgba(153, 57, 33, 0.1);
   border-radius: 0 24rpx 24rpx 0;
   background: linear-gradient(180deg, rgba(255, 252, 247, 0.95), rgba(250, 243, 231, 0.84));
-  box-shadow: 0 18rpx 32rpx rgba(93, 71, 45, 0.06);
+  box-shadow: 0 18rpx 32rpx rgba(84, 57, 31, 0.06);
   text-align: left;
 }
 
@@ -611,10 +583,10 @@
   display: inline-block;
   padding: 7rpx 12rpx;
   border-radius: 999rpx;
-  background: rgba(143, 61, 36, 0.09);
+  background: rgba(209, 94, 20, 0.09);
   font-size: 20rpx;
   line-height: 1;
-  color: #8f3d24;
+  color: #D15E14;
 }
 
 .active-trip-card__desc {
@@ -630,8 +602,61 @@
 }
 
 .profile-empty-state {
-  margin-top: 4rpx;
-  padding: 40rpx 8rpx 8rpx;
+  margin-top: 18rpx;
+}
+
+.profile-empty-state__visual {
+  position: relative;
+  height: 360rpx;
+  overflow: hidden;
+  border-radius: 30rpx;
+  background:
+    linear-gradient(180deg, rgba(230, 215, 187, 0.52), rgba(99, 77, 54, 0.12)),
+    linear-gradient(135deg, rgba(209, 94, 20, 0.05), rgba(143, 61, 36, 0.02));
+}
+
+.profile-empty-state__image {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.profile-empty-state__image--fallback {
+  background:
+    radial-gradient(circle at 24% 22%, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0) 24%),
+    linear-gradient(180deg, rgba(221, 205, 178, 0.94), rgba(151, 131, 103, 0.86));
+}
+
+.profile-empty-state__shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(38, 31, 23, 0.08), rgba(38, 31, 23, 0.02) 30%, rgba(38, 31, 23, 0.18) 60%, rgba(38, 31, 23, 0.5)),
+    linear-gradient(180deg, rgba(255, 248, 236, 0), rgba(255, 248, 236, 0) 54%, rgba(30, 24, 18, 0.16));
+}
+
+.profile-empty-state__copy {
+  position: absolute;
+  right: 40rpx;
+  bottom: 56rpx;
+  left: 40rpx;
+  z-index: 2;
+  text-align: center;
+}
+
+.profile-empty-state__eyebrow {
+  display: block;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 26rpx;
+  line-height: 1.7;
+  font-weight: 500;
+  letter-spacing: 0.5rpx;
+  color: #fff6e5;
+  text-shadow: 0 6rpx 18rpx rgba(23, 17, 12, 0.32);
 }
 
 .is-pressing {
@@ -650,24 +675,215 @@
 }
 
 .profile-contact {
-  margin-top: 48rpx;
-  padding: 12rpx 24rpx 40rpx;
+  margin-top: 88rpx;
+  padding: 22rpx 6rpx 12rpx;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  border-top: 1rpx solid rgba(151, 124, 91, 0.16);
 }
 
 .profile-contact__label {
   font-size: 24rpx;
-  line-height: 1.5;
-  color: rgba(102, 88, 74, 0.72);
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+  color: rgba(153, 57, 33, 0.9);
 }
 
 .profile-contact__email {
-  margin-left: 4rpx;
+  margin-top: 10rpx;
   font-size: 24rpx;
   line-height: 1.6;
-  color: rgba(102, 88, 74, 0.5);
+  color: rgba(74, 58, 43, 0.76);
+}
+
+.profile-completion-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 28rpx 32rpx;
+  background: rgba(35, 28, 20, 0.42);
+  box-sizing: border-box;
+}
+
+.profile-completion-mask--keyboard {
+  align-items: center;
+  padding-bottom: 360rpx;
+}
+
+.profile-completion-panel {
+  width: 100%;
+  max-height: 86vh;
+  overflow: hidden;
+  padding: 34rpx 34rpx calc(34rpx + env(safe-area-inset-bottom));
+  border-radius: 34rpx;
+  border: 1rpx solid rgba(151, 124, 91, 0.2);
+  background:
+    radial-gradient(circle at 88% 12%, rgba(255, 250, 242, 0.96), rgba(255, 250, 242, 0) 26%),
+    linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(245, 239, 227, 0.96));
+  box-shadow: 0 -18rpx 52rpx rgba(28, 22, 15, 0.18);
+  box-sizing: border-box;
+}
+
+.profile-completion__head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.profile-completion__eyebrow {
+  font-size: 20rpx;
+  line-height: 1.4;
+  letter-spacing: 5rpx;
+  color: rgba(143, 61, 36, 0.72);
+}
+
+.profile-completion__title {
+  display: block;
+  margin-top: 10rpx;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 44rpx;
+  line-height: 1.28;
+  font-weight: 500;
+  color: #2a2119;
+}
+
+.profile-completion__desc {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  line-height: 1.75;
+  color: #66584a;
+}
+
+.profile-completion__avatar-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  width: 100%;
+  margin: 34rpx 0 0;
+  padding: 24rpx;
+  border: 1rpx solid rgba(151, 124, 91, 0.14);
+  border-radius: 28rpx;
+  background: rgba(255, 250, 242, 0.82);
+  text-align: left;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.profile-completion__avatar-button::after {
+  border: none;
+}
+
+.profile-completion__avatar-shell {
+  width: 116rpx;
+  height: 116rpx;
+  flex-shrink: 0;
+}
+
+.profile-completion__avatar {
+  width: 116rpx;
+  height: 116rpx;
+  border-radius: 50%;
+  border: 6rpx solid rgba(255, 250, 242, 0.9);
+  box-shadow: 0 12rpx 24rpx rgba(98, 79, 54, 0.12);
+  box-sizing: border-box;
+}
+
+.profile-completion__avatar--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0) 38%),
+    linear-gradient(145deg, rgba(226, 211, 181, 0.96), rgba(209, 94, 20, 0.18));
+}
+
+.profile-completion__avatar-mark {
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 28rpx;
+  line-height: 1;
+  color: rgba(42, 33, 25, 0.72);
+}
+
+.profile-completion__avatar-label {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  font-size: 28rpx;
+  line-height: 1.45;
+  font-weight: 600;
+  color: #2a2119;
+}
+
+.profile-completion__field {
+  margin-top: 26rpx;
+}
+
+.profile-completion__label {
+  display: block;
+  margin-bottom: 12rpx;
+  font-size: 22rpx;
+  line-height: 1.4;
+  color: rgba(143, 61, 36, 0.78);
+}
+
+.profile-completion__nickname-input {
+  min-height: 84rpx;
+  padding: 0 24rpx;
+  border-radius: 22rpx;
+  background: rgba(255, 250, 242, 0.96);
+  font-size: 28rpx;
+  color: #2a2119;
+  box-shadow: inset 0 0 0 1rpx rgba(151, 124, 91, 0.16);
+  box-sizing: border-box;
+}
+
+.profile-completion__actions {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  margin-top: 30rpx;
+}
+
+.profile-completion__later,
+.profile-completion__save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 74rpx;
+  padding: 0 28rpx;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.profile-completion__later {
+  flex: 0 0 auto;
+  color: rgba(143, 61, 36, 0.88);
+  background: rgba(255, 250, 242, 0.74);
+}
+
+.profile-completion__save {
+  flex: 1;
+  color: #fff9f2;
+  background: #D15E14;
+  box-shadow: 0 14rpx 30rpx rgba(209, 94, 20, 0.18);
+}
+
+.profile-completion__save--disabled {
+  opacity: 0.68;
+}
+
+.profile-completion__later--pressing,
+.profile-completion__save--pressing {
+  opacity: 0.78;
 }

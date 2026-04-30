@@ -17,15 +17,6 @@
     </view>
   </view>
 
-  <view wx:if="{{creatorRouteTypes.length}}" class="section-block paper-block">
-    <view class="skeleton-line skeleton-line--section"></view>
-    <view class="skeleton-stack">
-      <view class="skeleton-line skeleton-line--long"></view>
-      <view class="skeleton-line skeleton-line--long"></view>
-      <view class="skeleton-line skeleton-line--medium"></view>
-    </view>
-  </view>
-
   <view class="section-block">
     <view class="skeleton-line skeleton-line--section"></view>
     <view class="skeleton-card-list">
@@ -58,7 +49,7 @@
         </view>
         <text class="page-subtitle creator-top__stance">{{creator.stance}}</text>
         <view class="creator-top__tags">
-          <text wx:for="{{creator.tags}}" wx:key="*this" class="creator-top__descriptor">{{item}}</text>
+          <text wx:for="{{creator.displayTags}}" wx:key="*this" class="creator-top__descriptor">{{item}}</text>
         </view>
       </view>
       <image class="creator-top__avatar" src="{{creator.avatarDetail || creator.avatar}}" mode="aspectFill"></image>
@@ -66,27 +57,10 @@
   </view>
 
   <view class="section-block paper-block">
-      <text class="section-title detail-card__title">他与地方</text>
+      <text class="section-title detail-card__title">关于创作者</text>
       <view class="detail-list">
         <text wx:for="{{creator.about}}" wx:key="*this" class="detail-list-item">{{item}}</text>
       </view>
-  </view>
-
-  <view class="section-block paper-block">
-    <text class="section-title">常带的旅程类型</text>
-    <view class="creator-place-list">
-      <view
-        wx:for="{{creatorRouteTypes}}"
-        wx:key="*this"
-        class="creator-place-item"
-        hover-class="creator-place-item--hover"
-        data-value="{{item}}"
-        bindtap="onRouteTypeTap"
-      >
-        <text class="creator-place-item__label">{{item}}</text>
-        <text class="creator-place-item__icon">↗</text>
-      </view>
-    </view>
   </view>
 
   <view wx:if="{{displayIdeas.length}}" class="section-block creator-stories">
@@ -128,7 +102,7 @@
     </view>
   </view>
 
-  <view class="section-block creator-feedback">
+  <view wx:if="{{creator.hasVisibleReviews}}" class="section-block creator-feedback">
     <text class="section-eyebrow creator-feedback__eyebrow">队员反馈</text>
     <text class="section-title">旅人回声</text>
     <view class="review-list">

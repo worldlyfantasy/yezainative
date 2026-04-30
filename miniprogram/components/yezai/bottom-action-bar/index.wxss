@@ -3,7 +3,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 24rpx;
-  background: rgba(242, 230, 201, 0.96);
+  background:
+    linear-gradient(180deg, rgba(255, 249, 242, 0.88), rgba(242, 230, 201, 0.96));
 }
 
 .bottom-action-bar--fixed-bottom {
@@ -12,10 +13,10 @@
   right: 24rpx;
   bottom: calc(156rpx + env(safe-area-inset-bottom));
   z-index: 2000;
-  padding: 18rpx 0 0;
-  border-top: 1rpx solid rgba(153, 57, 33, 0.14);
-  border-radius: 0;
-  box-shadow: none;
+  padding: 18rpx 20rpx 18rpx;
+  border: 1rpx solid rgba(153, 57, 33, 0.12);
+  border-radius: 32rpx;
+  box-shadow: 0 18rpx 40rpx rgba(84, 57, 31, 0.1);
 }
 
 .bottom-action-bar--sticky-top {

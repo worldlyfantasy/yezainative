@@ -34,7 +34,32 @@ function deepMerge(base, override) {
   return result;
 }
 
-async function getStoredConfig(key) {
+async function queryStoredConfig(key) {
+  const result = await db.collection(CONFIG_COLLECTION).where({ key }).limit(1).get();
+  if (!result.data || !result.data.length) {
+    return null;
+  }
+
+  const doc = result.data[0];
+  return doc.value && isPlainObject(doc.value) ? doc.value : doc;
+}
+
+async function getStoredConfig(key, options) {
+  const settings = Object.assign(
+    {
+      cache: true
+    },
+    options || {}
+  );
+
+  if (!settings.cache) {
+    try {
+      return await queryStoredConfig(key);
+    } catch (error) {
+      return null;
+    }
+  }
+
   const cached = configCache.get(key);
   if (cached) {
     if (cached.expiresAt > Date.now()) {
@@ -48,8 +73,8 @@ async function getStoredConfig(key) {
 
   const loadPromise = (async () => {
     try {
-      const result = await db.collection(CONFIG_COLLECTION).where({ key }).limit(1).get();
-      if (!result.data || !result.data.length) {
+      const value = await queryStoredConfig(key);
+      if (!value) {
         configCache.set(key, {
           expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,
           value: null
@@ -57,8 +82,6 @@ async function getStoredConfig(key) {
         return null;
       }
 
-      const doc = result.data[0];
-      const value = doc.value && isPlainObject(doc.value) ? doc.value : doc;
       configCache.set(key, {
         expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,
         value
@@ -82,9 +105,9 @@ async function getStoredConfig(key) {
   }
 }
 
-async function readConfig(key) {
+async function readConfig(key, options) {
   const defaults = defaultConfigs[key];
-  const stored = await getStoredConfig(key);
+  const stored = await getStoredConfig(key, options);
   return deepMerge(defaults || {}, stored || {});
 }
 
@@ -94,6 +117,7 @@ const handlers = {
   getServiceDetailPageConfig: () => readConfig("serviceDetailPage"),
   getPaymentResultPageConfig: () => readConfig("paymentResultPage"),
   getOrderDetailPageConfig: () => readConfig("orderDetailPage"),
+  getProfilePageConfig: () => readConfig("profilePage", { cache: false }),
   getFavoritesPageConfig: () => readConfig("favoritesPage"),
   getArticleBridgePageConfig: () => readConfig("articleBridgePage")
 };

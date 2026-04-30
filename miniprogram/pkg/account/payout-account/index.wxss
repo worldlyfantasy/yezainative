@@ -1,0 +1,60 @@
+.payout-page {
+  padding-bottom: 140rpx;
+}
+
+.payout-intro {
+  margin-top: 10rpx;
+}
+
+.payout-form-block {
+  border-bottom: 0;
+}
+
+.payout-submit-button {
+  margin-top: 8rpx;
+  width: 100%;
+  min-height: 88rpx;
+  border-radius: 44rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  white-space: nowrap;
+  background-color: #D15E14;
+  background-image: none;
+  color: #fff9f2;
+  box-shadow: 0 12rpx 28rpx rgba(209, 94, 20, 0.18);
+}
+
+.payout-submit-button--disabled {
+  color: rgba(255, 255, 255, 0.82);
+  background-color: rgba(153, 57, 33, 0.32);
+  box-shadow: none;
+}
+
+.traveler-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  margin-top: 22rpx;
+}
+
+.traveler-form-group__label {
+  font-size: 24rpx;
+  color: #6a5a4b;
+}
+
+.traveler-form-group__input {
+  min-height: 92rpx;
+  padding: 0 24rpx;
+  border-radius: 22rpx;
+  background: rgba(255, 250, 241, 0.92);
+  border: 1rpx solid rgba(153, 57, 33, 0.12);
+}
+
+.traveler-form-group__input--error {
+  border-color: rgba(122, 31, 31, 0.35);
+}
+
+.traveler-form-group__error {
+  font-size: 22rpx;
+  color: #7a1f1f;
+}

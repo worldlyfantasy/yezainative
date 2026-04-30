@@ -23,7 +23,11 @@ function mapUser(payload) {
     avatarUrl: source.avatarUrl || "",
     memberLabel: source.memberLabel || "野哉会员",
     role: source.role || "user",
-    profileConfigured: Boolean(source.profileConfigured)
+    profileConfigured: Boolean(source.profileConfigured),
+    travelerCount: Number(source.travelerCount) || 0,
+    effectiveOrderCount: Number(source.effectiveOrderCount) || 0,
+    effectiveRouteCount: Number(source.effectiveRouteCount) || 0,
+    lastTravelAt: Number(source.lastTravelAt) || 0
   };
 }
 

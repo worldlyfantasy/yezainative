@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const DEFAULT_ENV_ID = "yezai-3gr73wd48057512e";
+const DEFAULT_ENV_ID = "yezai-3gr73wd48057512e-10f17b581";
 const DEFAULT_SEED_DIR = path.join(__dirname, "..", "docs", "cloud-seed");
 const DEFAULT_COLLECTIONS = [
   "app_configs",
@@ -31,7 +31,7 @@ function printUsage() {
       "  node scripts/import-cloud-seed.js [--collections services,creators] [--reset] [--dry-run]",
       "",
       "Environment variables:",
-      "  TCB_ENV_ID / TCB_ENV     CloudBase env id, defaults to yezai-3gr73wd48057512e",
+      "  TCB_ENV_ID / TCB_ENV     CloudBase env id, defaults to yezai-3gr73wd48057512e-10f17b581",
       "  TCB_SECRET_ID            Tencent Cloud SecretId",
       "  TCB_SECRET_KEY           Tencent Cloud SecretKey",
       "",
@@ -43,6 +43,26 @@ function printUsage() {
       "  --help                  Show this help message"
     ].join("\n")
   );
+}
+
+function isCanonicalCloudbaseEnvId(envId) {
+  const normalized = String(envId || "").trim();
+
+  if (!normalized) {
+    return false;
+  }
+
+  const parts = normalized.split("-").filter(Boolean);
+  const suffix = parts[parts.length - 1] || "";
+  return parts.length >= 3 && /^[0-9a-z]+$/i.test(suffix) && suffix.length >= 8;
+}
+
+function assertCanonicalEnvId(envId) {
+  if (!isCanonicalCloudbaseEnvId(envId)) {
+    throw new Error(
+      `CloudBase envId 必须使用完整环境 ID，当前收到 \`${envId}\`。请改成类似 \`${DEFAULT_ENV_ID}\` 的完整值。`
+    );
+  }
 }
 
 function parseArgs(argv) {
@@ -290,6 +310,8 @@ async function main() {
     printUsage();
     return;
   }
+
+  assertCanonicalEnvId(options.envId);
 
   const collections = resolveCollections(options);
   const seedPayloads = collections.map((collectionName) =>

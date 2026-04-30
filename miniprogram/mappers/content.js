@@ -8,6 +8,23 @@ function ensureObject(value) {
   return value && typeof value === "object" ? value : {};
 }
 
+function normalizeIdeaSortTimestamp(item) {
+  const source = ensureObject(item);
+  const candidates = [
+    Number(source.publishedAt) || 0,
+    Number(source.updatedAt) || 0,
+    Number(source.createdAt) || 0
+  ];
+
+  return candidates.find((value) => value > 0) || 0;
+}
+
+function sortIdeasByNewest(items) {
+  return ensureArray(items)
+    .slice()
+    .sort((left, right) => normalizeIdeaSortTimestamp(right) - normalizeIdeaSortTimestamp(left));
+}
+
 function mapHomePageData(payload) {
   const source = ensureObject(payload);
   const servicesByTab = ensureObject(source.featuredServicesByTab);
@@ -28,7 +45,10 @@ function mapJourneyPageData(payload) {
   const source = ensureObject(payload);
   return {
     routeTypeOptions: ensureArray(source.routeTypeOptions),
-    journeys: ensureArray(source.journeys)
+    regionOptions: ensureArray(source.regionOptions),
+    journeys: ensureArray(source.journeys).length
+      ? ensureArray(source.journeys)
+      : ensureArray(source.services)
   };
 }
 
@@ -55,7 +75,7 @@ function mapCreatorDetailData(payload) {
     creator: source.creator || null,
     creatorDestinations: ensureArray(source.creatorDestinations),
     relatedServices: ensureArray(source.relatedServices),
-    creatorIdeas: ensureArray(source.creatorIdeas)
+    creatorIdeas: sortIdeasByNewest(source.creatorIdeas)
   };
 }
 
@@ -93,7 +113,7 @@ function mapIdeasPageData(payload) {
   return {
     themes: ensureArray(source.themes),
     pageTitle: source.pageTitle || "旅行故事",
-    ideas: ensureArray(source.ideas)
+    ideas: sortIdeasByNewest(source.ideas)
   };
 }
 
@@ -106,6 +126,7 @@ function mapIdeaDetailData(payload) {
   return {
     idea: source.idea || null,
     author: source.author || null,
+    relatedRegions: ensureArray(source.relatedRegions),
     relatedServices: ensureArray(source.relatedServices),
     blocks: ensureArray(source.blocks)
   };
@@ -126,6 +147,7 @@ function mapServiceDetailData(payload) {
     photoGallery: ensureArray(source.photoGallery),
     photoTotal: Number(source.photoTotal) || 0,
     mediaTabs: ensureArray(source.mediaTabs),
+    hasGalleryGroups: Boolean(source.hasGalleryGroups),
     groupPeriods: ensureArray(source.groupPeriods)
   };
 }
@@ -162,10 +184,33 @@ function mapServiceDetailContentData(payload) {
   const source = ensureObject(payload);
   return {
     travelDetail: source.travelDetail || null,
-    photoGallery: ensureArray(source.photoGallery),
-    photoTotal: Number(source.photoTotal) || 0,
-    mediaTabs: ensureArray(source.mediaTabs),
     groupPeriods: ensureArray(source.groupPeriods)
+  };
+}
+
+function mapServiceGalleryData(payload) {
+  if (!payload) {
+    return null;
+  }
+
+  const source = ensureObject(payload);
+  return {
+    mediaTabs: ensureArray(source.mediaTabs),
+    photoTotal: Number(source.photoTotal) || 0,
+    hasGalleryGroups: Boolean(source.hasGalleryGroups)
+  };
+}
+
+function mapServiceGalleryOriginalData(payload) {
+  if (!payload) {
+    return null;
+  }
+
+  const source = ensureObject(payload);
+  return {
+    mediaTabs: ensureArray(source.mediaTabs),
+    photoTotal: Number(source.photoTotal) || 0,
+    hasGalleryGroups: Boolean(source.hasGalleryGroups)
   };
 }
 
@@ -182,5 +227,7 @@ module.exports = {
   mapServiceConsultData,
   mapServiceDetailSummaryData,
   mapServiceDetailContentData,
+  mapServiceGalleryData,
+  mapServiceGalleryOriginalData,
   mapServiceDetailData
 };

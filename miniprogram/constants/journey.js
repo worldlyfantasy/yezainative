@@ -1,14 +1,27 @@
 const ROUTE_TYPE_ORDER = [
-  "城市漫游",
-  "慢旅行",
-  "徒步与自然",
-  "度假放松",
-  "亲子&逆向亲子",
-  "人宠",
-  "摄影创作",
-  "瑜伽疗愈",
+  "山野",
+  "城市",
+  "乡土",
+  "户外",
+  "研学",
+  "文化",
+  "内在成长",
+  "家庭",
   "特殊节庆"
 ];
+
+const LEGACY_ROUTE_TYPE_ALIASES = {
+  "城市漫游": "城市",
+  "慢旅行": "文化",
+  "徒步与自然": "户外",
+  "徒步自然": "户外",
+  "度假放松": "山野",
+  "亲子&逆向亲子": "家庭",
+  "人宠": "家庭",
+  "摄影创作": "研学",
+  "瑜伽疗愈": "内在成长",
+  "特殊节庆": "特殊节庆"
+};
 
 const STATUS_FILTER_OPTIONS = [
   { key: "all", label: "全部" },
@@ -43,35 +56,44 @@ const STATUS_PRIORITY = {
 };
 
 const ROUTE_TYPE_ICON_MAP = {
-  "城市漫游": "/images/journey-types/city-walk.svg",
-  "慢旅行": "/images/journey-types/slow-travel.svg",
-  "徒步与自然": "/images/journey-types/hike-nature.svg",
-  "度假放松": "/images/journey-types/retreat.svg",
-  "人宠": "/images/journey-types/human-pet.svg",
-  "摄影创作": "/images/journey-types/photo-creation.svg",
-  "瑜伽疗愈": "/images/journey-types/yoga-healing.svg",
-  "特殊节庆": "/images/journey-types/festival.svg",
-  "亲子&逆向亲子": "/images/journey-types/family.svg"
+  "山野": "/images/journey-types/shan-ye.svg",
+  "城市": "/images/journey-types/cheng-shi.svg",
+  "乡土": "/images/journey-types/xiang-tu.svg",
+  "户外": "/images/journey-types/hu-wai.svg",
+  "研学": "/images/journey-types/yan-xue.svg",
+  "文化": "/images/journey-types/wen-hua.svg",
+  "内在成长": "/images/journey-types/nei-zai-cheng-zhang.svg",
+  "家庭": "/images/journey-types/jia-ting.svg",
+  "特殊节庆": "/images/journey-types/te-shu-jie-qing.svg"
 };
 
 const ROUTE_TYPE_WORDMARK_MAP = {
-  "城市漫游": "/images/route-type-wordmark/city-walk.svg",
-  "慢旅行": "/images/route-type-wordmark/slow-travel.svg",
-  "徒步与自然": "/images/route-type-wordmark/hike-nature.svg",
-  "度假放松": "/images/route-type-wordmark/retreat.svg",
-  "人宠": "/images/route-type-wordmark/human-pet.svg",
-  "摄影创作": "/images/route-type-wordmark/photo-creation.svg",
-  "瑜伽疗愈": "/images/route-type-wordmark/yoga-healing.svg",
-  "特殊节庆": "/images/route-type-wordmark/festival.svg",
-  "亲子&逆向亲子": "/images/route-type-wordmark/family.svg"
+  "山野": "/images/route-type-wordmark/shan-ye.svg",
+  "城市": "/images/route-type-wordmark/cheng-shi.svg",
+  "乡土": "/images/route-type-wordmark/xiang-tu.svg",
+  "户外": "/images/route-type-wordmark/hu-wai.svg",
+  "研学": "/images/route-type-wordmark/yan-xue.svg",
+  "文化": "/images/route-type-wordmark/wen-hua.svg",
+  "内在成长": "/images/route-type-wordmark/nei-zai-cheng-zhang.svg",
+  "家庭": "/images/route-type-wordmark/jia-ting.svg",
+  "特殊节庆": "/images/route-type-wordmark/te-shu-jie-qing.svg"
 };
 
 function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function buildRouteTypeIconUrl(label) {
+function normalizeRouteTypeLabel(label) {
   const normalized = normalizeText(label);
+  if (!normalized) {
+    return "";
+  }
+
+  return LEGACY_ROUTE_TYPE_ALIASES[normalized] || normalized;
+}
+
+function buildRouteTypeIconUrl(label) {
+  const normalized = normalizeRouteTypeLabel(label);
   if (!normalized) {
     return "";
   }
@@ -80,7 +102,7 @@ function buildRouteTypeIconUrl(label) {
 }
 
 function buildRouteTypeWordmarkUrl(label) {
-  const normalized = normalizeText(label);
+  const normalized = normalizeRouteTypeLabel(label);
   if (!normalized) {
     return "";
   }
@@ -132,6 +154,7 @@ function formatCalendarMonth(monthKey) {
 }
 
 module.exports = {
+  LEGACY_ROUTE_TYPE_ALIASES,
   ROUTE_TYPE_ORDER,
   STATUS_FILTER_OPTIONS,
   buildMonthKey,
@@ -140,5 +163,6 @@ module.exports = {
   formatCalendarMonth,
   formatJourneyDate,
   getStatusMeta,
-  getStatusPriority
+  getStatusPriority,
+  normalizeRouteTypeLabel
 };

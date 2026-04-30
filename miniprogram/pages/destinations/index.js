@@ -15,8 +15,16 @@ const {
   formatCalendarMonth,
   formatJourneyDate,
   getStatusMeta,
-  getStatusPriority
+  getStatusPriority,
+  normalizeRouteTypeLabel
 } = require("../../constants/journey");
+const {
+  getDestinationRegionLabel,
+  normalizeDestinationRegionCode
+} = require("../../constants/destination-region");
+const {
+  DESTINATION_REGION_OPTIONS
+} = require("../../constants/destination-region");
 
 const WEEKDAY_LABELS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const UPCOMING_WINDOW_DAYS = 14;
@@ -33,6 +41,10 @@ function normalizeText(value) {
 
 function lowerCaseText(value) {
   return normalizeText(value).toLowerCase();
+}
+
+function ensureArray(value) {
+  return Array.isArray(value) ? value : [];
 }
 
 function unique(values) {
@@ -128,12 +140,61 @@ function buildRouteTypeShortLabel(label) {
 }
 
 function buildRouteTypeDisplayLabel(label) {
-  const normalized = normalizeText(label);
-  if (normalized === "亲子&逆向亲子") {
-    return "亲子";
+  return normalizeText(label);
+}
+
+function buildRegionCountText(count, available) {
+  const safeCount = Math.max(0, Number(count) || 0);
+  if (!available || !safeCount) {
+    return "暂无可报";
   }
 
-  return normalized;
+  return `${safeCount} 条旅程`;
+}
+
+function buildRegionSheetColumns(regionOptions) {
+  const columns = [];
+  const source = Array.isArray(regionOptions) ? regionOptions : [];
+
+  for (let index = 0; index < source.length; index += 3) {
+    columns.push(source.slice(index, index + 3));
+  }
+
+  return columns;
+}
+
+function buildFallbackRegionOptions(journeys, configuredRegionOptions) {
+  const configuredMap = Array.isArray(configuredRegionOptions)
+    ? configuredRegionOptions.reduce((result, item) => {
+      const value = normalizeText(item && item.value);
+      if (value) {
+        result[value] = {
+          label: normalizeText(item && item.label) || getDestinationRegionLabel(value),
+          value,
+          image: normalizeText(item && item.image)
+        };
+      }
+      return result;
+    }, {})
+    : {};
+  const discoveredRegionCodes = new Set();
+
+  (Array.isArray(journeys) ? journeys : []).forEach((journey) => {
+    unique(journey && journey.destinationRegionCodes).forEach((regionCode) => {
+      const normalizedRegionCode = normalizeText(regionCode);
+      if (normalizedRegionCode) {
+        discoveredRegionCodes.add(normalizedRegionCode);
+      }
+    });
+  });
+
+  return DESTINATION_REGION_OPTIONS
+    .filter((item) => discoveredRegionCodes.has(item.value))
+    .map((item) => ({
+      label: item.label,
+      value: item.value,
+      image: configuredMap[item.value] ? configuredMap[item.value].image : ""
+    }));
 }
 
 function buildCalendarWeeks(monthKey, markedDateSet, selectedDate) {
@@ -207,17 +268,33 @@ function sortPeriods(periods, selectedStatus) {
   });
 }
 
+function getRawJourneyRouteTypes(rawJourney) {
+  return unique(
+    ensureArray(rawJourney && rawJourney.routeTypes)
+      .concat(ensureArray(rawJourney && rawJourney.tags))
+      .concat(ensureArray(rawJourney && rawJourney.styles))
+      .map((item) => normalizeRouteTypeLabel(item))
+  );
+}
+
+function getRawJourneyPeriods(rawJourney) {
+  return ensureArray(rawJourney && rawJourney.activePeriods).length
+    ? ensureArray(rawJourney && rawJourney.activePeriods)
+    : ensureArray(rawJourney && rawJourney.groupPeriods);
+}
+
 Page({
   data: {
     loading: true,
     errorText: "",
     searchKeyword: "",
     visibleRouteTypeOptions: [],
+    visibleRegionOptions: [],
     statusOptions: buildStatusOptions("all"),
     selectedRouteType: "",
+    selectedDestinationRegionCode: "",
+    selectedDestinationRegionLabel: "",
     selectedStatus: "all",
-    selectedDepartureDate: "",
-    selectedDepartureDateLabel: "",
     selectedFilterChips: [],
     resultCountText: "",
     renderedCountText: "",
@@ -225,6 +302,8 @@ Page({
     hasMoreJourneys: false,
     isDateSheetVisible: false,
     isDateSheetAnimating: false,
+    isRegionSheetVisible: false,
+    isRegionSheetAnimating: false,
     calendarMonthKeys: [],
     activeCalendarMonth: "",
     activeCalendarMonthLabel: "",
@@ -236,8 +315,13 @@ Page({
     sheetEmptyTitle: "",
     sheetEmptyDesc: "",
     sheetHintText: "",
+    regionSheetColumns: [],
     hasMarkedDates: false,
-    showFloatingFilters: false
+    showFloatingFilters: false,
+    emptyStateTitle: "暂时没有匹配的旅程",
+    emptyStateDescPrimary: "换一个旅程类型、团期状态试试看",
+    emptyStateDescSecondary: "也可以直接清空筛选重新浏览",
+    showEmptyClearRegionAction: false
   },
 
   async onLoad() {
@@ -246,6 +330,7 @@ Page({
     this.allJourneys = [];
     this.filteredJourneys = [];
     this.routeTypeOrder = [];
+    this.regionOptions = [];
     this.lastScrollTop = 0;
     this.filterStackTop = 0;
     await this.loadJourneyData();
@@ -259,7 +344,10 @@ Page({
     const pendingFilter = consumePendingJourneyFilter();
     if (
       !pendingFilter
-      || (!pendingFilter.searchKeyword && !pendingFilter.routeType && !pendingFilter.status && !pendingFilter.departureDate)
+      || (!pendingFilter.searchKeyword
+        && !pendingFilter.routeType
+        && !pendingFilter.status
+        && !pendingFilter.destinationRegionCode)
     ) {
       return;
     }
@@ -269,37 +357,24 @@ Page({
 
   buildRouteTypeOrder(routeTypeOptions, journeys) {
     const values = unique(
-      ROUTE_TYPE_ORDER
-        .concat((routeTypeOptions || []).map((item) => normalizeText(item && (item.value || item.label))))
-        .concat((journeys || []).flatMap((item) => item && Array.isArray(item.routeTypes) ? item.routeTypes : []))
+      (journeys || []).flatMap((item) => (
+        item && Array.isArray(item.routeTypes)
+          ? item.routeTypes.map((tag) => normalizeRouteTypeLabel(tag))
+          : []
+      ))
     );
     const ordered = ROUTE_TYPE_ORDER.filter((item) => values.includes(item));
-    const availableTypeSet = new Set();
-
-    (journeys || []).forEach((journey) => {
-      if (!Array.isArray(journey && journey.activePeriods) || !journey.activePeriods.length) {
-        return;
-      }
-
-      (journey.routeTypes || []).forEach((tag) => {
-        availableTypeSet.add(tag);
-      });
-    });
-
     values.forEach((value) => {
-      if (!ordered.includes(value)) {
+      if (value && !ordered.includes(value)) {
         ordered.push(value);
       }
     });
-
-    return ordered
-      .filter((value) => availableTypeSet.has(value))
-      .concat(ordered.filter((value) => !availableTypeSet.has(value)));
+    return ordered;
   },
 
   normalizeJourney(rawJourney) {
-    const routeTypes = unique(rawJourney && rawJourney.routeTypes);
-    const activePeriods = sortPeriods(rawJourney && rawJourney.activePeriods, "all").map((period) => {
+    const routeTypes = getRawJourneyRouteTypes(rawJourney);
+    const activePeriods = sortPeriods(getRawJourneyPeriods(rawJourney), "all").map((period) => {
       const statusMeta = getStatusMeta(period && period.status);
       return Object.assign({}, period, {
         statusText: period && period.statusText ? period.statusText : statusMeta.label,
@@ -308,24 +383,31 @@ Page({
     });
     const creatorName = normalizeText(rawJourney && rawJourney.creatorName);
     const destinationNames = unique(rawJourney && rawJourney.destinationNames);
+    const destinationRegionCodes = unique(rawJourney && rawJourney.destinationRegionCodes);
+    const destinationRegionLabels = unique(
+      (rawJourney && rawJourney.destinationRegionLabels) || destinationRegionCodes.map((item) => getDestinationRegionLabel(item))
+    );
     const searchText = lowerCaseText(
       rawJourney && rawJourney.searchText
         ? rawJourney.searchText
         : [rawJourney && rawJourney.name, creatorName]
           .concat(routeTypes)
           .concat(destinationNames)
+          .concat(destinationRegionLabels)
           .join(" ")
     );
 
     return Object.assign({}, rawJourney, {
       routeTypes,
-      primaryRouteType: normalizeText(rawJourney && rawJourney.primaryRouteType) || routeTypes[0] || "",
+      primaryRouteType: normalizeRouteTypeLabel(rawJourney && rawJourney.primaryRouteType) || routeTypes[0] || "",
       primaryRouteTypeWordmark: buildRouteTypeWordmarkUrl(
-        normalizeText(rawJourney && rawJourney.primaryRouteType) || routeTypes[0] || ""
+        normalizeRouteTypeLabel(rawJourney && rawJourney.primaryRouteType) || routeTypes[0] || ""
       ),
       activePeriods,
       creatorName,
       destinationNames,
+      destinationRegionCodes,
+      destinationRegionLabels,
       searchText
     });
   },
@@ -340,6 +422,14 @@ Page({
       const payload = await getJourneyPageData();
       const allJourneys = (payload.journeys || []).map((item) => this.normalizeJourney(item));
       this.routeTypeOrder = this.buildRouteTypeOrder(payload.routeTypeOptions, allJourneys);
+      const configuredRegionOptions = (payload.regionOptions || []).map((item) => ({
+        label: normalizeText(item && item.label),
+        value: normalizeText(item && item.value),
+        image: normalizeText(item && item.image)
+      })).filter((item) => item.value && item.label);
+      this.regionOptions = configuredRegionOptions.length
+        ? configuredRegionOptions
+        : buildFallbackRegionOptions(allJourneys, configuredRegionOptions);
       this.allJourneys = allJourneys;
 
       this.setData(
@@ -356,12 +446,14 @@ Page({
       console.error("Failed to load journeys", error);
       this.allJourneys = [];
       this.routeTypeOrder = [];
+      this.regionOptions = [];
       this.setData({
         loading: false,
         errorText: "旅程列表加载失败，请稍后重试。",
         resultCountText: "",
         displayJourneys: [],
-        visibleRouteTypeOptions: []
+        visibleRouteTypeOptions: [],
+        visibleRegionOptions: []
       });
     }
   },
@@ -379,12 +471,13 @@ Page({
       routeType: Object.prototype.hasOwnProperty.call(source, "routeType")
         ? normalizeText(source.routeType)
         : this.data.selectedRouteType,
+      destinationRegionCode: Object.prototype.hasOwnProperty.call(source, "destinationRegionCode")
+        ? normalizeDestinationRegionCode(source.destinationRegionCode)
+        : normalizeDestinationRegionCode(this.data.selectedDestinationRegionCode),
       status: Object.prototype.hasOwnProperty.call(source, "status")
         ? normalizeStatusFilter(source.status)
         : normalizeStatusFilter(this.data.selectedStatus),
-      departureDate: Object.prototype.hasOwnProperty.call(source, "departureDate")
-        ? normalizeText(source.departureDate)
-        : this.data.selectedDepartureDate
+      departureDate: ""
     };
   },
 
@@ -394,6 +487,33 @@ Page({
     }
 
     return lowerCaseText(journey && journey.searchText).includes(lowerCaseText(keyword));
+  },
+
+  journeyMatchesRegion(journey, regionCode) {
+    const normalizedRegionCode = normalizeText(regionCode);
+    if (!normalizedRegionCode) {
+      return true;
+    }
+
+    return Array.isArray(journey && journey.destinationRegionCodes)
+      && journey.destinationRegionCodes.includes(normalizedRegionCode);
+  },
+
+  journeyMatchesBaseFilters(journey, filters, options) {
+    const config = options || {};
+    if (!config.excludeSearch && !this.journeyMatchesSearch(journey, filters.searchKeyword)) {
+      return false;
+    }
+
+    if (!config.excludeRouteType && filters.routeType && !(journey.routeTypes || []).includes(filters.routeType)) {
+      return false;
+    }
+
+    if (!config.excludeRegion && !this.journeyMatchesRegion(journey, filters.destinationRegionCode)) {
+      return false;
+    }
+
+    return true;
   },
 
   filterPeriodsForFilters(periods, filters, options) {
@@ -413,6 +533,18 @@ Page({
     }
 
     return filtered;
+  },
+
+  getMatchedPeriodsForJourney(journey, filters, options) {
+    const config = options || {};
+    if (!this.journeyMatchesBaseFilters(journey, filters, config)) {
+      return [];
+    }
+
+    return this.filterPeriodsForFilters(journey && journey.activePeriods, filters, {
+      excludeDate: Boolean(config.excludeDate),
+      excludeStatus: Boolean(config.excludeStatus)
+    });
   },
 
   decorateJourneyForDisplay(journey, displayPeriod, options) {
@@ -455,15 +587,7 @@ Page({
 
     return (this.allJourneys || [])
       .reduce((result, journey) => {
-        if (!this.journeyMatchesSearch(journey, filters.searchKeyword)) {
-          return result;
-        }
-
-        if (filters.routeType && !(journey.routeTypes || []).includes(filters.routeType)) {
-          return result;
-        }
-
-        const candidatePeriods = this.filterPeriodsForFilters(journey.activePeriods, filters);
+        const candidatePeriods = this.getMatchedPeriodsForJourney(journey, filters);
         const sortedPeriods = sortPeriods(candidatePeriods, filters.status);
         const displayPeriod = sortedPeriods[0] || null;
         if (!displayPeriod) {
@@ -502,11 +626,9 @@ Page({
     const matchedTypeSet = new Set();
 
     (this.allJourneys || []).forEach((journey) => {
-      if (!this.journeyMatchesSearch(journey, filters.searchKeyword)) {
-        return;
-      }
-
-      const candidatePeriods = this.filterPeriodsForFilters(journey.activePeriods, filters, { excludeDate: false, excludeStatus: false });
+      const candidatePeriods = this.getMatchedPeriodsForJourney(journey, filters, {
+        excludeRouteType: true
+      });
       if (!candidatePeriods.length) {
         return;
       }
@@ -532,6 +654,48 @@ Page({
       }));
   },
 
+  buildAvailableRegionCountMap(filters) {
+    return (this.allJourneys || []).reduce((result, journey) => {
+      const candidatePeriods = this.getMatchedPeriodsForJourney(journey, filters, {
+        excludeRegion: true,
+        excludeDate: true
+      });
+      if (!candidatePeriods.length) {
+        return result;
+      }
+
+      unique(journey && journey.destinationRegionCodes).forEach((regionCode) => {
+        if (!regionCode) {
+          return;
+        }
+
+        result[regionCode] = (result[regionCode] || 0) + 1;
+      });
+      return result;
+    }, {});
+  },
+
+  buildVisibleRegionOptions(filters) {
+    const availableRegionCountMap = this.buildAvailableRegionCountMap(filters);
+
+    return (this.regionOptions || []).map((item) => {
+      const value = normalizeText(item && item.value);
+      const count = availableRegionCountMap[value] || 0;
+      const available = count > 0;
+
+      return {
+        key: value,
+        value,
+        label: normalizeText(item && item.label),
+        image: normalizeText(item && item.image),
+        count,
+        countText: buildRegionCountText(count, available),
+        available,
+        selected: value === filters.destinationRegionCode
+      };
+    });
+  },
+
   buildSelectedFilterChips(filters) {
     const chips = [];
 
@@ -549,6 +713,16 @@ Page({
       });
     }
 
+    if (filters.destinationRegionCode) {
+      const destinationRegionLabel = getDestinationRegionLabel(filters.destinationRegionCode);
+      if (destinationRegionLabel) {
+        chips.push({
+          key: "destinationRegionCode",
+          label: destinationRegionLabel
+        });
+      }
+    }
+
     if (filters.status && filters.status !== "all") {
       const statusOption = STATUS_FILTER_OPTIONS.find((item) => item.key === filters.status);
       if (statusOption) {
@@ -559,21 +733,16 @@ Page({
       }
     }
 
-    if (filters.departureDate) {
-      chips.push({
-        key: "departureDate",
-        label: formatJourneyDate(filters.departureDate)
-      });
-    }
-
     return chips;
   },
 
   buildCalendarSource(filters) {
     return (this.allJourneys || []).reduce((result, journey) => {
       const periods = sortPeriods(
-        (journey.activePeriods || []).filter((item) => item && isBookableStatus(item.status)),
-        "all"
+        this.getMatchedPeriodsForJourney(journey, filters, {
+          excludeDate: true
+        }).filter((item) => item && isBookableStatus(item.status)),
+        filters.status
       );
       if (!periods.length) {
         return result;
@@ -584,10 +753,6 @@ Page({
       }));
       return result;
     }, []);
-  },
-
-  findFirstMarkedDateForMonth(monthKey, markedDates) {
-    return (markedDates || []).find((item) => buildMonthKey(item) === monthKey) || "";
   },
 
   buildSheetJourneys(sourceJourneys, selectedDate) {
@@ -620,25 +785,38 @@ Page({
       });
   },
 
+  buildRegionSheetState(filters, visibleRegionOptions) {
+    return {
+      regionSheetColumns: buildRegionSheetColumns(visibleRegionOptions)
+    };
+  },
+
   buildDateSheetState(filters, patch) {
-    const sourceJourneys = this.buildCalendarSource(filters);
+    const dateSheetFilters = {
+      searchKeyword: "",
+      routeType: "",
+      destinationRegionCode: "",
+      status: "all",
+      departureDate: ""
+    };
+    const sourceJourneys = this.buildCalendarSource(dateSheetFilters);
     const markedDates = unique(
       sourceJourneys.flatMap((journey) => (journey.calendarPeriods || []).map((period) => period && period.dateStart))
     ).sort(sortDateStrings);
     const monthKeys = unique(markedDates.map((item) => buildMonthKey(item))).sort(sortDateStrings);
+    const hasPatchedSelectedDate = Object.prototype.hasOwnProperty.call(patch || {}, "sheetSelectedDate");
     const preferredMonth = Object.prototype.hasOwnProperty.call(patch || {}, "activeCalendarMonth")
       ? normalizeText(patch.activeCalendarMonth)
       : this.data.activeCalendarMonth;
-    const dateFromFilter = filters.departureDate;
-    const currentSelectedDate = Object.prototype.hasOwnProperty.call(patch || {}, "sheetSelectedDate")
+    const currentSelectedDate = hasPatchedSelectedDate
       ? normalizeText(patch.sheetSelectedDate)
       : this.data.sheetSelectedDate;
-    const fallbackMonth = buildMonthKey(dateFromFilter) || buildMonthKey(currentSelectedDate) || monthKeys[0] || "";
+    const normalizedCurrentSelectedDate = markedDates.includes(currentSelectedDate) ? currentSelectedDate : "";
+    const fallbackMonth = buildMonthKey(normalizedCurrentSelectedDate) || monthKeys[0] || "";
     const activeCalendarMonth = monthKeys.includes(preferredMonth) ? preferredMonth : fallbackMonth;
-    const defaultDate = this.findFirstMarkedDateForMonth(activeCalendarMonth, markedDates) || (activeCalendarMonth ? `${activeCalendarMonth}-01` : "");
-    const sheetSelectedDate = currentSelectedDate && buildMonthKey(currentSelectedDate) === activeCalendarMonth
-      ? currentSelectedDate
-      : (dateFromFilter && buildMonthKey(dateFromFilter) === activeCalendarMonth ? dateFromFilter : defaultDate);
+    const sheetSelectedDate = normalizedCurrentSelectedDate && buildMonthKey(normalizedCurrentSelectedDate) === activeCalendarMonth
+      ? normalizedCurrentSelectedDate
+      : "";
     const markedDateSet = new Set(markedDates);
     const calendarWeeks = buildCalendarWeeks(activeCalendarMonth, markedDateSet, sheetSelectedDate);
     const sheetJourneys = this.buildSheetJourneys(sourceJourneys, sheetSelectedDate);
@@ -651,6 +829,8 @@ Page({
       sheetHintText = "暂时没有可报名的出行日期。";
       sheetEmptyTitle = "暂时没有可选出行日期";
       sheetEmptyDesc = "旅程数据准备好后，这里会显示可以报名的出发日期。";
+    } else if (!sheetSelectedDate && hasPatchedSelectedDate) {
+      sheetHintText = "点一个有标记的日期，查看当天所有有在架团期的旅程。";
     } else if (sheetSelectedDate && !sheetJourneys.length) {
       sheetHintText = "这一天暂时没有可报名的旅程。";
     }
@@ -667,6 +847,33 @@ Page({
       sheetEmptyDesc,
       sheetHintText,
       hasMarkedDates
+    };
+  },
+
+  buildEmptyState(filters, filteredJourneys) {
+    if (Array.isArray(filteredJourneys) && filteredJourneys.length) {
+      return {
+        emptyStateTitle: "暂时没有匹配的旅程",
+        emptyStateDescPrimary: "换一个旅程类型、团期状态试试看",
+        emptyStateDescSecondary: "也可以直接清空筛选重新浏览",
+        showEmptyClearRegionAction: false
+      };
+    }
+
+    if (filters.destinationRegionCode) {
+      return {
+        emptyStateTitle: `${getDestinationRegionLabel(filters.destinationRegionCode)}暂时没有可报名旅程`,
+        emptyStateDescPrimary: "先清空区域看看其他在架旅程，或换一个旅程类型、团期状态试试看。",
+        emptyStateDescSecondary: "",
+        showEmptyClearRegionAction: true
+      };
+    }
+
+    return {
+      emptyStateTitle: "暂时没有匹配的旅程",
+      emptyStateDescPrimary: "换一个旅程类型、团期状态试试看",
+      emptyStateDescSecondary: "也可以直接清空筛选重新浏览",
+      showEmptyClearRegionAction: false
     };
   },
 
@@ -715,20 +922,23 @@ Page({
   applyJourneyFilters(patch) {
     const filters = this.resolveFilters(patch);
     const filteredJourneys = this.filterJourneys(filters, {
-      exactPrice: Boolean(filters.departureDate)
+      exactPrice: false
     });
     this.filteredJourneys = filteredJourneys;
     const initialDisplayJourneys = filteredJourneys.slice(0, INITIAL_JOURNEY_RENDER_COUNT);
     const visibleRouteTypeOptions = this.buildVisibleRouteTypeOptions(filters);
+    const visibleRegionOptions = this.buildVisibleRegionOptions(filters);
     const selectedFilterChips = this.buildSelectedFilterChips(filters);
+    const selectedDestinationRegionLabel = getDestinationRegionLabel(filters.destinationRegionCode);
     const nextData = Object.assign(
       {
         searchKeyword: filters.searchKeyword,
         selectedRouteType: filters.routeType,
+        selectedDestinationRegionCode: filters.destinationRegionCode,
+        selectedDestinationRegionLabel,
         selectedStatus: filters.status,
-        selectedDepartureDate: filters.departureDate,
-        selectedDepartureDateLabel: formatJourneyDate(filters.departureDate),
         visibleRouteTypeOptions,
+        visibleRegionOptions,
         selectedFilterChips,
         displayJourneys: initialDisplayJourneys,
         hasMoreJourneys: initialDisplayJourneys.length < filteredJourneys.length,
@@ -736,7 +946,9 @@ Page({
         resultCountText: `共 ${filteredJourneys.length} 条符合条件的旅程`,
         renderedCountText: this.buildRenderedCountText(filteredJourneys.length, initialDisplayJourneys.length)
       },
-      this.buildDateSheetState(filters, patch)
+      this.buildDateSheetState(filters, patch),
+      this.buildRegionSheetState(filters, visibleRegionOptions),
+      this.buildEmptyState(filters, filteredJourneys)
     );
 
     this.setData(nextData);
@@ -769,15 +981,16 @@ Page({
     const passedTrigger = scrollTop > triggerTop + FLOATING_FILTER_TRIGGER_OFFSET;
     const isScrollingUp = scrollTop < lastScrollTop - FLOATING_FILTER_SCROLL_EPSILON;
     const isScrollingDown = scrollTop > lastScrollTop + FLOATING_FILTER_SCROLL_EPSILON;
+    const isAnySheetVisible = this.data.isDateSheetVisible || this.data.isRegionSheetVisible;
     const shouldShow =
-      !this.data.isDateSheetVisible
+      !isAnySheetVisible
       && passedTrigger
       && isScrollingUp;
 
     const shouldHide =
       this.data.showFloatingFilters
       && (
-        this.data.isDateSheetVisible
+        isAnySheetVisible
         || !passedTrigger
         || isScrollingDown
       );
@@ -835,8 +1048,8 @@ Page({
       patch.status = "all";
     }
 
-    if (key === "departureDate") {
-      patch.departureDate = "";
+    if (key === "destinationRegionCode") {
+      patch.destinationRegionCode = "";
     }
 
     this.applyJourneyFilters(patch);
@@ -846,9 +1059,19 @@ Page({
     this.applyJourneyFilters({
       searchKeyword: "",
       routeType: "",
-      status: "all",
-      departureDate: ""
+      destinationRegionCode: "",
+      status: "all"
     });
+  },
+
+  clearDestinationRegionFilter() {
+    this.applyJourneyFilters({
+      destinationRegionCode: ""
+    });
+
+    if (this.data.isRegionSheetVisible) {
+      this.closeRegionSheet();
+    }
   },
 
   onJourneyTap(event) {
@@ -869,13 +1092,52 @@ Page({
     }
 
     this.applyJourneyFilters({
-      status: "all",
-      departureDate
+      sheetSelectedDate: departureDate,
+      activeCalendarMonth: buildMonthKey(departureDate)
+    });
+
+    if (this.data.isDateSheetVisible) {
+      return;
+    }
+
+    this.openDateSheet({
+      preserveSelection: true
     });
   },
 
+  showDateSheet(options) {
+    const settings = options || {};
+    const patch = {
+      activeCalendarMonth: this.data.activeCalendarMonth
+    };
+
+    if (!settings.preserveSelection) {
+      patch.sheetSelectedDate = "";
+    }
+
+    this.applyJourneyFilters({
+      ...patch
+    });
+    this.setData(
+      {
+        isRegionSheetVisible: false,
+        isRegionSheetAnimating: false,
+        isDateSheetVisible: true,
+        isDateSheetAnimating: false,
+        showFloatingFilters: false
+      },
+      () => {
+        setTimeout(() => {
+          this.setData({
+            isDateSheetAnimating: true
+          });
+        }, 20);
+      }
+    );
+  },
+
   onReachBottom() {
-    if (this.data.isDateSheetVisible || !this.data.hasMoreJourneys) {
+    if (this.data.isDateSheetVisible || this.data.isRegionSheetVisible || !this.data.hasMoreJourneys) {
       return;
     }
 
@@ -917,8 +1179,8 @@ Page({
     });
   },
 
-  openDateSheet() {
-    if (this.data.isDateSheetVisible) {
+  openRegionSheet() {
+    if (this.data.isRegionSheetVisible) {
       return;
     }
 
@@ -940,18 +1202,72 @@ Page({
 
     this.setData(
       {
-        isDateSheetVisible: true,
+        isDateSheetVisible: false,
         isDateSheetAnimating: false,
+        isRegionSheetVisible: true,
+        isRegionSheetAnimating: false,
         showFloatingFilters: false
       },
       () => {
         setTimeout(() => {
           this.setData({
-            isDateSheetAnimating: true
+            isRegionSheetAnimating: true
           });
         }, 20);
       }
     );
+  },
+
+  closeRegionSheet() {
+    if (!this.data.isRegionSheetVisible) {
+      return;
+    }
+
+    this.setData({
+      isRegionSheetAnimating: false
+    });
+    setTimeout(() => {
+      this.setData({
+        isRegionSheetVisible: false
+      });
+    }, 240);
+  },
+
+  onRegionTap(event) {
+    const destinationRegionCode = normalizeText(event.currentTarget.dataset.region);
+    const regionOption = (this.data.visibleRegionOptions || []).find((item) => item && item.value === destinationRegionCode);
+    if (!destinationRegionCode || !regionOption || (!regionOption.available && !regionOption.selected)) {
+      return;
+    }
+
+    this.applyJourneyFilters({
+      destinationRegionCode: destinationRegionCode === this.data.selectedDestinationRegionCode ? "" : destinationRegionCode
+    });
+    this.closeRegionSheet();
+  },
+
+  openDateSheet(options) {
+    if (this.data.isDateSheetVisible) {
+      return;
+    }
+
+    if (this.data.loading) {
+      wx.showToast({
+        title: "旅程加载中，请稍候",
+        icon: "none"
+      });
+      return;
+    }
+
+    if (this.data.errorText) {
+      wx.showToast({
+        title: "请先重新加载旅程",
+        icon: "none"
+      });
+      return;
+    }
+
+    this.showDateSheet(options);
   },
 
   closeDateSheet() {
@@ -964,7 +1280,10 @@ Page({
     });
     setTimeout(() => {
       this.setData({
-        isDateSheetVisible: false
+        isDateSheetVisible: false,
+        sheetSelectedDate: "",
+        sheetSelectedDateLabel: "",
+        sheetJourneys: []
       });
     }, 240);
   },
@@ -1002,32 +1321,9 @@ Page({
     }
 
     this.applyJourneyFilters({
-      routeType: "",
-      status: "all",
-      departureDate: fullDate,
       sheetSelectedDate: fullDate,
       activeCalendarMonth: buildMonthKey(fullDate)
     });
-  },
-
-  clearDateSelection() {
-    this.applyJourneyFilters({
-      departureDate: "",
-      sheetSelectedDate: "",
-      activeCalendarMonth: this.data.activeCalendarMonth
-    });
-    this.closeDateSheet();
-  },
-
-  confirmDateSelection() {
-    if (!this.data.sheetSelectedDate) {
-      return;
-    }
-
-    this.applyJourneyFilters({
-      departureDate: this.data.sheetSelectedDate
-    });
-    this.closeDateSheet();
   },
 
   onUnload() {

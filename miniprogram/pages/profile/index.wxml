@@ -53,27 +53,25 @@
     </view>
 
     <view class="section-block profile-entry-grid">
-      <button
-        wx:for="{{shortcuts}}"
-        wx:key="key"
-        class="profile-entry-card {{item.cardClassName}}"
-        hover-class="is-pressing-card"
-        data-key="{{item.key}}"
-        bindtap="onShortcutTap"
-      >
-        <image class="profile-entry-card__glyph" src="{{item.glyphSrc}}" mode="aspectFit"></image>
-        <text class="profile-entry-card__eyebrow">{{item.eyebrow}}</text>
-        <view class="profile-entry-card__head">
-          <view class="profile-entry-card__title-wrap">
-            <text class="profile-entry-card__title">{{item.label}}</text>
-            <view wx:if="{{item.key === 'favorites'}}" class="profile-entry-card__leaf">
-              <view class="profile-entry-card__leaf-shape"></view>
-              <view class="profile-entry-card__leaf-vein"></view>
+      <view wx:for="{{shortcutRows}}" wx:key="index" wx:for-item="row" class="profile-entry-row">
+        <button
+          wx:for="{{row}}"
+          wx:key="key"
+          class="profile-entry-card {{item.cardClassName}}"
+          hover-class="is-pressing-card"
+          data-key="{{item.key}}"
+          bindtap="onShortcutTap"
+        >
+          <image class="profile-entry-card__glyph" src="{{item.glyphSrc}}" mode="aspectFit"></image>
+          <view class="profile-entry-card__head">
+            <view class="profile-entry-card__title-wrap">
+              <text class="profile-entry-card__title">{{item.label}}</text>
             </view>
+            <text class="profile-entry-card__arrow">›</text>
           </view>
-          <text class="profile-entry-card__arrow">›</text>
-        </view>
-      </button>
+          <text class="profile-entry-card__desc">{{item.desc}}</text>
+        </button>
+      </view>
     </view>
 
     <view class="section-block profile-trip-group">
@@ -121,7 +119,21 @@
           </view>
         </view>
       </view>
-      <view wx:else class="empty-state profile-empty-state">当前还没有待出发或在进行的旅行，下一段山野还在路上。</view>
+      <view wx:else class="profile-empty-state">
+        <view class="profile-empty-state__visual">
+          <image
+            wx:if="{{emptyTripStateImage}}"
+            class="profile-empty-state__image"
+            src="{{emptyTripStateImage}}"
+            mode="aspectFill"
+          ></image>
+          <view wx:else class="profile-empty-state__image profile-empty-state__image--fallback"></view>
+          <view class="profile-empty-state__shade"></view>
+          <view class="profile-empty-state__copy">
+            <text class="profile-empty-state__eyebrow">当前还没有待出发或正在进行的旅程</text>
+          </view>
+        </view>
+      </view>
     </view>
 
     <view class="profile-contact">
@@ -129,6 +141,49 @@
       <text class="profile-contact__email">zhayeye@yezai.me</text>
     </view>
   </block>
+
+  <view wx:if="{{profilePromptVisible}}" class="profile-completion-mask {{profilePromptKeyboardActive ? 'profile-completion-mask--keyboard' : ''}}" catchtouchmove="noop">
+    <view class="profile-completion-panel" catchtap="noop">
+      <view class="profile-completion__head">
+        <text class="profile-completion__eyebrow">PROFILE</text>
+        <text class="profile-completion__title">完善头像和昵称</text>
+        <text class="profile-completion__desc">方便我们识别你的报名、订单和沟通记录。</text>
+      </view>
+
+      <button class="profile-completion__avatar-button" open-type="chooseAvatar" bindchooseavatar="handleProfilePromptChooseAvatar">
+        <view class="profile-completion__avatar-shell">
+          <image wx:if="{{profileDraftAvatarUrl}}" class="profile-completion__avatar" src="{{profileDraftAvatarUrl}}" mode="aspectFill"></image>
+          <image wx:elif="{{user.avatarUrl}}" class="profile-completion__avatar" src="{{user.avatarUrl}}" mode="aspectFill"></image>
+          <view wx:else class="profile-completion__avatar profile-completion__avatar--placeholder">
+            <text class="profile-completion__avatar-mark">野哉</text>
+          </view>
+        </view>
+        <text class="profile-completion__avatar-label">选择头像</text>
+      </button>
+
+      <view class="profile-completion__field">
+        <text class="profile-completion__label">昵称</text>
+        <input
+          class="profile-completion__nickname-input"
+          type="nickname"
+          maxlength="20"
+          placeholder="输入或选择微信昵称"
+          value="{{profileDraftNickname}}"
+          focus="{{profilePromptNicknameFocus}}"
+          confirm-type="done"
+          bindinput="handleNicknameInput"
+          bindfocus="handleProfilePromptNicknameFocus"
+          bindblur="handleProfilePromptNicknameBlur"
+          bindconfirm="handleProfilePromptConfirm"
+        />
+      </view>
+
+      <view class="profile-completion__actions">
+        <view class="profile-completion__later" bindtap="handleProfilePromptDismiss" hover-class="profile-completion__later--pressing" hover-stay-time="100">稍后再说</view>
+        <view class="profile-completion__save {{profileSaving ? 'profile-completion__save--disabled' : ''}}" bindtap="handleProfilePromptSave" hover-class="profile-completion__save--pressing" hover-stay-time="100">{{profileSaving ? "保存中" : "完成"}}</view>
+      </view>
+    </view>
+  </view>
 </view>
 
 <app-tab-bar></app-tab-bar>

@@ -32,6 +32,12 @@
             "title": "联系人姓名",
             "maxLength": 256
         },
+        "orderContactName": {
+            "description": "订单联系人姓名",
+            "type": "string",
+            "title": "订单联系人姓名",
+            "maxLength": 64
+        },
         "_mainDep": {
             "x-system": true,
             "x-id": "aa7499c",
@@ -191,6 +197,84 @@
             "type": "string",
             "title": "联系人电话",
             "maxLength": 32
+        },
+        "orderContactPhone": {
+            "format": "phone",
+            "description": "订单联系人电话",
+            "type": "string",
+            "title": "订单联系人电话",
+            "maxLength": 32
+        },
+        "emergencyContactName": {
+            "description": "紧急联系人姓名",
+            "type": "string",
+            "title": "紧急联系人姓名",
+            "maxLength": 64
+        },
+        "emergencyContactPhone": {
+            "description": "紧急联系人电话",
+            "type": "string",
+            "title": "紧急联系人电话",
+            "maxLength": 32
+        },
+        "roomingMode": {
+            "description": "拼房方式",
+            "type": "string",
+            "title": "拼房方式",
+            "maxLength": 64
+        },
+        "roommateName": {
+            "description": "睡友姓名",
+            "type": "string",
+            "title": "睡友姓名",
+            "maxLength": 64
+        },
+        "roomType": {
+            "description": "房型（大床/双床）",
+            "type": "string",
+            "title": "房型",
+            "maxLength": 32
+        },
+        "singleRoomPrice": {
+            "description": "单房差参考价",
+            "type": "number",
+            "title": "单房差参考价"
+        },
+        "singleRoomPriceDec": {
+            "description": "单房差参考价Decimal",
+            "type": "number",
+            "title": "单房差参考价Decimal"
+        },
+        "singleRoomStatus": {
+            "description": "单房申请状态",
+            "type": "string",
+            "title": "单房申请状态",
+            "maxLength": 32
+        },
+        "singleRoomNotice": {
+            "description": "单房申请说明",
+            "type": "string",
+            "title": "单房申请说明",
+            "maxLength": 256
+        },
+        "allergyNotes": {
+            "description": "过敏源忌口说明",
+            "type": "string",
+            "title": "过敏源忌口说明",
+            "maxLength": 512
+        },
+        "couponId": {
+            "description": "优惠券ID",
+            "type": "string",
+            "title": "优惠券ID",
+            "maxLength": 64
+        },
+        "couponSnapshotJson": {
+            "format": "x-rtf",
+            "description": "优惠快照JSON",
+            "type": "string",
+            "title": "优惠快照JSON",
+            "maxLength": 262144
         },
         "canceledAtTs": {
             "x-id": "1og2jj4i",

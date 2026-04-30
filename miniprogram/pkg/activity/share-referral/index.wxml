@@ -1,0 +1,115 @@
+<view class="page-shell share-referral-page">
+  <text class="page-eyebrow">野哉分享家</text>
+
+  <view wx:if="{{loading}}" class="section-block paper-block share-referral-hero">
+    <text class="page-title share-referral-hero__title">领取野哉分享家\n新人券</text>
+    <text class="page-subtitle share-referral-hero__desc">正在确认领取资格…</text>
+    <view class="share-referral-loading-ring"></view>
+  </view>
+
+  <view wx:elif="{{errorText}}" class="section-block paper-block page-feedback">
+    <text class="page-feedback__title">暂时无法确认</text>
+    <text class="page-feedback__desc">{{errorText}}</text>
+  </view>
+
+  <block wx:else>
+    <view wx:if="{{stageView.showResult}}" class="share-referral-flow">
+      <view wx:if="{{resultView.hasAwards}}" class="section-block">
+        <text wx:if="{{resultView.awardIntroText}}" class="share-referral-award-intro">{{resultView.awardIntroText}}</text>
+        <view class="section-head share-referral-award-head">
+          <text class="section-eyebrow">{{resultView.awardSectionEyebrow}}</text>
+          <image class="share-referral-pouch" src="images/coupon-pouch.png" mode="aspectFit"></image>
+        </view>
+        <view class="share-referral-award-list">
+          <view wx:for="{{resultView.couponCards}}" wx:key="couponType" class="share-referral-award-card">
+            <image class="share-referral-award-card__bg" src="/images/coupons/coupon-bg-active.png" mode="aspectFit"></image>
+            <view class="share-referral-award-card__content">
+              <view class="share-referral-award-card__value">
+                <text class="share-referral-award-card__currency">¥</text>
+                <text class="share-referral-award-card__amount">{{item.amount}}</text>
+              </view>
+              <text class="share-referral-award-card__title">{{item.title}}</text>
+              <text class="share-referral-award-card__meta">满 {{item.threshold}} 可用</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view class="section-block share-referral-actions">
+        <button class="primary-button share-referral-actions__button" bindtap="openAssets">{{resultView.primaryActionText}}</button>
+        <button class="outline-button share-referral-actions__button" bindtap="goJourneyList">去看路线</button>
+      </view>
+    </view>
+
+    <view wx:elif="{{stageView.showFailed}}" class="share-referral-flow">
+      <view class="section-block share-referral-status-card share-referral-status-card--failed">
+        <text class="share-referral-status-card__eyebrow">无法领取</text>
+        <text class="share-referral-status-card__title">本次未领取新人券</text>
+        <text class="share-referral-status-card__desc">{{resultView.codeText}}</text>
+      </view>
+
+      <view class="section-block paper-block">
+        <text class="section-eyebrow">原因说明</text>
+        <view class="share-referral-reason-list">
+          <view wx:for="{{resultView.reasonCards}}" wx:key="key" class="share-referral-reason-card">
+            <text class="share-referral-reason-card__mark"></text>
+            <view class="share-referral-reason-card__body">
+              <text class="share-referral-reason-card__title">{{item.title}}</text>
+              <text class="share-referral-reason-card__desc">{{item.desc}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view class="section-block share-referral-actions">
+        <button class="primary-button share-referral-actions__button" bindtap="openAssets">查看我的分享码</button>
+        <button class="outline-button share-referral-actions__button" bindtap="goJourneyList">去看路线</button>
+      </view>
+    </view>
+
+    <view wx:elif="{{stageView.showDuplicateRecord}}" class="share-referral-flow">
+      <view class="section-block share-referral-ledger-stage">
+        <image class="share-referral-ledger-stage__image" src="images/duplicate-record-confirmed.png" mode="aspectFit"></image>
+      </view>
+
+      <view class="section-block paper-block share-referral-result">
+        <text class="section-eyebrow">已参与</text>
+        <text class="page-subtitle">{{resultView.resultDesc}}</text>
+      </view>
+
+      <view class="section-block share-referral-timeline">
+        <view wx:for="{{resultView.duplicateRecord.timeline}}" wx:key="key" class="share-referral-timeline__item">
+          <text class="share-referral-timeline__title">{{item.title}}</text>
+          <text class="share-referral-timeline__desc">{{item.desc}}</text>
+        </view>
+      </view>
+
+      <view class="section-block share-referral-actions">
+        <button class="primary-button share-referral-actions__button" bindtap="openAssets">查看我的券包</button>
+        <button class="outline-button share-referral-actions__button" bindtap="goJourneyList">去看路线</button>
+      </view>
+    </view>
+
+    <view wx:else class="section-block paper-block share-referral-hero">
+      <text class="page-title share-referral-hero__title">领取野哉分享家\n新人券</text>
+      <text class="page-subtitle share-referral-hero__desc">扫码后会自动确认领取资格，符合条件的新人券会直接存入你的券包。</text>
+    </view>
+
+    <view wx:if="{{stageView.showGiftModal}}" class="share-referral-modal-mask">
+      <view class="share-referral-gift-modal {{stageView.isLocked ? 'share-referral-gift-modal--locked' : ''}}">
+        <image class="share-referral-gift-modal__image {{stageView.isLocked ? 'share-referral-gift-modal__image--shake' : ''}}" src="{{stageView.giftImage}}" mode="aspectFit"></image>
+        <image wx:if="{{stageView.showCelebration}}" class="share-referral-burst" src="images/celebration-burst.png" mode="aspectFit"></image>
+        <view wx:if="{{stageView.showCelebration}}" class="share-referral-confetti">
+          <text wx:for="{{stageView.confetti}}" wx:key="*this" class="share-referral-confetti__piece share-referral-confetti__piece--{{item}}"></text>
+        </view>
+        <view wx:if="{{stageView.showFlyingCoupon}}" class="share-referral-flying-coupon">
+          <text class="share-referral-flying-coupon__title">野哉分享家新人券</text>
+          <text class="share-referral-flying-coupon__amount">{{resultView.awardText}}</text>
+        </view>
+        <text class="share-referral-gift-modal__title">{{stageView.modalTitle}}</text>
+        <text class="share-referral-gift-modal__desc">{{stageView.modalDesc}}</text>
+        <button wx:if="{{stageView.canOpenGift}}" class="primary-button share-referral-gift-modal__button" bindtap="openGift">{{stageView.modalButtonText}}</button>
+      </view>
+    </view>
+  </block>
+</view>

@@ -112,8 +112,12 @@ test("transactionGateway maps SQL order records into miniapp-friendly order obje
     discountDec: "100",
     payableDec: "1898.00",
     createdAtTs: Date.UTC(2026, 2, 26, 4, 0, 0),
-    travelerName: "联系人",
+    orderContactName: "新联系人",
+    orderContactPhone: "13900000000",
+    travelerName: "旧联系人",
     travelerPhone: "13800000000",
+    emergencyContactName: "紧急联系人",
+    emergencyContactPhone: "13700000000",
     travelersJson: JSON.stringify([
       {
         name: "联系人",
@@ -149,7 +153,9 @@ test("transactionGateway maps SQL order records into miniapp-friendly order obje
   assert.equal(mapped.serviceSnapshot.cover, "cloud://cover");
   assert.equal(mapped.creatorSnapshot.name, "山野向导");
   assert.equal(mapped.traveler.note, "不吃辣");
-  assert.equal(mapped.contact.name, "联系人");
+  assert.equal(mapped.orderContactName, "新联系人");
+  assert.equal(mapped.contact.name, "新联系人");
+  assert.equal(mapped.contact.emergencyName, "紧急联系人");
 });
 
 test("transactionGateway falls back to legacy fields when snapshots are incomplete", () => {
@@ -229,7 +235,11 @@ test("transactionGateway includes contact and traveler snapshots in order servic
   });
   assert.deepEqual(snapshot.travelers, [
     {
+      profileId: "",
+      travelerRecordId: "",
+      source: "",
       name: "扎哥",
+      documents: [{ documentType: "passport", documentNumber: "E12345678" }],
       documentType: "passport",
       documentTypeLabel: "护照",
       documentNumber: "E12345678",
@@ -237,36 +247,55 @@ test("transactionGateway includes contact and traveler snapshots in order servic
       idCard: "E12345678",
       phone: "13800000000",
       wechat: "zhayeye",
+      email: "",
+      gender: "",
+      birthday: "",
       note: "靠窗"
     }
   ]);
+  assert.equal(snapshot.roomingMode, "random");
+  assert.equal(snapshot.roommateName, "");
+  assert.equal(snapshot.roomType, "twin");
+  assert.deepEqual(snapshot.singleRoom, {
+    requested: false,
+    price: 0,
+    status: "",
+    notice: ""
+  });
+  assert.equal(snapshot.allergyNotes, "");
+  assert.equal(snapshot.couponId, "");
 });
 
-test("transactionGateway supports compact traveler snapshots and keeps three travelers within legacy limits", () => {
+test("transactionGateway supports compact traveler snapshots for two travelers", () => {
   const { __test__ } = loadTransactionGatewayModule();
   const travelers = [
     {
+      profileId: "profile_1",
+      travelerRecordId: "traveler_doc_1",
+      source: "traveler_profile",
       name: "出行人1",
       documentType: "idCard",
       documentNumber: "500227198606090019",
-      phone: "13800000001"
+      phone: "13800000001",
+      gender: "male",
+      birthday: "1986-06-09",
+      wechat: "wx_a"
     },
     {
+      profileId: "profile_2",
+      source: "manual",
       name: "出行人2",
       documentType: "idCard",
       documentNumber: "500227198606090019",
-      phone: "13800000002"
-    },
-    {
-      name: "出行人3",
-      documentType: "idCard",
-      documentNumber: "500227198606090019",
-      phone: "13800000003"
+      phone: "13800000002",
+      gender: "female",
+      birthday: "1987-07-09",
+      wechat: "wx_b"
     }
   ];
 
-  const persisted = __test__.buildPersistedTravelers(travelers, 256);
-  assert.ok(persisted.length <= 256);
+  const persisted = __test__.buildPersistedTravelers(travelers, 4096);
+  assert.ok(persisted.length <= 4096);
 
   const mapped = __test__.mapSqlOrder({
     orderNo: "yz202604030001",
@@ -276,17 +305,21 @@ test("transactionGateway supports compact traveler snapshots and keeps three tra
     travelersJson: persisted,
     travelerName: "联系人",
     travelerPhone: "13800000000",
-    peopleCountInt: 3,
+    peopleCountInt: 2,
     amountDec: "300",
     payableDec: "300",
     createdAtTs: Date.UTC(2026, 3, 3, 10, 0, 0),
     status: "pending"
   });
 
-  assert.equal(mapped.travelers.length, 3);
+  assert.equal(mapped.travelers.length, 2);
   assert.equal(mapped.travelers[0].name, "出行人1");
   assert.equal(mapped.travelers[0].documentNumber, "500227198606090019");
   assert.equal(mapped.travelers[0].phone, "13800000001");
+  assert.equal(mapped.travelers[0].profileId, "profile_1");
+  assert.equal(mapped.travelers[0].travelerRecordId, "traveler_doc_1");
+  assert.equal(mapped.travelers[0].source, "traveler_profile");
+  assert.equal(mapped.travelers[1].source, "manual");
 });
 
 test("transactionGateway createOrder inserts a generated SQL _id for multi-traveler orders", async () => {
@@ -299,8 +332,8 @@ test("transactionGateway createOrder inserts a generated SQL _id for multi-trave
     serviceType: "长途旅行",
     periodCode: "compact-2026-04-10",
     versionName: "清明团",
-    dateStart: "2026-04-10",
-    dateEnd: "2026-04-12",
+    dateStart: "2026-12-10",
+    dateEnd: "2026-12-12",
     price: 999,
     remainingSeats: 8,
     status: "available"
@@ -412,28 +445,35 @@ test("transactionGateway createOrder inserts a generated SQL _id for multi-trave
 
   const result = await __test__.createOrder({
     serviceSlug: "compact-service",
-    travelDateStart: "2026-04-10",
-    peopleCount: 3,
+    travelDateStart: "2026-12-10",
+    peopleCount: 2,
     contactName: "测试4",
     contactPhone: "13122276786",
+    emergencyContactName: "紧急联系4",
+    emergencyContactPhone: "13811112222",
+    roomingMode: "singleRoomRequest",
+    roomType: "king",
+    singleRoomPrice: 600,
+    singleRoomNotice: "房态有限，需人工确认",
     travelers: [
       {
+        profileId: "profile_create_1",
+        travelerRecordId: "traveler_doc_create_1",
+        source: "traveler_profile",
         name: "出行人1",
-        documentType: "idCard",
-        documentNumber: "11010519491231002X",
-        phone: "13800000001"
+        documents: [{ documentType: "idCard", documentNumber: "11010519491231002X" }],
+        phone: "13800000001",
+        gender: "male",
+        birthday: "1990-01-01",
+        wechat: "wx_one"
       },
       {
         name: "出行人2",
-        documentType: "idCard",
-        documentNumber: "11010519491231002X",
-        phone: "13800000002"
-      },
-      {
-        name: "出行人3",
-        documentType: "idCard",
-        documentNumber: "11010519491231002X",
-        phone: "13800000003"
+        documents: [{ documentType: "idCard", documentNumber: "11010519491231002X" }],
+        phone: "13800000002",
+        gender: "female",
+        birthday: "1991-02-02",
+        wechat: "wx_two"
       }
     ]
   });
@@ -441,9 +481,25 @@ test("transactionGateway createOrder inserts a generated SQL _id for multi-trave
   assert.equal(insertCalls.length, 1);
   assert.match(insertCalls[0]._id, /^order_[a-z0-9]+$/);
   assert.equal(insertCalls[0]._openid, "test-openid");
-  assert.equal(insertCalls[0].peopleCountInt, 3);
+  assert.equal(insertCalls[0].peopleCountInt, 2);
+  assert.equal(insertCalls[0].orderContactName, "测试4");
+  assert.equal(insertCalls[0].orderContactPhone, "13122276786");
+  assert.equal(insertCalls[0].travelerName, "测试4");
+  assert.equal(insertCalls[0].emergencyContactName, "紧急联系4");
+  assert.equal(insertCalls[0].roomingMode, "singleRoomRequest");
+  assert.equal(insertCalls[0].amount, 2598);
+  assert.equal(insertCalls[0].payable, 2598);
+  assert.equal(insertCalls[0].singleRoomPrice, 600);
+  assert.equal(insertCalls[0].singleRoomStatus, "pending");
+  assert.equal(insertCalls[0].singleRoomNotice, "房态有限，需人工确认");
+  assert.match(insertCalls[0].travelersJson, /\"pid\":\"profile_create_1\"/);
+  assert.match(insertCalls[0].travelersJson, /\"rid\":\"traveler_doc_create_1\"/);
+  assert.match(insertCalls[0].travelersJson, /\"src\":\"traveler_profile\"/);
   assert.equal(result._id, insertCalls[0]._id);
-  assert.equal(periodRecord.remainingSeats, 5);
+  assert.equal(result.roomingMode, "singleRoomRequest");
+  assert.equal(result.singleRoomPrice, 600);
+  assert.equal(result.singleRoomStatus, "pending");
+  assert.equal(periodRecord.remainingSeats, 6);
   assert.equal(orderEvents.length, 1);
 });
 
@@ -455,28 +511,30 @@ test("transactionGateway rejects orders above the single-order people limit", as
       __test__.createOrder({
         serviceSlug: "compact-service",
         travelDateStart: "2026-04-10",
-        peopleCount: 4
+        peopleCount: 3
       }),
     /peopleCount exceeds max allowed/
   );
 });
 
-test("transactionGateway validates traveler document type, document number, and contact phone", () => {
+test("transactionGateway validates traveler document type and emergency contact only", () => {
   const { __test__ } = loadTransactionGatewayModule();
 
   assert.equal(
     __test__.validateOrderParticipants({
       peopleCount: 1,
-      contact: {
-        name: "海森",
-        phone: "+86 138-0000-0000"
+      emergencyContact: {
+        name: "阿急",
+        phone: "13122276786"
       },
       travelers: [
         {
           name: "阿野",
-          documentType: "passport",
-          documentNumber: "E12345678",
-          phone: "13800000000"
+          documents: [{ documentType: "passport", documentNumber: "E12345678" }],
+          phone: "13800000000",
+          gender: "male",
+          birthday: "1990-01-01",
+          wechat: "wx_test"
         }
       ]
     }),
@@ -486,58 +544,91 @@ test("transactionGateway validates traveler document type, document number, and 
   assert.equal(
     __test__.validateOrderParticipants({
       peopleCount: 1,
-      contact: {
+      orderContact: {
         name: "海森",
         phone: "010-12345678"
+      },
+      emergencyContact: {
+        name: "阿急",
+        phone: "13122276786"
       },
       travelers: [
         {
           name: "阿野",
-          documentType: "passport",
-          documentNumber: "E12345678",
-          phone: "13800000000"
+          documents: [{ documentType: "passport", documentNumber: "E12345678" }],
+          phone: "13800000000",
+          gender: "male",
+          birthday: "1990-01-01",
+          wechat: "wx_test"
         }
       ]
     }),
-    "请输入正确的联系人手机号"
+    ""
   );
 
   assert.equal(
     __test__.validateOrderParticipants({
       peopleCount: 1,
-      contact: {
+      orderContact: {
         name: "海森",
+        phone: "13800000000"
+      },
+      emergencyContact: {
+        name: "阿急",
         phone: "12345"
       },
       travelers: [
         {
           name: "阿野",
-          documentType: "passport",
-          documentNumber: "E12345678",
-          phone: "13800000000"
+          documents: [{ documentType: "passport", documentNumber: "E12345678" }],
+          phone: "13800000000",
+          gender: "male",
+          birthday: "1990-01-01",
+          wechat: "wx_test"
         }
       ]
     }),
-    "请输入正确的联系人手机号"
+    "请输入正确的紧急联系人手机号"
   );
 
   assert.equal(
     __test__.validateOrderParticipants({
       peopleCount: 1,
-      contact: {
+      orderContact: {
         name: "海森",
         phone: "13800000000"
+      },
+      emergencyContact: {
+        name: "阿急",
+        phone: "13122276786"
       },
       travelers: [
         {
           name: "阿野",
-          documentType: "idCard",
-          documentNumber: "E12345678",
-          phone: "13800000000"
+          documents: [{ documentType: "idCard", documentNumber: "E12345678" }],
+          phone: "13800000000",
+          gender: "male",
+          birthday: "1990-01-01",
+          wechat: "wx_test"
         }
       ]
     }),
     "出行人1请输入正确的身份证号"
+  );
+});
+
+test("transactionGateway aliases emergency contact into legacy order contact fields", () => {
+  const { __test__ } = loadTransactionGatewayModule();
+
+  assert.deepEqual(
+    __test__.normalizeOrderContact({
+      emergencyContactName: "阿急",
+      emergencyContactPhone: "13122276786"
+    }),
+    {
+      name: "阿急",
+      phone: "13122276786"
+    }
   );
 });
 
@@ -633,8 +724,305 @@ test("transactionGateway settlement ignores client discount by design", () => {
   assert.deepEqual(settlement, {
     amount: 1998,
     discount: 0,
-    payable: 1998
+    payable: 1998,
+    couponId: ""
   });
+});
+
+test("transactionGateway builds a cash reward ledger draft when an invited user completes an order", () => {
+  const { __test__ } = loadTransactionGatewayModule();
+  const draft = __test__.buildShareReferralRewardLedger(
+    {
+      orderNo: "yz202604150001",
+      userOpenid: "invitee-openid",
+      serviceSlug: "spring-hill",
+      serviceName: "春山慢行",
+      travelDateStart: "2026-04-20",
+      travelDateEnd: "2026-04-23"
+    },
+    {
+      _id: "relation_1",
+      inviterUserId: "user_inviter_1",
+      inviteeUserId: "user_invitee_1"
+    },
+    {
+      campaignKey: "yezai_share_referral",
+      campaignName: "野哉分享家",
+      cashRewardAmount: 100,
+      monthlySettlementDay: 20
+    },
+    1776240000000
+  );
+
+  assert.equal(draft.campaignKey, "yezai_share_referral");
+  assert.equal(draft.rewardAmount, 100);
+  assert.equal(draft.status, "awaiting_account");
+  assert.equal(draft.inviterUserId, "user_inviter_1");
+  assert.equal(draft.inviteeUserId, "user_invitee_1");
+  assert.equal(draft.sourceOrderNo, "yz202604150001");
+  assert.equal(draft.settlementMonth, "2026-04");
+  assert.equal(draft.settlementPlannedDay, 20);
+});
+
+test("transactionGateway records only the first completed invited order as a cash reward", async () => {
+  const collectionAdds = [];
+  const collectionUpdates = [];
+  const collectionData = {
+    users: [
+      {
+        _id: "user_invitee_1",
+        openid: "invitee-openid",
+        effectiveOrderCount: 0,
+        effectiveRouteCount: 0,
+        lastTravelAt: 0
+      }
+    ],
+    referral_relations: [
+      {
+        _id: "relation_1",
+        inviterUserId: "user_inviter_1",
+        inviteeUserId: "user_invitee_1",
+        status: "active"
+      }
+    ],
+    app_configs: [
+      {
+        _id: "config_1",
+        key: "shareReferralCampaign",
+        value: {
+          campaignKey: "yezai_share_referral",
+          campaignName: "野哉分享家",
+          cashRewardAmount: 100,
+          monthlySettlementDay: 20
+        }
+      }
+    ],
+    cash_reward_ledgers: []
+  };
+
+  const { __test__ } = loadTransactionGatewayModule({
+    wxServerSdk: {
+      DYNAMIC_CURRENT_ENV: "test-env",
+      init() {},
+      database() {
+        function matchesWhere(doc, query) {
+          if (!query || typeof query !== "object") {
+            return true;
+          }
+          return Object.entries(query).every(([key, expected]) => {
+            const actual = doc && doc[key];
+            if (expected && typeof expected === "object" && Object.prototype.hasOwnProperty.call(expected, "$eq")) {
+              return actual === expected.$eq;
+            }
+            return actual === expected;
+          });
+        }
+        return {
+          collection(name) {
+            let query = null;
+            let limit = 0;
+            const readRows = () => collectionData[name] || [];
+            return {
+              where(value) {
+                query = value || null;
+                return this;
+              },
+              limit(value) {
+                limit = Number(value) || 0;
+                return this;
+              },
+              doc(id) {
+                return {
+                  update: async ({ data } = {}) => {
+                    const rows = readRows();
+                    const index = rows.findIndex((item) => item._id === id);
+                    if (index >= 0) {
+                      rows[index] = Object.assign({}, rows[index], data || {});
+                    }
+                    collectionUpdates.push({ name, id, data: data || {} });
+                    return {};
+                  }
+                };
+              },
+              add: async ({ data } = {}) => {
+                const rows = readRows();
+                const id = data && data._id ? data._id : `${name}_${rows.length + 1}`;
+                const doc = Object.assign({ _id: id }, data || {});
+                rows.push(doc);
+                collectionAdds.push({ name, data: doc });
+                return { _id: id };
+              },
+              get: async () => {
+                const rows = readRows().filter((item) => matchesWhere(item, query));
+                return {
+                  data: limit ? rows.slice(0, limit) : rows
+                };
+              }
+            };
+          }
+        };
+      },
+      getWXContext() {
+        return { OPENID: "invitee-openid" };
+      }
+    }
+  });
+
+  const first = await __test__.syncShareReferralRewardForCompletedOrder({
+    orderNo: "order_1",
+    userOpenid: "invitee-openid",
+    serviceName: "春山慢行"
+  });
+  const second = await __test__.syncShareReferralRewardForCompletedOrder({
+    orderNo: "order_2",
+    userOpenid: "invitee-openid",
+    serviceName: "夏野入谷"
+  });
+
+  assert.equal(first.sourceOrderNo, "order_1");
+  assert.equal(second.sourceOrderNo, "order_1");
+  assert.equal(collectionAdds.filter((item) => item.name === "cash_reward_ledgers").length, 1);
+  assert.equal(collectionUpdates.some((item) => item.name === "users" && item.id === "user_invitee_1" && item.data.effectiveOrderCount === 1), true);
+});
+
+test("transactionGateway settlement includes single-room surcharge in order amount", () => {
+  const { __test__ } = loadTransactionGatewayModule();
+  const settlement = __test__.resolveOrderSettlement(999, { singleRoomPrice: 200 });
+
+  assert.deepEqual(settlement, {
+    amount: 1199,
+    discount: 0,
+    payable: 1199,
+    couponId: ""
+  });
+});
+
+test("transactionGateway settlement ignores legacy global coupon rules", () => {
+  const { __test__ } = loadTransactionGatewayModule();
+
+  const reachedThreshold = __test__.resolveOrderSettlement(3200, { couponId: "GROUP100" });
+  assert.deepEqual(reachedThreshold, {
+    amount: 3200,
+    discount: 0,
+    payable: 3200,
+    couponId: ""
+  });
+
+  const reachedBySingleRoom = __test__.resolveOrderSettlement(900, {
+    couponId: "WELCOME50",
+    singleRoomPrice: 200
+  });
+  assert.deepEqual(reachedBySingleRoom, {
+    amount: 1100,
+    discount: 0,
+    payable: 1100,
+    couponId: ""
+  });
+});
+
+test("transactionGateway settlement validates and stacks share referral coupon assets", async () => {
+  const welcomeCouponId = "1234567890abcdef1234567890abcdef";
+  const bonusCouponId = "abcdef1234567890abcdef1234567890";
+  const collectionData = {
+    users: [
+      {
+        _id: "user_1",
+        openid: "test-openid"
+      }
+    ],
+    user_coupon_assets: [
+      {
+        _id: welcomeCouponId,
+        userId: "user_1",
+        userOpenid: "test-openid",
+        couponType: "share_referral_welcome_100",
+        title: "野哉分享家新人券",
+        amount: 100,
+        threshold: 1000,
+        stackGroup: "share_referral_phase2",
+        status: "active",
+        expiresAt: Date.UTC(2027, 0, 1, 0, 0, 0)
+      },
+      {
+        _id: bonusCouponId,
+        userId: "user_1",
+        userOpenid: "test-openid",
+        couponType: "share_referral_bonus_50",
+        title: "野哉分享家加码券",
+        amount: 50,
+        threshold: 1000,
+        stackGroup: "share_referral_phase2",
+        status: "active",
+        expiresAt: Date.UTC(2027, 0, 1, 0, 0, 0)
+      }
+    ]
+  };
+  const { __test__ } = loadTransactionGatewayModule({
+    wxServerSdk: {
+      DYNAMIC_CURRENT_ENV: "test-env",
+      init() {},
+      database() {
+        function matchesWhere(doc, query) {
+          if (!query || typeof query !== "object") {
+            return true;
+          }
+          return Object.entries(query).every(([key, expected]) => {
+            const actual = doc && doc[key];
+            if (expected && typeof expected === "object" && Object.prototype.hasOwnProperty.call(expected, "$eq")) {
+              return actual === expected.$eq;
+            }
+            return actual === expected;
+          });
+        }
+        return {
+          collection(name) {
+            let query = null;
+            let limit = 0;
+            return {
+              where(value) {
+                query = value || null;
+                return this;
+              },
+              limit(value) {
+                limit = Number(value) || 0;
+                return this;
+              },
+              doc(id) {
+                return {
+                  get: async () => ({
+                    data: (collectionData[name] || []).find((item) => item._id === id) || null
+                  })
+                };
+              },
+              get: async () => {
+                const rows = (collectionData[name] || []).filter((item) => matchesWhere(item, query));
+                return {
+                  data: limit ? rows.slice(0, limit) : rows
+                };
+              }
+            };
+          }
+        };
+      },
+      getWXContext() {
+        return { OPENID: "test-openid" };
+      }
+    }
+  });
+
+  const settlement = await __test__.resolveOrderSettlementForUser(1200, {
+    couponId: `${welcomeCouponId}+${bonusCouponId}`,
+    userOpenid: "test-openid"
+  });
+
+  assert.equal(settlement.amount, 1200);
+  assert.equal(settlement.discount, 150);
+  assert.equal(settlement.payable, 1050);
+  assert.equal(settlement.couponId, "share_referral_phase2_combo");
+  assert.equal(settlement.couponId.length <= 64, true);
+  assert.deepEqual(settlement.couponAssetIds.sort(), [bonusCouponId, welcomeCouponId].sort());
+  assert.equal(settlement.couponSnapshot.id, "share_referral_phase2_combo");
+  assert.equal(settlement.couponSnapshot.amountOff, 150);
 });
 
 test("transactionGateway transition guard allows only intended status changes", () => {

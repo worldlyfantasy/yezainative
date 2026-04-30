@@ -1,9 +1,20 @@
 const cloud = require("wx-server-sdk");
 const cloudbase = require("@cloudbase/node-sdk");
+const { sign } = require("@cloudbase/signature-nodejs");
 const http = require("http");
 const https = require("https");
+const nodemailer = require("nodemailer");
 const { pinyin } = require("pinyin-pro");
 const { URL } = require("url");
+const {
+  buildApprovalAccessOutcome,
+  buildCreatorActivationEmailPayload,
+  buildCreatorPortalEmailPayload,
+  buildCreatorRejectionEmailPayload,
+  createActivationToken,
+  hashActivationToken,
+  ACTIVATION_EXPIRATION_MS
+} = require("./creator-registration-access");
 const {
   dedupeImageValues,
   ensureImageAssetValue,
@@ -127,17 +138,34 @@ const rdb = app.rdb();
 const QUERY_BATCH_SIZE = 100;
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
+const SQL_RESUME_RETRY_MAX_ATTEMPTS = 3;
+const SQL_QUERY_RETRY_MAX_ATTEMPTS = 3;
+const SQL_RESUME_RETRY_BASE_DELAY_MS = 800;
+const TRAVELER_RELATION_ORDER_LIMIT = 5000;
+const DEFAULT_SERVICE_CREATOR_MESSAGE = "这段路线想带你用更贴近在地的方式慢慢走进去。";
 const CONFIG_COLLECTION = "app_configs";
 const ADMIN_COLLECTION = "admin_accounts";
 const ORDER_EVENTS_COLLECTION = "order_events";
+const ORDER_DEBUG_RECORDS_COLLECTION = "order_debug_records";
 const COLLECTIONS = {
   services: "services",
   creators: "creators",
+  creatorRegistrations: "creator_registrations",
   destinations: "destinations",
   ideas: "ideas",
-  users: "users"
+  users: "users",
+  userTravelers: "user_travelers",
+  userCouponAssets: "user_coupon_assets",
+  referralRelations: "referral_relations",
+  referralRewardLedgers: "cash_reward_ledgers",
+  payoutAccounts: "payout_accounts",
+  orderDebugRecords: ORDER_DEBUG_RECORDS_COLLECTION
 };
+const EFFECTIVE_ORDER_STATUSES = new Set(["pending", "paid", "traveling", "completed"]);
 const CONTENT_GATEWAY_FUNCTION_NAME = normalizeText(process.env.CONTENT_GATEWAY_FUNCTION) || "contentGateway";
+const ADMIN_GATEWAY_MAINTENANCE_TOKEN_ENV_KEY = "ADMIN_GATEWAY_MAINTENANCE_TOKEN";
+const SERVICE_CREATOR_MESSAGE_BACKFILL_UPDATED_BY = "maintenance:backfill-service-creator-message";
+const SERVICE_RESTORE_UPDATED_BY = "maintenance:restore-service-document";
 const CACHE_INVALIDATE_ACTIONS = new Set([
   "saveService",
   "deleteService",
@@ -155,51 +183,93 @@ const SERVICE_TYPE_OPTIONS = ["在地体验", "短途旅行", "长途旅行", "�
 const LEGACY_SERVICE_TYPE_OPTIONS = ["带团旅行", "定制规划", "路线设计"];
 const DEFAULT_SERVICE_TYPE = "短途旅行";
 const ADMIN_ROLE_NAMES = ["admin", "super_admin", "yezai_admin", "ops_admin"];
+const ADMIN_ACCOUNT_TYPES = ["admin", "creator_portal"];
 const ADMIN_ACCOUNT_LEVELS = ["owner", "admin"];
 const ADMIN_ACCOUNT_STATUSES = ["active", "inactive"];
+const ORDER_DEBUG_TOOL_ENABLED_ENV_KEYS = ["ENABLE_ORDER_DEBUG_TOOL", "ORDER_DEBUG_TOOL_ENABLED"];
+const ORDER_DEBUG_TOOL_ADMIN_ALLOWLIST_ENV_KEYS = ["ORDER_DEBUG_ADMIN_UIDS", "ORDER_DEBUG_ADMIN_USER_IDS", "ORDER_DEBUG_ADMIN_EMAILS", "ORDER_DEBUG_ADMIN_USERNAMES"];
+const ORDER_DEBUG_MUTATION_ACTIONS = new Set([
+  "markTestOrder",
+  "unmarkTestOrder",
+  "confirmOrder",
+  "setOrderEndDatePast",
+  "runAutoComplete",
+  "settleReward",
+  "mockPayout"
+]);
+const ORDER_DEBUG_PAYOUT_STATUSES = new Set(["paid", "failed"]);
+const DEFAULT_SHARE_REFERRAL_CONFIG = {
+  campaignKey: "yezai_share_referral",
+  campaignName: "野哉分享家",
+  cashRewardAmount: 100,
+  monthlySettlementDay: 20
+};
 const ADMIN_ACCOUNT_IDENTIFIER_FIELDS = ["uid", "customUserId", "username", "email", "phone"];
+const ADMIN_HOME_PATH = "/admin/dashboard";
+const CREATOR_PORTAL_HOME_PATH = "/admin/services";
 const SERVICE_STATUSES = ["active", "inactive"];
 const SERVICE_PERIOD_STATUSES = ["available", "confirmed", "soldout", "closed", "inactive"];
+const CREATOR_REGISTRATION_ACTIVE_STATUSES = new Set(["draft", "submitted", "under_review", "rejected"]);
+const CREATOR_REGISTRATION_REVIEWABLE_STATUSES = new Set(["submitted", "under_review"]);
+const APPROVAL_EMAIL_STATUSES = new Set(["pending", "sent", "failed"]);
+const CREATOR_REGISTRATION_ACCESS_PROVISION_STATUSES = new Set(["pending", "provisioned", "activation_pending", "conflict", "failed"]);
+const CREATOR_REGISTRATION_ACTIVATION_EMAIL_STATUSES = new Set(["pending", "sent", "failed"]);
 const ROUTE_TAG_OPTIONS = [
-  "城市漫游",
-  "慢旅行",
-  "徒步与自然",
-  "度假放松",
-  "亲子&逆向亲子",
-  "人宠",
-  "摄影创作",
-  "瑜伽疗愈",
+  "山野",
+  "城市",
+  "乡土",
+  "户外",
+  "研学",
+  "文化",
+  "内在成长",
+  "家庭",
   "特殊节庆"
 ];
-const CREATOR_TAG_OPTIONS = [
-  "自然野行",
-  "在地人文",
-  "城市探索",
-  "公路旅行",
-  "影像记录",
-  "身心疗愈",
-  "研学观察",
-  "风物美食",
-  "亲子同行",
-  "宠物同行"
-];
+const LEGACY_ROUTE_TAG_ALIASES = {
+  "城市漫游": "城市",
+  "慢旅行": "文化",
+  "徒步与自然": "户外",
+  "徒步自然": "户外",
+  "度假放松": "山野",
+  "亲子&逆向亲子": "家庭",
+  "人宠": "家庭",
+  "摄影创作": "研学",
+  "瑜伽疗愈": "内在成长",
+  "特殊节庆": "特殊节庆"
+};
 const IDEA_THEME_OPTIONS = [
-  { key: "hiking-nature", label: "徒步自然" },
-  { key: "city-walk", label: "城市漫游" },
-  { key: "local-life", label: "在地生活" },
-  { key: "craft-labor", label: "劳动手艺" },
-  { key: "reset-recovery", label: "疲惫重置" },
-  { key: "sensory-notes", label: "感官采集" },
-  { key: "inner-growth", label: "内在成长" }
+  { key: "xiaoye-travel-notes", label: "小野旅记" },
+  { key: "yezai-traveler-voice", label: "野哉旅人说" },
+  { key: "xiaoye-reflections", label: "小野行思" },
+  { key: "yezai-field-notes", label: "野哉采风" }
 ];
-const CUSTOM_IDEA_THEME_KEY = "custom";
 const IDEA_SOURCE_TYPES = ["mini", "wechat", "hybrid"];
 const DEFAULT_IDEA_SOURCE_TYPE = "mini";
 const DEFAULT_IDEA_READ_MORE_TEXT = "阅读全文";
+const DEFAULT_IDEA_THEME_KEY = "yezai-field-notes";
 const IDEA_THEME_LABEL_MAP = IDEA_THEME_OPTIONS.reduce((map, item) => {
   map[item.key] = item.label;
   return map;
 }, {});
+const LEGACY_IDEA_THEME_KEY_ALIASES = {
+  "hiking-nature": "xiaoye-travel-notes",
+  "city-walk": "xiaoye-travel-notes",
+  "local-life": "xiaoye-travel-notes",
+  "craft-labor": "yezai-field-notes",
+  "reset-recovery": "yezai-field-notes",
+  "sensory-notes": "yezai-field-notes",
+  "inner-growth": "xiaoye-reflections",
+  "custom": ""
+};
+const LEGACY_IDEA_THEME_LABEL_ALIASES = {
+  "徒步自然": "xiaoye-travel-notes",
+  "城市漫游": "xiaoye-travel-notes",
+  "在地生活": "xiaoye-travel-notes",
+  "劳动手艺": "yezai-field-notes",
+  "疲惫重置": "yezai-field-notes",
+  "感官采集": "yezai-field-notes",
+  "内在成长": "xiaoye-reflections"
+};
 const DEFAULT_SERVICE_SECTIONS = [
   { key: "overview", title: "概况", anchorId: "section_overview" },
   { key: "highlights", title: "亮点", anchorId: "section_highlights" },
@@ -313,6 +383,205 @@ function normalizeText(value) {
   }
 
   return "";
+}
+
+function normalizeEmail(value) {
+  return normalizeText(value).toLowerCase();
+}
+
+function getCurrentEnvId() {
+  return normalizeText(process.env.TCB_ENV || cloud.DYNAMIC_CURRENT_ENV);
+}
+
+function getTencentCloudContext() {
+  try {
+    return typeof cloudbase.getCloudbaseContext === "function" ? cloudbase.getCloudbaseContext() : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function getTencentCloudCredentials() {
+  const context = getTencentCloudContext();
+  const config = app && app.config ? app.config : {};
+  const secretId =
+    normalizeText(config.secretId)
+    || normalizeText(context.TENCENTCLOUD_SECRETID)
+    || normalizeText(process.env.TENCENTCLOUD_SECRETID);
+  const secretKey =
+    normalizeText(config.secretKey)
+    || normalizeText(context.TENCENTCLOUD_SECRETKEY)
+    || normalizeText(process.env.TENCENTCLOUD_SECRETKEY);
+  const sessionToken =
+    normalizeText(config.sessionToken)
+    || normalizeText(context.TENCENTCLOUD_SESSIONTOKEN)
+    || normalizeText(process.env.TENCENTCLOUD_SESSIONTOKEN);
+
+  assertCondition(secretId && secretKey, "缺少云端账号同步凭证，请检查云函数运行权限");
+
+  return { secretId, secretKey, sessionToken };
+}
+
+async function callTencentCloudTcbApi(action, payload) {
+  assertCondition(typeof cloudbase.request === "function", "当前运行环境不支持云端账号同步请求");
+
+  const credentials = getTencentCloudCredentials();
+  const region =
+    normalizeText(process.env.TENCENTCLOUD_REGION)
+    || normalizeText(app && app.config && app.config.region)
+    || "ap-shanghai";
+  const url = "https://tcb.tencentcloudapi.com";
+  const method = "POST";
+  const timestamp = Math.floor(Date.now() / 1000);
+  const headers = {
+    "Content-Type": "application/json",
+    Host: "tcb.tencentcloudapi.com",
+    "X-TC-Action": action,
+    "X-TC-Version": "2018-06-08",
+    "X-TC-Timestamp": String(timestamp)
+  };
+
+  if (region) {
+    headers["X-TC-Region"] = region;
+  }
+
+  if (credentials.sessionToken) {
+    headers["X-TC-Token"] = credentials.sessionToken;
+  }
+
+  const signature = sign({
+    secretId: credentials.secretId,
+    secretKey: credentials.secretKey,
+    service: "tcb",
+    method,
+    url,
+    headers,
+    params: payload || {},
+    timestamp,
+    isCloudApi: true
+  });
+
+  headers.Authorization = signature.authorization;
+
+  const response = await cloudbase.request(
+    {
+      url,
+      method,
+      headers,
+      body: payload || {},
+      json: true,
+      timeout: 15000
+    },
+    {
+      op: `tcb:${action}`,
+      seqId: "",
+      timingsMeasurerOptions: {}
+    }
+  );
+  const body = response && response.body ? response.body : response;
+  const result = body && body.Response ? body.Response : body;
+
+  if (result && result.Error) {
+    const error = new Error(result.Error.Message || `${action} 调用失败`);
+    error.code = result.Error.Code;
+    error.requestId = result.RequestId;
+    throw error;
+  }
+
+  return result || {};
+}
+
+function extractCloudAuthUid(userInfo) {
+  return (
+    normalizeText(userInfo && userInfo.uid)
+    || normalizeText(userInfo && userInfo.id)
+    || normalizeText(userInfo && userInfo.Uid)
+    || normalizeText(userInfo && userInfo.UUId)
+  );
+}
+
+function isCloudAuthUserNotFoundError(error) {
+  const code = normalizeText(error && error.code);
+  const message = normalizeText(error && error.message);
+  return /ResourceNotFound\.UserNotExists?|UserNotExist|用户不存在/i.test(`${code} ${message}`);
+}
+
+async function resolveAdminAccountCloudAuthUid(account) {
+  const directUid = normalizeText(account && account.uid);
+  if (directUid) {
+    return directUid;
+  }
+
+  const email =
+    normalizeEmail(account && account.email)
+    || normalizeEmail(account && account.username);
+  if (!email || typeof auth.queryUserInfo !== "function") {
+    return "";
+  }
+
+  try {
+    const result = await auth.queryUserInfo({
+      platform: "EMAIL",
+      platformId: email
+    });
+    return extractCloudAuthUid(result && result.userInfo);
+  } catch (error) {
+    if (isCloudAuthUserNotFoundError(error)) {
+      return "";
+    }
+    throw error;
+  }
+}
+
+async function syncAdminAccountCloudAuthStatus(account, status) {
+  const uid = await resolveAdminAccountCloudAuthUid(account);
+  assertCondition(uid, "缺少云端用户 UID，无法同步账号状态");
+
+  await callTencentCloudTcbApi("ModifyUser", {
+    EnvId: getCurrentEnvId(),
+    Uid: uid,
+    UserStatus: status === "inactive" ? "BLOCKED" : "ACTIVE"
+  });
+}
+
+async function deleteAdminAccountCloudAuthUser(account) {
+  const uid = await resolveAdminAccountCloudAuthUid(account);
+  if (!uid) {
+    return { skipped: true };
+  }
+
+  try {
+    await callTencentCloudTcbApi("DeleteUsers", {
+      EnvId: getCurrentEnvId(),
+      Uids: [uid]
+    });
+  } catch (error) {
+    if (!isCloudAuthUserNotFoundError(error)) {
+      throw error;
+    }
+  }
+
+  return { skipped: false };
+}
+
+function isCanonicalCloudbaseEnvId(envId) {
+  const normalized = normalizeText(envId);
+
+  if (!normalized) {
+    return false;
+  }
+
+  const parts = normalized.split("-").filter(Boolean);
+  const suffix = parts[parts.length - 1] || "";
+  return parts.length >= 3 && /^[0-9a-z]+$/i.test(suffix) && suffix.length >= 8;
+}
+
+function buildEnvWarning(envId) {
+  if (isCanonicalCloudbaseEnvId(envId)) {
+    return "";
+  }
+
+  return "当前函数运行在非完整环境 ID 上，请改用完整 CloudBase 环境 ID 部署和查询，避免误连到旧环境或空环境。";
 }
 
 function formatDateTime(value) {
@@ -607,24 +876,144 @@ function normalizeArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+const MAX_IDENTITY_DOCUMENT_COUNT = 3;
+
+function normalizeIdentityDocuments(value, fallbackDocument) {
+  const documents = normalizeArray(value)
+    .map((item) => ({
+      documentType: normalizeText(item && (item.documentType || item.t)),
+      documentNumber: normalizeText(item && (item.documentNumber || item.idCard || item.idNo || item.i))
+    }))
+    .filter((item) => item.documentType || item.documentNumber);
+
+  if (documents.length) {
+    return documents;
+  }
+
+  if (fallbackDocument && (fallbackDocument.documentType || fallbackDocument.documentNumber)) {
+    return [
+      {
+        documentType: normalizeText(fallbackDocument.documentType),
+        documentNumber: normalizeText(fallbackDocument.documentNumber)
+      }
+    ];
+  }
+
+  return [];
+}
+
+function assertIdentityDocumentsAllowed(documents) {
+  const normalizedDocuments = normalizeArray(documents)
+    .filter((item) => item && (item.documentType || item.documentNumber));
+  assertCondition(
+    normalizedDocuments.length <= MAX_IDENTITY_DOCUMENT_COUNT,
+    "证件最多只能添加三条，且每种类型只能添加一条"
+  );
+
+  const documentTypes = new Set();
+  normalizedDocuments.forEach((document) => {
+    const documentType = normalizeText(document && document.documentType);
+    if (!documentType) {
+      return;
+    }
+
+    assertCondition(!documentTypes.has(documentType), "每种证件类型只能添加一条记录");
+    documentTypes.add(documentType);
+  });
+}
+
 function normalizeTravelerSnapshot(value) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const documentNumber = normalizeText(source.documentNumber || source.idCard || source.idNo || source.i);
   const documentType = normalizeText(source.documentType || source.t);
+  const profileId = normalizeText(
+    source.profileId || source.pid || source.matchedProfileId || source.travelerId
+  );
+  const travelerRecordId = normalizeText(
+    source.travelerRecordId
+      || source.recordId
+      || source.rid
+      || source.matchedTravelerRecordId
+      || source._id
+      || source.id
+  );
+  const sourceType = normalizeText(source.source || source.src)
+    || (profileId || travelerRecordId ? "traveler_profile" : "manual");
+  let documents = [];
+  if (Array.isArray(source.documents) && source.documents.length) {
+    documents = source.documents.map((item) => ({
+      documentType: normalizeText(item && (item.documentType || item.t)),
+      documentNumber: normalizeText(item && (item.documentNumber || item.idCard || item.i)),
+      idCard: normalizeText(item && (item.documentNumber || item.idCard || item.i))
+    }));
+  } else if (Array.isArray(source.ds) && source.ds.length) {
+    documents = source.ds.map((item) => ({
+      documentType: normalizeText(item && item.t),
+      documentNumber: normalizeText(item && item.i),
+      idCard: normalizeText(item && item.i)
+    }));
+  } else if (documentNumber || documentType) {
+    documents = [
+      {
+        documentType,
+        documentNumber,
+        idCard: documentNumber
+      }
+    ];
+  }
   return {
+    profileId,
+    travelerRecordId,
+    source: sourceType,
+    matchedTravelerRecordId: travelerRecordId,
+    matchedProfileId: profileId,
+    isLinkedToTravelerProfile: Boolean(profileId || travelerRecordId),
     name: normalizeText(source.name || source.n),
     phone: normalizeText(source.phone || source.p),
     documentType,
     documentNumber,
     idCard: documentNumber,
+    documents,
+    gender: normalizeText(source.gender || source.g),
+    birthday: normalizeText(source.birthday || source.b),
     wechat: normalizeText(source.wechat || source.w),
+    email: normalizeText(source.email || source.e),
     note: normalizeText(source.note || source.o)
   };
+}
+
+function maskPhone(value) {
+  const normalized = normalizeText(value).replace(/\s+/g, "");
+  if (normalized.length < 7) {
+    return normalized;
+  }
+  return `${normalized.slice(0, 3)}****${normalized.slice(-4)}`;
+}
+
+function maskIdNumber(value) {
+  const normalized = normalizeText(value).replace(/\s+/g, "");
+  if (normalized.length <= 6) {
+    return normalized;
+  }
+  return `${normalized.slice(0, 3)}***${normalized.slice(-3)}`;
 }
 
 function normalizeNumber(value, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeBoolean(value) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return value > 0;
+  }
+
+  const normalized = normalizeText(value).toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on";
 }
 
 function normalizePositiveInteger(value, fallback = 0) {
@@ -729,6 +1118,64 @@ function resolveOrderUserSummary(userMap, userOpenid) {
     userId: normalizeText(matched && matched.userId) || normalizedOpenid || "--",
     userNickname: normalizeText(matched && matched.userNickname) || "旅人"
   };
+}
+
+function buildUserIdSummaryMap(users) {
+  return normalizeArray(users).reduce((map, user) => {
+    const userId = normalizeText(user && (user._id || user.id));
+    if (!userId) {
+      return map;
+    }
+
+    map[userId] = {
+      userId,
+      userNickname: normalizeText(user && user.nickname) || "旅人"
+    };
+    return map;
+  }, {});
+}
+
+function resolveUserSummaryByUserId(userMap, userId) {
+  const normalizedUserId = normalizeText(userId);
+  const matched = normalizedUserId ? userMap[normalizedUserId] : null;
+
+  return {
+    userId: normalizeText(matched && matched.userId) || normalizedUserId || "--",
+    userNickname: normalizeText(matched && matched.userNickname) || "旅人"
+  };
+}
+
+function maskName(value) {
+  const source = normalizeText(value);
+  if (!source) {
+    return "";
+  }
+  if (source.length <= 1) {
+    return `${source}*`;
+  }
+  return `${source.slice(0, 1)}${"*".repeat(Math.max(1, source.length - 1))}`;
+}
+
+function maskPhone(value) {
+  const source = normalizeText(value).replace(/\s+/g, "");
+  if (!source) {
+    return "";
+  }
+  if (/^1\d{10}$/.test(source)) {
+    return `${source.slice(0, 3)}****${source.slice(-4)}`;
+  }
+  if (source.length <= 4) {
+    return `${source.slice(0, 1)}***`;
+  }
+  return `${source.slice(0, 2)}****${source.slice(-2)}`;
+}
+
+function maskBankAccount(value) {
+  const source = normalizeText(value).replace(/\s+/g, "");
+  if (!source) {
+    return "";
+  }
+  return `${"*".repeat(Math.max(0, source.length - 4))}${source.slice(-4)}`;
 }
 
 function createOrderStatusLogEntry(entry) {
@@ -843,6 +1290,39 @@ function buildOrderStatusLogs(orderRecord, eventDocs) {
   });
 }
 
+async function appendOrderStatusEvent(event) {
+  const orderNo = normalizeText(event && event.orderNo);
+  const status = normalizeText(event && event.status);
+  if (!orderNo || !status) {
+    return;
+  }
+
+  const occurredAtTs = normalizeNumber(event && event.occurredAtTs, Date.now());
+  const data = {
+    orderNo,
+    userOpenid: normalizeText(event && event.userOpenid),
+    status,
+    fromStatus: normalizeText(event && event.fromStatus),
+    source: normalizeText(event && event.source) || "system",
+    note: normalizeText(event && event.note),
+    operatorId: normalizeText(event && event.operatorId),
+    occurredAtTs,
+    occurredAtText: formatDateTime(occurredAtTs),
+    createdAt: occurredAtTs,
+    updatedAt: occurredAtTs
+  };
+
+  try {
+    await db.collection(ORDER_EVENTS_COLLECTION).add({ data });
+  } catch (error) {
+    console.error("Failed to append order status event", {
+      orderNo,
+      status,
+      error
+    });
+  }
+}
+
 function resolveLastOrderUpdateTs(orderRecord, statusLogs) {
   const latestLogTs = normalizeArray(statusLogs).reduce(
     (maxValue, item) => Math.max(maxValue, normalizeNumber(item && item.occurredAtTs, 0)),
@@ -882,11 +1362,155 @@ function matchesKeyword(values, keyword) {
   return values.some((value) => normalizeText(value).toLowerCase().includes(keyword));
 }
 
+function normalizePageNumber(value) {
+  const parsed = parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function normalizeSortDirection(value, fallback = "desc") {
+  return normalizeText(value).toLowerCase() === "asc"
+    ? "asc"
+    : (fallback === "asc" ? "asc" : "desc");
+}
+
+function compareSortValues(left, right) {
+  if (typeof left === "boolean" && typeof right === "boolean") {
+    return Number(left) - Number(right);
+  }
+
+  if (typeof left === "number" && typeof right === "number") {
+    return left - right;
+  }
+
+  return String(left == null ? "" : left).localeCompare(
+    String(right == null ? "" : right),
+    "zh-Hans-CN",
+    {
+      numeric: true,
+      sensitivity: "base"
+    }
+  );
+}
+
+function sortListItems(items, sortBy, sortDirection, getSortValue, getItemKey) {
+  if (!sortBy || typeof getSortValue !== "function") {
+    return items.slice();
+  }
+
+  return items.slice().sort((left, right) => {
+    const result = compareSortValues(
+      getSortValue(left, sortBy),
+      getSortValue(right, sortBy)
+    );
+
+    if (result !== 0) {
+      return sortDirection === "asc" ? result : -result;
+    }
+
+    if (typeof getItemKey !== "function") {
+      return 0;
+    }
+
+    return compareSortValues(getItemKey(left), getItemKey(right));
+  });
+}
+
+function shouldReturnPagedResult(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return false;
+  }
+
+  return (
+    Object.prototype.hasOwnProperty.call(payload, "page")
+    || Object.prototype.hasOwnProperty.call(payload, "pageSize")
+    || Boolean(normalizeText(payload.sortBy))
+    || Boolean(normalizeText(payload.sortDirection))
+  );
+}
+
+function buildPagedResult(items, payload, options = {}) {
+  const page = normalizePageNumber(payload && payload.page);
+  const pageSize = clampLimit(
+    payload && payload.pageSize,
+    Math.max(1, normalizePageNumber(options.defaultPageSize || 10))
+  );
+  const sortBy = normalizeText(payload && payload.sortBy) || normalizeText(options.defaultSortBy);
+  const sortDirection = normalizeSortDirection(
+    payload && payload.sortDirection,
+    options.defaultSortDirection || "desc"
+  );
+  const sortedItems = sortListItems(
+    items,
+    sortBy,
+    sortDirection,
+    options.getSortValue,
+    options.getItemKey
+  );
+  const total = sortedItems.length;
+  const start = (page - 1) * pageSize;
+
+  return {
+    items: sortedItems.slice(start, start + pageSize),
+    total,
+    page,
+    pageSize
+  };
+}
+
 function parseListEnv(name) {
   return normalizeText(process.env[name])
     .split(",")
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean);
+}
+
+function parseBooleanEnv(name) {
+  const normalized = normalizeText(process.env[name]).toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return ["1", "true", "yes", "on", "enabled"].includes(normalized);
+}
+
+function isOrderDebugToolEnabled() {
+  return ORDER_DEBUG_TOOL_ENABLED_ENV_KEYS.some((key) => parseBooleanEnv(key));
+}
+
+function matchesAnyOrderDebugAllowList(adminUser) {
+  const uidAllowList = new Set(
+    ORDER_DEBUG_TOOL_ADMIN_ALLOWLIST_ENV_KEYS
+      .filter((key) => key.includes("UID") || key.includes("USER_ID"))
+      .flatMap((key) => parseListEnv(key))
+  );
+  const emailAllowList = new Set(parseListEnv("ORDER_DEBUG_ADMIN_EMAILS"));
+  const usernameAllowList = new Set(parseListEnv("ORDER_DEBUG_ADMIN_USERNAMES"));
+  const uidCandidates = [
+    adminUser && adminUser.uid,
+    adminUser && adminUser.id,
+    adminUser && adminUser.customUserId
+  ].map((item) => normalizeText(item).toLowerCase()).filter(Boolean);
+  const email = normalizeText(adminUser && adminUser.email).toLowerCase();
+  const username = normalizeText(adminUser && adminUser.username).toLowerCase();
+
+  return (
+    uidCandidates.some((item) => uidAllowList.has(item))
+    || Boolean(email && emailAllowList.has(email))
+    || Boolean(username && usernameAllowList.has(username))
+  );
+}
+
+function assertOrderDebugToolAccess(adminUser) {
+  assertCondition(isOrderDebugToolEnabled(), "订单调试工具未启用，请仅在测试环境设置 ENABLE_ORDER_DEBUG_TOOL=true 后使用");
+  assertPlatformAdmin(adminUser, "创作者账号不可使用订单调试工具");
+  assertAdminPermission(adminUser, "ops:read");
+
+  const adminLevel = normalizeText(adminUser && adminUser.adminLevel).toLowerCase();
+  const isPlatformOperator = adminLevel === "owner" || adminLevel === "admin";
+  assertCondition(
+    isPlatformOperator || matchesAnyOrderDebugAllowList(adminUser),
+    "当前账号没有订单调试工具权限"
+  );
 }
 
 async function invalidateContentGatewayCache(triggerAction) {
@@ -943,31 +1567,49 @@ function uniqueStrings(values) {
 function normalizeRouteTags(value, fallbackValue) {
   const candidates = uniqueStrings(value && value.length ? value : fallbackValue);
   return candidates
+    .map((item) => LEGACY_ROUTE_TAG_ALIASES[item] || item)
     .filter((item) => ROUTE_TAG_OPTIONS.includes(item))
     .slice(0, 3);
-}
-
-function normalizeCreatorTags(value, fallbackValue) {
-  const candidates = uniqueStrings(value && value.length ? value : fallbackValue);
-  return candidates
-    .filter((item) => CREATOR_TAG_OPTIONS.includes(item))
-    .slice(0, 2);
 }
 
 function getServiceRouteTags(service) {
   return normalizeRouteTags(service && service.tags, service && service.styles);
 }
 
+function normalizeServiceRegionCodes(value) {
+  return uniqueStrings(value)
+    .map((item) => normalizeDestinationRegionCode(item))
+    .filter(Boolean);
+}
+
+function getCreatorRouteTags(creator, services) {
+  const tagSet = new Set();
+
+  normalizeArray(services).forEach((service) => {
+    if (!listCreatorRefs(creator).includes(normalizeText(service && service.creatorId))) {
+      return;
+    }
+
+    getServiceRouteTags(service).forEach((tag) => tagSet.add(tag));
+  });
+
+  return ROUTE_TAG_OPTIONS.filter((tag) => tagSet.has(tag));
+}
+
 function normalizeIdeaTheme(themeKeyValue, themeLabelValue, isCustomThemeValue) {
   const rawKey = normalizeText(themeKeyValue);
   const rawLabel = normalizeText(themeLabelValue);
-  const matchedByKey = rawKey && IDEA_THEME_LABEL_MAP[rawKey]
-    ? { key: rawKey, label: IDEA_THEME_LABEL_MAP[rawKey] }
+  const normalizedKey = rawKey && Object.prototype.hasOwnProperty.call(IDEA_THEME_LABEL_MAP, rawKey)
+    ? rawKey
+    : (LEGACY_IDEA_THEME_KEY_ALIASES[rawKey] || "");
+  const matchedByKey = normalizedKey && IDEA_THEME_LABEL_MAP[normalizedKey]
+    ? { key: normalizedKey, label: IDEA_THEME_LABEL_MAP[normalizedKey] }
     : null;
   const matchedByLabel = rawLabel
-    ? IDEA_THEME_OPTIONS.find((item) => item.label === rawLabel) || null
+    ? IDEA_THEME_OPTIONS.find((item) => item.label === rawLabel)
+      || IDEA_THEME_OPTIONS.find((item) => item.key === LEGACY_IDEA_THEME_LABEL_ALIASES[rawLabel])
+      || null
     : null;
-  const forceCustom = Boolean(isCustomThemeValue) || rawKey === CUSTOM_IDEA_THEME_KEY;
 
   if (!rawKey && !rawLabel) {
     return {
@@ -977,7 +1619,7 @@ function normalizeIdeaTheme(themeKeyValue, themeLabelValue, isCustomThemeValue) 
     };
   }
 
-  if (!forceCustom && matchedByKey) {
+  if (matchedByKey) {
     return {
       themeKey: matchedByKey.key,
       themeLabel: matchedByKey.label,
@@ -985,7 +1627,7 @@ function normalizeIdeaTheme(themeKeyValue, themeLabelValue, isCustomThemeValue) 
     };
   }
 
-  if (!forceCustom && matchedByLabel) {
+  if (matchedByLabel) {
     return {
       themeKey: matchedByLabel.key,
       themeLabel: matchedByLabel.label,
@@ -994,9 +1636,9 @@ function normalizeIdeaTheme(themeKeyValue, themeLabelValue, isCustomThemeValue) 
   }
 
   return {
-    themeKey: CUSTOM_IDEA_THEME_KEY,
-    themeLabel: rawLabel || (matchedByKey ? matchedByKey.label : ""),
-    isCustomTheme: true
+    themeKey: DEFAULT_IDEA_THEME_KEY,
+    themeLabel: IDEA_THEME_LABEL_MAP[DEFAULT_IDEA_THEME_KEY],
+    isCustomTheme: false
   };
 }
 
@@ -1016,6 +1658,10 @@ function sanitizeExternalUrl(value) {
 
 function uniqueIdentifiers(values) {
   return Array.from(new Set(normalizeArray(values).map(normalizeIdentifier).filter(Boolean)));
+}
+
+function uniqueCaseSensitiveIdentifiers(values) {
+  return Array.from(new Set(normalizeArray(values).map(normalizeText).filter(Boolean)));
 }
 
 function assertCondition(condition, message) {
@@ -1363,6 +2009,10 @@ function collectRoles(userInfo) {
 
 function mapAdminUser(callerInfo, userInfo) {
   const userMetadata = userInfo && userInfo.user_metadata ? userInfo.user_metadata : {};
+  const documentType =
+    normalizeText(userInfo && userInfo.documentType) || normalizeText(userMetadata.documentType);
+  const documentNumber =
+    normalizeText(userInfo && userInfo.documentNumber) || normalizeText(userMetadata.documentNumber);
   const id =
     normalizeText(userInfo && userInfo.id)
     || normalizeText(userInfo && userInfo.uid)
@@ -1397,6 +2047,19 @@ function mapAdminUser(callerInfo, userInfo) {
     email: normalizeText(userInfo && userInfo.email) || normalizeText(userInfo && userInfo.mail),
     phone:
       normalizeText(userInfo && userInfo.phone) || normalizeText(userInfo && userInfo.phoneNumber),
+    realName:
+      normalizeText(userInfo && userInfo.realName)
+      || normalizeText(userMetadata.realName)
+      || normalizeText(userInfo && userInfo.name),
+    gender: normalizeText(userInfo && userInfo.gender) || normalizeText(userMetadata.gender),
+    birthday: normalizeText(userInfo && userInfo.birthday) || normalizeText(userMetadata.birthday),
+    documentType,
+    documentNumber,
+    documents: normalizeIdentityDocuments(
+      (userInfo && userInfo.documents) || userMetadata.documents,
+      { documentType, documentNumber }
+    ),
+    wechat: normalizeText(userInfo && userInfo.wechat) || normalizeText(userMetadata.wechat),
     roles: collectRoles(userInfo)
   };
 }
@@ -1405,11 +2068,19 @@ function normalizeAdminLevel(value, fallback = "admin") {
   return normalizeStatus(value, ADMIN_ACCOUNT_LEVELS, fallback);
 }
 
+function normalizeAdminAccountType(value, fallback = "admin") {
+  return normalizeStatus(value, ADMIN_ACCOUNT_TYPES, fallback);
+}
+
 function normalizeAdminAccountStatus(value, fallback = "active") {
   return normalizeStatus(value, ADMIN_ACCOUNT_STATUSES, fallback);
 }
 
 function mapAdminAccountDoc(doc) {
+  const accountType = normalizeAdminAccountType(doc && doc.accountType, "admin");
+  const documentType = normalizeText(doc && doc.documentType);
+  const documentNumber = normalizeText(doc && doc.documentNumber);
+  const documents = normalizeIdentityDocuments(doc && doc.documents, { documentType, documentNumber });
   return {
     _id: normalizeText(doc && doc._id),
     uid: normalizeText(doc && doc.uid),
@@ -1422,7 +2093,16 @@ function mapAdminAccountDoc(doc) {
       || "管理员",
     email: normalizeText(doc && doc.email),
     phone: normalizeText(doc && doc.phone),
-    level: normalizeAdminLevel(doc && doc.level, "admin"),
+    realName: normalizeText(doc && doc.realName),
+    gender: normalizeText(doc && doc.gender),
+    birthday: normalizeText(doc && doc.birthday),
+    documentType,
+    documentNumber,
+    documents,
+    wechat: normalizeText(doc && doc.wechat),
+    accountType,
+    boundCreatorId: accountType === "creator_portal" ? normalizeText(doc && doc.boundCreatorId) : "",
+    level: accountType === "admin" ? normalizeAdminLevel(doc && doc.level, "admin") : "",
     status: normalizeAdminAccountStatus(doc && doc.status, "active"),
     note: normalizeText(doc && doc.note),
     createdAt: normalizeNumber(doc && doc.createdAt),
@@ -1438,21 +2118,53 @@ function getAdminAccountIdentifiers(account) {
   );
 }
 
+function getAdminStrongIdentifiers(account) {
+  return uniqueIdentifiers([
+    account && account.uid,
+    account && account.customUserId
+  ]);
+}
+
+function getAdminWeakIdentifiers(account) {
+  return uniqueIdentifiers([
+    account && account.username,
+    account && account.email,
+    account && account.phone
+  ]);
+}
+
 function findAdminAccountForUser(accounts, user) {
-  const userIdentifiers = new Set(
-    getAdminAccountIdentifiers({
-      _id: user && user.id,
-      uid: user && user.uid,
-      customUserId: user && user.customUserId,
-      username: user && user.username,
-      email: user && user.email,
-      phone: user && user.phone
-    })
+  const normalizedAccounts = normalizeArray(accounts);
+  const userStrongIdentifiers = new Set(
+    uniqueIdentifiers([
+      user && user.id,
+      user && user.uid,
+      user && user.customUserId
+    ])
+  );
+  const userWeakIdentifiers = new Set(
+    uniqueIdentifiers([
+      user && user.username,
+      user && user.email,
+      user && user.phone
+    ])
   );
 
-  return normalizeArray(accounts).find((account) =>
-    getAdminAccountIdentifiers(account).some((identifier) => userIdentifiers.has(identifier))
-  ) || null;
+  const strongMatch = normalizedAccounts.find((account) =>
+    getAdminStrongIdentifiers(account).some((identifier) => userStrongIdentifiers.has(identifier))
+  );
+
+  if (strongMatch) {
+    return strongMatch;
+  }
+
+  return normalizedAccounts.find((account) => {
+    if (getAdminStrongIdentifiers(account).length) {
+      return false;
+    }
+
+    return getAdminWeakIdentifiers(account).some((identifier) => userWeakIdentifiers.has(identifier));
+  }) || null;
 }
 
 function isMissingCollectionError(error) {
@@ -1493,6 +2205,28 @@ function sortAdminAccounts(accounts) {
 }
 
 function buildAdminPermissions(context) {
+  const accountType = normalizeAdminAccountType(context && context.account && context.account.accountType, "admin");
+  if (accountType === "creator_portal") {
+    return [
+      "dashboard:read:owned",
+      "creators:read",
+      "creators:write:self",
+      "services:read",
+      "services:write:owned",
+      "periods:read",
+      "periods:write:owned",
+      "ideas:read",
+      "orders:read:owned",
+      "orders:detail:owned",
+      "orders:update:owned",
+      "orders:export:owned",
+      "travelers:read:owned",
+      "travelers:detail:owned",
+      "travelers:sensitive:read:owned",
+      "travelers:export:owned"
+    ];
+  }
+
   const canWriteAdmins = Boolean(
     context && (
       context.isAllowListed
@@ -1503,6 +2237,18 @@ function buildAdminPermissions(context) {
 
   const permissions = [
     "dashboard:read",
+    "services:read",
+    "services:write",
+    "destinations:read",
+    "destinations:write",
+    "creators:read",
+    "creators:write",
+    "creator_registrations:read",
+    "creator_registrations:review",
+    "ideas:read",
+    "ideas:write",
+    "periods:read",
+    "periods:write",
     "content:read",
     "content:write",
     "period:read",
@@ -1593,9 +2339,20 @@ async function createBootstrapAdminAccount(user) {
       || "管理员",
     email: normalizeText(user && user.email),
     phone: normalizeText(user && user.phone),
+    realName: normalizeText(user && user.realName),
+    gender: normalizeText(user && user.gender),
+    birthday: normalizeText(user && user.birthday),
+    documentType: normalizeText(user && user.documentType),
+    documentNumber: normalizeText(user && user.documentNumber),
+    documents: normalizeIdentityDocuments(user && user.documents, {
+      documentType: normalizeText(user && user.documentType),
+      documentNumber: normalizeText(user && user.documentNumber)
+    }),
+    wechat: normalizeText(user && user.wechat),
     level: "owner",
     status: "active",
     note: "Bootstrapped from legacy admin access",
+    accountType: "admin",
     createdAt: now,
     updatedAt: now,
     createdBy: fallbackIdentifier,
@@ -1605,6 +2362,33 @@ async function createBootstrapAdminAccount(user) {
 
   const result = await db.collection(ADMIN_COLLECTION).add({ data });
   return mapAdminAccountDoc(Object.assign({ _id: result && result._id }, data));
+}
+
+function normalizeRegistrationAccountDocuments(registration) {
+  return normalizeIdentityDocuments([], {
+    documentType: normalizeText(registration && registration.documentType),
+    documentNumber: normalizeText(registration && registration.documentNumber)
+  });
+}
+
+async function findApprovedRegistrationForCreatorPortalAccount(account) {
+  const accountId = normalizeText(account && account._id);
+  const uid = normalizeText(account && account.uid);
+  const email = normalizeEmail(account && account.email);
+  const registrations = normalizeArray(await listOptionalCollection(COLLECTIONS.creatorRegistrations))
+    .map(normalizeCreatorRegistrationDoc)
+    .filter((registration) => registration && registration.status === "approved");
+
+  return registrations.find((registration) => (
+    accountId && normalizeText(registration.linkedAdminAccountId) === accountId
+  )) || registrations.find((registration) => (
+    uid && normalizeText(registration.authUserId) === uid
+  )) || registrations.find((registration) => (
+    email && (
+      normalizeEmail(registration.authEmail) === email
+      || normalizeEmail(registration.contactEmail) === email
+    )
+  )) || null;
 }
 
 async function resolveAdminAccess() {
@@ -1659,6 +2443,14 @@ async function resolveAdminAccess() {
     throw new Error(`admin access denied: uid=${normalizeText(user.uid || user.id) || "unknown"}`);
   }
 
+  const accountType = normalizeAdminAccountType(matchedAccount && matchedAccount.accountType, "admin");
+  const boundCreatorId = accountType === "creator_portal"
+    ? normalizeText(matchedAccount && matchedAccount.boundCreatorId)
+    : "";
+  if (matchedAccount && accountType === "creator_portal" && !boundCreatorId) {
+    throw new Error(`creator portal binding missing: uid=${normalizeText(user.uid || user.id) || "unknown"}`);
+  }
+
   const permissions = buildAdminPermissions({
     account: matchedAccount,
     accountsCount: accounts.length,
@@ -1666,6 +2458,20 @@ async function resolveAdminAccess() {
     isAllowListed
   });
   const authSource = matchedAccount ? "directory" : isAllowListed ? "allowlist" : "role";
+  const registrationProfile = matchedAccount && accountType === "creator_portal"
+    ? await findApprovedRegistrationForCreatorPortalAccount(matchedAccount)
+    : null;
+  const registrationDocuments = normalizeRegistrationAccountDocuments(registrationProfile);
+  const matchedAccountDocuments = matchedAccount
+    ? normalizeIdentityDocuments(matchedAccount.documents, {
+        documentType: normalizeText(matchedAccount.documentType),
+        documentNumber: normalizeText(matchedAccount.documentNumber)
+      })
+    : [];
+  const userDocuments = normalizeIdentityDocuments(user.documents, {
+    documentType: normalizeText(user.documentType),
+    documentNumber: normalizeText(user.documentNumber)
+  });
   const resolvedProfile = matchedAccount
     ? {
         username: normalizeText(matchedAccount.username) || normalizeText(user.username),
@@ -1675,19 +2481,44 @@ async function resolveAdminAccess() {
           || normalizeText(user.displayName)
           || normalizeText(user.username),
         email: normalizeText(matchedAccount.email) || normalizeText(user.email),
-        phone: normalizeText(matchedAccount.phone) || normalizeText(user.phone)
+        phone: normalizeText(matchedAccount.phone) || normalizeText(registrationProfile && registrationProfile.phone) || normalizeText(user.phone),
+        realName: normalizeText(matchedAccount.realName) || normalizeText(registrationProfile && registrationProfile.applicantName) || normalizeText(user.realName),
+        gender: normalizeText(matchedAccount.gender) || normalizeText(registrationProfile && registrationProfile.gender) || normalizeText(user.gender),
+        birthday: normalizeText(matchedAccount.birthday) || normalizeText(registrationProfile && registrationProfile.birthday) || normalizeText(user.birthday),
+        documentType: normalizeText(matchedAccount.documentType) || normalizeText(registrationProfile && registrationProfile.documentType) || normalizeText(user.documentType),
+        documentNumber: normalizeText(matchedAccount.documentNumber) || normalizeText(registrationProfile && registrationProfile.documentNumber) || normalizeText(user.documentNumber),
+        documents: matchedAccountDocuments.length
+          ? matchedAccountDocuments
+          : (registrationDocuments.length ? registrationDocuments : userDocuments),
+        wechat: normalizeText(matchedAccount.wechat) || normalizeText(registrationProfile && registrationProfile.wechat) || normalizeText(user.wechat)
       }
     : {
         username: normalizeText(user.username),
         displayName: normalizeText(user.displayName) || normalizeText(user.username),
         email: normalizeText(user.email),
-        phone: normalizeText(user.phone)
+        phone: normalizeText(user.phone),
+        realName: normalizeText(user.realName),
+        gender: normalizeText(user.gender),
+        birthday: normalizeText(user.birthday),
+        documentType: normalizeText(user.documentType),
+        documentNumber: normalizeText(user.documentNumber),
+        documents: normalizeIdentityDocuments(user.documents, {
+          documentType: normalizeText(user.documentType),
+          documentNumber: normalizeText(user.documentNumber)
+        }),
+        wechat: normalizeText(user.wechat)
       };
 
   return Object.assign({}, user, resolvedProfile, {
     adminAccountId: normalizeText(matchedAccount && matchedAccount._id),
-    adminLevel: normalizeText(matchedAccount && matchedAccount.level) || "owner",
+    adminLevel: accountType === "admin"
+      ? (normalizeText(matchedAccount && matchedAccount.level) || "owner")
+      : "",
+    accountType,
+    boundCreatorId,
+    homePath: accountType === "creator_portal" ? CREATOR_PORTAL_HOME_PATH : ADMIN_HOME_PATH,
     authSource,
+    authEmail: normalizeText(user.email),
     permissions
   });
 }
@@ -1839,16 +2670,109 @@ async function saveConfigDetail(payload, adminUser) {
   return getConfigDetail({ key, _id: existing._id });
 }
 
+function isSqlResumeRetryableError(error) {
+  const message = normalizeText(error && error.message).toLowerCase();
+  return message.includes("error 9449") || message.includes("serverless instance is resuming");
+}
+
+function isSqlQueryRetryableError(error) {
+  const message = normalizeText(error && error.message).toLowerCase();
+  if (isSqlResumeRetryableError(error)) {
+    return true;
+  }
+
+  return [
+    "timeout",
+    "timed out",
+    "etimedout",
+    "econnreset",
+    "econnrefused",
+    "socket hang up",
+    "network error",
+    "connection reset",
+    "temporarily unavailable",
+    "service unavailable",
+    "bad gateway",
+    "gateway timeout",
+    "502",
+    "503",
+    "504"
+  ].some((keyword) => message.includes(keyword));
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runSQLWithRetry(sql, params, shouldRetryError, maxAttempts) {
+  const normalizedParams = params || {};
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await runSQL(sql, normalizedParams);
+    } catch (error) {
+      const canRetry = attempt < maxAttempts && shouldRetryError(error);
+      if (!canRetry) {
+        throw error;
+      }
+
+      const delayMs = SQL_RESUME_RETRY_BASE_DELAY_MS * attempt;
+      console.warn("Admin SQL query retrying after transient failure", {
+        attempt,
+        delayMs,
+        sql
+      });
+      await sleep(delayMs);
+    }
+  }
+
+  throw new Error("后台 SQL 查询失败，请稍后重试");
+}
+
+async function runSQLWithResumeRetry(sql, params) {
+  return runSQLWithRetry(sql, params, isSqlResumeRetryableError, SQL_RESUME_RETRY_MAX_ATTEMPTS);
+}
+
+async function runSQLWithQueryRetry(sql, params) {
+  return runSQLWithRetry(sql, params, isSqlQueryRetryableError, SQL_QUERY_RETRY_MAX_ATTEMPTS);
+}
+
 async function queryRows(sql, params) {
   if (typeof runSQL !== "function") {
     throw new Error("后台 SQL 服务未就绪，请稍后重试");
   }
 
   try {
-    return getSQLRows(await runSQL(sql, params || {}));
+    return getSQLRows(await runSQLWithQueryRetry(sql, params));
   } catch (error) {
     console.error("Admin SQL query failed", { sql, params, error });
     throw new Error("后台 SQL 查询失败，请稍后重试");
+  }
+}
+
+async function queryRowsBestEffort(sql, params) {
+  if (typeof runSQL !== "function") {
+    return [];
+  }
+
+  try {
+    return getSQLRows(await runSQL(sql, params || {}));
+  } catch (error) {
+    console.warn("Admin SQL optional query skipped", { sql, params, error });
+    return [];
+  }
+}
+
+async function executeSQL(sql, params) {
+  if (typeof runSQL !== "function") {
+    throw new Error("后台 SQL 服务未就绪，请稍后重试");
+  }
+
+  try {
+    return await runSQLWithResumeRetry(sql, params);
+  } catch (error) {
+    console.error("Admin SQL execute failed", { sql, params, error });
+    throw new Error("后台 SQL 写入失败，请稍后重试");
   }
 }
 
@@ -1858,10 +2782,249 @@ async function queryCount(sql, params) {
   return normalizeNumber(first.total, 0);
 }
 
+async function getSystemHealth() {
+  const envId = getCurrentEnvId();
+  const health = {
+    envId,
+    isCanonicalEnvId: isCanonicalCloudbaseEnvId(envId),
+    envWarning: buildEnvWarning(envId),
+    checkedAt: new Date().toISOString(),
+    adminGateway: {
+      name: "adminGateway",
+      ok: true,
+      message: "后台管理网关可用",
+      error: ""
+    },
+    contentGateway: {
+      name: CONTENT_GATEWAY_FUNCTION_NAME,
+      ok: false,
+      message: "",
+      error: "",
+      journeyCount: 0
+    },
+    sql: {
+      ok: false,
+      error: "",
+      servicePeriodCount: 0,
+      futurePeriodCount: 0,
+      travelOrderCount: 0,
+      latestOrderUpdatedAt: ""
+    }
+  };
+
+  try {
+    const servicePeriodRows = await queryRows(
+      [
+        "SELECT",
+        "  COUNT(*) AS servicePeriodCount,",
+        "  SUM(CASE WHEN dateStart >= CURRENT_DATE() THEN 1 ELSE 0 END) AS futurePeriodCount",
+        "FROM `ServicePeriod`"
+      ].join("\n")
+    );
+    const servicePeriodSummary = servicePeriodRows[0] || {};
+    const orderRows = await queryRows(
+      [
+        "SELECT",
+        "  COUNT(*) AS travelOrderCount,",
+        "  MAX(COALESCE(updatedAt, createdAtTs)) AS latestOrderUpdatedAt",
+        "FROM `TravelOrder`"
+      ].join("\n")
+    );
+    const orderSummary = orderRows[0] || {};
+
+    health.sql = {
+      ok: true,
+      error: "",
+      servicePeriodCount: normalizeNumber(servicePeriodSummary.servicePeriodCount, 0),
+      futurePeriodCount: normalizeNumber(servicePeriodSummary.futurePeriodCount, 0),
+      travelOrderCount: normalizeNumber(orderSummary.travelOrderCount, 0),
+      latestOrderUpdatedAt: normalizeText(orderSummary.latestOrderUpdatedAt)
+    };
+  } catch (error) {
+    health.sql.error = normalizeText(error && error.message) || "后台 SQL 查询失败，请稍后重试";
+  }
+
+  try {
+    if (typeof cloud.callFunction !== "function") {
+      throw new Error("云函数调用能力不可用");
+    }
+
+    const response = await cloud.callFunction({
+      name: CONTENT_GATEWAY_FUNCTION_NAME,
+      data: {
+        action: "getJourneyPageData",
+        payload: {}
+      }
+    });
+    const result = response && response.result;
+
+    if (!result || result.ok !== true) {
+      throw new Error(normalizeText(result && result.error) || "线路内容查询失败");
+    }
+
+    const journeys = normalizeArray(result.data && result.data.journeys);
+    health.contentGateway = {
+      name: CONTENT_GATEWAY_FUNCTION_NAME,
+      ok: true,
+      message: "线路聚合查询正常",
+      error: "",
+      journeyCount: journeys.length
+    };
+  } catch (error) {
+    health.contentGateway.error = normalizeText(error && error.message) || "线路内容查询失败";
+  }
+
+  return health;
+}
+
 function assertAdminPermission(adminUser, permission) {
   assertCondition(
     normalizeArray(adminUser && adminUser.permissions).includes(permission),
-    "当前管理员没有对应操作权限"
+    "当前账号没有对应操作权限"
+  );
+}
+
+function assertPlatformAdmin(adminUser, message) {
+  assertCondition(
+    !isCreatorPortalUser(adminUser),
+    message || "当前账号没有对应操作权限"
+  );
+}
+
+function assertAnyAdminPermission(adminUser, permissions, message) {
+  assertCondition(
+    normalizeArray(permissions).some((permission) => hasAdminPermission(adminUser, permission)),
+    message || "当前账号没有对应操作权限"
+  );
+}
+
+function hasAdminPermission(adminUser, permission) {
+  return normalizeArray(adminUser && adminUser.permissions).includes(permission);
+}
+
+function getAdminOperatorId(adminUser) {
+  return normalizeText(adminUser && (adminUser.uid || adminUser.id));
+}
+
+function isCreatorPortalUser(adminUser) {
+  return normalizeAdminAccountType(adminUser && adminUser.accountType, "admin") === "creator_portal";
+}
+
+function resolveRecordCreatedBy(record) {
+  return normalizeText(record && record.createdBy);
+}
+
+function isOwnedContentRecord(record, adminUser) {
+  const operatorId = getAdminOperatorId(adminUser);
+  const createdBy = resolveRecordCreatedBy(record);
+  return Boolean(operatorId && createdBy && operatorId === createdBy);
+}
+
+function canEditOwnedContent(record, adminUser, fullPermission, ownedPermission) {
+  if (hasAdminPermission(adminUser, fullPermission)) {
+    return true;
+  }
+
+  if (!hasAdminPermission(adminUser, ownedPermission)) {
+    return false;
+  }
+
+  return isOwnedContentRecord(record, adminUser);
+}
+
+function getCreatorPortalBoundCreatorId(adminUser) {
+  return isCreatorPortalUser(adminUser) ? normalizeText(adminUser && adminUser.boundCreatorId) : "";
+}
+
+function buildAdminCreatorRefSet(adminUser, creators) {
+  if (!isCreatorPortalUser(adminUser)) {
+    return null;
+  }
+
+  const boundCreatorId = getCreatorPortalBoundCreatorId(adminUser);
+  if (!boundCreatorId) {
+    return new Set();
+  }
+
+  const matchedCreator = normalizeArray(creators).find((creator) => listCreatorRefs(creator).includes(boundCreatorId)) || null;
+  return new Set(uniqueStrings([boundCreatorId].concat(matchedCreator ? listCreatorRefs(matchedCreator) : [])));
+}
+
+function matchesCreatorRefSet(creatorRefSet, refs) {
+  if (!(creatorRefSet instanceof Set)) {
+    return true;
+  }
+
+  const normalizedRefs = uniqueStrings(normalizeArray(refs).map((item) => normalizeText(item)));
+  return normalizedRefs.some((ref) => creatorRefSet.has(ref));
+}
+
+function buildServiceMap(services) {
+  return normalizeArray(services).reduce((map, service) => {
+    const slug = normalizeText(service && service.slug);
+    if (slug) {
+      map[slug] = service;
+    }
+    return map;
+  }, {});
+}
+
+function buildOrderCreatorRefs(row, serviceMap) {
+  const creatorSnapshot = parseJsonText(row && row.creatorSnapshotJson, {}) || {};
+  const serviceSnapshot = parseJsonText(row && row.serviceSnapshotJson, {}) || {};
+  const matchedService = serviceMap && serviceMap[normalizeText(row && row.serviceSlug)];
+
+  return uniqueStrings([
+    normalizeText(row && row.creatorId),
+    normalizeText(row && row.serviceCreatorId),
+    normalizeText(creatorSnapshot && creatorSnapshot.id),
+    normalizeText(creatorSnapshot && creatorSnapshot.creatorId),
+    normalizeText(creatorSnapshot && creatorSnapshot.slug),
+    normalizeText(serviceSnapshot && serviceSnapshot.creatorId),
+    normalizeText(serviceSnapshot && serviceSnapshot.creatorSlug),
+    normalizeText(matchedService && matchedService.creatorId)
+  ]);
+}
+
+function canAccessOrderForAdmin(row, adminUser, creatorRefSet, serviceMap) {
+  if (!isCreatorPortalUser(adminUser)) {
+    return true;
+  }
+
+  return matchesCreatorRefSet(creatorRefSet, buildOrderCreatorRefs(row, serviceMap));
+}
+
+function canAccessServiceForAdmin(service, adminUser, creatorRefSet) {
+  if (!isCreatorPortalUser(adminUser)) {
+    return true;
+  }
+
+  return matchesCreatorRefSet(creatorRefSet, [normalizeText(service && service.creatorId)]);
+}
+
+function canAccessServicePeriodForAdmin(row, adminUser, creatorRefSet, serviceMap) {
+  if (!isCreatorPortalUser(adminUser)) {
+    return true;
+  }
+
+  const matchedService = serviceMap && serviceMap[normalizeText(row && row.serviceSlug)];
+  return matchesCreatorRefSet(creatorRefSet, [
+    normalizeText(row && row.creatorId),
+    normalizeText(matchedService && matchedService.creatorId)
+  ]);
+}
+
+function filterOrderRowsForAdmin(rows, adminUser, creatorRefSet, serviceMap) {
+  return normalizeArray(rows).filter((row) => canAccessOrderForAdmin(row, adminUser, creatorRefSet, serviceMap));
+}
+
+function buildContentAccess(canEdit, canDelete, extra) {
+  return Object.assign(
+    {
+      canEdit: Boolean(canEdit),
+      canDelete: Boolean(canDelete)
+    },
+    extra && typeof extra === "object" ? extra : {}
   );
 }
 
@@ -1879,10 +3042,16 @@ function assertAdminAccountHasIdentifier(payload) {
 }
 
 function assertAdminAccountUnique(accounts, payload, existingId) {
+  const payloadAccountType = normalizeAdminAccountType(payload && payload.accountType, "admin");
   normalizeArray(accounts)
     .filter((account) => account._id !== existingId)
     .forEach((account) => {
       ADMIN_ACCOUNT_IDENTIFIER_FIELDS.forEach((field) => {
+        const accountType = normalizeAdminAccountType(account && account.accountType, "admin");
+        if (field === "phone" && (payloadAccountType === "creator_portal" || accountType === "creator_portal")) {
+          return;
+        }
+
         const nextValue = normalizeIdentifier(payload && payload[field]);
         if (!nextValue) {
           return;
@@ -1912,6 +3081,25 @@ function assertAdminOwnerRetention(accounts, existing, nextDoc) {
 function buildAdminAccountData(payload, existing, adminUser) {
   const now = Date.now();
   const operatorId = normalizeText(adminUser && (adminUser.uid || adminUser.id));
+  const payloadDocumentType = normalizeText(payload && payload.documentType);
+  const payloadDocumentNumber = normalizeText(payload && payload.documentNumber);
+  const existingDocumentType = normalizeText(existing && existing.documentType);
+  const existingDocumentNumber = normalizeText(existing && existing.documentNumber);
+  const payloadDocuments = normalizeIdentityDocuments(payload && payload.documents, {
+    documentType: payloadDocumentType,
+    documentNumber: payloadDocumentNumber
+  });
+  const existingDocuments = normalizeIdentityDocuments(existing && existing.documents, {
+    documentType: existingDocumentType,
+    documentNumber: existingDocumentNumber
+  });
+  const nextDocuments = payloadDocuments.length ? payloadDocuments : existingDocuments;
+  assertIdentityDocumentsAllowed(nextDocuments);
+  const primaryDocument = nextDocuments[0] || {};
+  const accountType = normalizeAdminAccountType(
+    payload && payload.accountType,
+    normalizeText(existing && existing.accountType) || "admin"
+  );
   const fallbackIdentifier =
     normalizeText(payload && payload.uid)
     || normalizeText(payload && payload.username)
@@ -1932,7 +3120,22 @@ function buildAdminAccountData(payload, existing, adminUser) {
       || "管理员",
     email: normalizeText(payload && payload.email) || normalizeText(existing && existing.email),
     phone: normalizeText(payload && payload.phone) || normalizeText(existing && existing.phone),
-    level: normalizeAdminLevel(payload && payload.level, normalizeText(existing && existing.level) || "admin"),
+    realName: normalizeText(payload && payload.realName) || normalizeText(existing && existing.realName),
+    gender: normalizeText(payload && payload.gender) || normalizeText(existing && existing.gender),
+    birthday: normalizeText(payload && payload.birthday) || normalizeText(existing && existing.birthday),
+    documentType:
+      payloadDocumentType || normalizeText(primaryDocument.documentType) || existingDocumentType,
+    documentNumber:
+      payloadDocumentNumber || normalizeText(primaryDocument.documentNumber) || existingDocumentNumber,
+    documents: nextDocuments,
+    wechat: normalizeText(payload && payload.wechat) || normalizeText(existing && existing.wechat),
+    accountType,
+    boundCreatorId: accountType === "creator_portal"
+      ? (normalizeText(payload && payload.boundCreatorId) || normalizeText(existing && existing.boundCreatorId))
+      : "",
+    level: accountType === "admin"
+      ? normalizeAdminLevel(payload && payload.level, normalizeText(existing && existing.level) || "admin")
+      : "",
     status: normalizeAdminAccountStatus(payload && payload.status, normalizeText(existing && existing.status) || "active"),
     note: normalizeText(payload && payload.note) || normalizeText(existing && existing.note),
     updatedAt: now,
@@ -1940,6 +3143,9 @@ function buildAdminAccountData(payload, existing, adminUser) {
   };
 
   assertAdminAccountHasIdentifier(nextDoc);
+  if (accountType === "creator_portal") {
+    assertCondition(nextDoc.boundCreatorId, "创作者后台账号必须绑定一个创作者");
+  }
 
   if (!existing) {
     return Object.assign({}, nextDoc, {
@@ -1960,24 +3166,123 @@ async function listAdminAccounts() {
   return listAdminAccountsData();
 }
 
-async function saveAdminAccount(payload, adminUser) {
-  assertAdminPermission(adminUser, "admins:write");
-
+async function saveAdminAccount(payload, adminUser, options = {}) {
   const accounts = await listAdminAccountsData();
   const accountId = normalizeText(payload && payload._id);
   const existing = accounts.find((account) => account._id === accountId) || null;
   const nextDoc = buildAdminAccountData(payload, existing, adminUser);
+  const isCreatorRegistrationProvision = Boolean(options && options.creatorRegistrationProvision)
+    && normalizeAdminAccountType(nextDoc.accountType, "admin") === "creator_portal";
+
+  if (isCreatorRegistrationProvision) {
+    assertAdminPermission(adminUser, "creator_registrations:review");
+    assertCondition(
+      !existing || normalizeAdminAccountType(existing.accountType, "admin") === "creator_portal",
+      "创作者申请自动开通不能改写普通管理员账号"
+    );
+  } else {
+    assertAdminPermission(adminUser, "admins:write");
+  }
+
+  if (normalizeAdminAccountType(nextDoc.accountType, "admin") === "creator_portal") {
+    const trustedBoundCreator = options && options.trustedBoundCreator;
+    const boundCreator = await findCreatorByReference(
+      nextDoc.boundCreatorId,
+      trustedBoundCreator ? [trustedBoundCreator] : undefined
+    );
+    assertCondition(boundCreator, "绑定的创作者不存在，请先在创作者页面创建资料");
+    nextDoc.boundCreatorId = normalizeText(boundCreator && boundCreator.id) || normalizeText(boundCreator && boundCreator.slug);
+  }
 
   assertAdminAccountUnique(accounts, nextDoc, normalizeText(existing && existing._id));
   assertAdminOwnerRetention(accounts, existing, nextDoc);
 
   if (!existing) {
+    if (nextDoc.status === "inactive") {
+      await syncAdminAccountCloudAuthStatus(nextDoc, nextDoc.status);
+    }
     const result = await db.collection(ADMIN_COLLECTION).add({ data: nextDoc });
     return mapAdminAccountDoc(Object.assign({ _id: result && result._id }, nextDoc));
   }
 
+  if (existing.status !== nextDoc.status) {
+    await syncAdminAccountCloudAuthStatus(Object.assign({}, existing, nextDoc), nextDoc.status);
+  }
+
   await db.collection(ADMIN_COLLECTION).doc(existing._id).update({ data: nextDoc });
   return mapAdminAccountDoc(Object.assign({}, existing, nextDoc));
+}
+
+async function saveCurrentAdminAccountProfile(payload, adminUser) {
+  const accounts = await listAdminAccountsData();
+  const currentAccount = findAdminAccountForUser(
+    accounts.filter((account) => account.status === "active"),
+    adminUser
+  );
+  assertCondition(currentAccount, "未找到当前账号档案，请联系管理员处理");
+
+  const requestedEmail = normalizeIdentifier(payload && payload.email);
+  if (requestedEmail && requestedEmail !== normalizeIdentifier(currentAccount.email)) {
+    let latestAuthEmail = normalizeIdentifier(adminUser && (adminUser.authEmail || adminUser.email));
+
+    if (currentAccount.uid && typeof auth.getEndUserInfo === "function") {
+      try {
+        const latestAuthInfo = await auth.getEndUserInfo(currentAccount.uid);
+        latestAuthEmail = normalizeIdentifier(
+          latestAuthInfo
+          && latestAuthInfo.userInfo
+          && (latestAuthInfo.userInfo.email || latestAuthInfo.userInfo.mail)
+        ) || latestAuthEmail;
+      } catch (error) {
+        console.error("Failed to refresh auth email for current admin account", {
+          uid: currentAccount.uid,
+          error
+        });
+      }
+    }
+
+    assertCondition(
+      requestedEmail === latestAuthEmail,
+      "请先完成邮箱二次验证"
+    );
+  }
+
+  const nextDoc = buildAdminAccountData(
+    {
+      _id: currentAccount._id,
+      uid: currentAccount.uid,
+      customUserId: currentAccount.customUserId,
+      username: normalizeText(payload && payload.username) || currentAccount.username,
+      displayName: currentAccount.displayName,
+      email: normalizeText(payload && payload.email) || currentAccount.email,
+      phone: normalizeText(payload && payload.phone) || currentAccount.phone,
+      realName: normalizeText(payload && payload.realName) || currentAccount.realName,
+      gender: normalizeText(payload && payload.gender) || currentAccount.gender,
+      birthday: normalizeText(payload && payload.birthday) || currentAccount.birthday,
+      documentType: normalizeText(payload && payload.documentType) || currentAccount.documentType,
+      documentNumber: normalizeText(payload && payload.documentNumber) || currentAccount.documentNumber,
+      documents: Array.isArray(payload && payload.documents)
+        ? normalizeIdentityDocuments(payload && payload.documents, {
+            documentType: normalizeText(payload && payload.documentType) || currentAccount.documentType,
+            documentNumber: normalizeText(payload && payload.documentNumber) || currentAccount.documentNumber
+          })
+        : currentAccount.documents,
+      wechat: normalizeText(payload && payload.wechat) || currentAccount.wechat,
+      accountType: currentAccount.accountType,
+      boundCreatorId: currentAccount.boundCreatorId,
+      level: currentAccount.level,
+      status: currentAccount.status,
+      note: currentAccount.note
+    },
+    currentAccount,
+    adminUser
+  );
+
+  assertAdminAccountUnique(accounts, nextDoc, normalizeText(currentAccount && currentAccount._id));
+  assertAdminOwnerRetention(accounts, currentAccount, nextDoc);
+
+  await db.collection(ADMIN_COLLECTION).doc(currentAccount._id).update({ data: nextDoc });
+  return mapAdminAccountDoc(Object.assign({}, currentAccount, nextDoc));
 }
 
 async function deactivateAdminAccount(payload, adminUser) {
@@ -2015,6 +3320,7 @@ async function deleteAdminAccount(payload, adminUser) {
   assertCondition(!currentAccount || currentAccount._id !== accountId, "不能删除当前登录账号");
   assertAdminOwnerRetention(accounts, existing, Object.assign({}, existing, { status: "inactive" }));
 
+  await deleteAdminAccountCloudAuthUser(existing);
   await db.collection(ADMIN_COLLECTION).doc(accountId).remove();
   return {
     _id: accountId,
@@ -2074,16 +3380,59 @@ function buildServicePeriodCreateRecord(record, operatorId, now) {
   });
 }
 
-function shouldFallbackLegacyServicePeriodFields(error) {
-  const message = normalizeText(error && error.message).toLowerCase();
-  return message.includes("totalseats");
+function extractMissingColumnFromMutationError(error) {
+  const message = normalizeText((error && error.message) || (error && error.errMsg) || "");
+  const match = message.match(/column\s+([`"'A-Za-z0-9_]+)\s+not\s+found/i);
+  if (!match || !match[1]) {
+    return "";
+  }
+
+  return String(match[1]).replace(/[`'"]/g, "").trim();
 }
 
-function stripOptionalTotalSeatFields(record) {
+async function insertServicePeriodRecordWithCompatibility(record) {
   const nextRecord = Object.assign({}, record);
-  delete nextRecord.totalSeats;
-  delete nextRecord.totalSeatsInt;
-  return nextRecord;
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const { error } = await rdb.from("ServicePeriod").insert(nextRecord);
+    if (!error) {
+      return nextRecord;
+    }
+
+    lastError = error;
+    const missingColumn = extractMissingColumnFromMutationError(error);
+    if (!missingColumn || !Object.prototype.hasOwnProperty.call(nextRecord, missingColumn)) {
+      throw error;
+    }
+    delete nextRecord[missingColumn];
+  }
+
+  throw lastError || new Error("创建团期失败");
+}
+
+async function updateServicePeriodRecordWithCompatibility(record, periodCode) {
+  const nextRecord = Object.assign({}, record);
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const { error } = await rdb
+      .from("ServicePeriod")
+      .update(nextRecord)
+      .eq("periodCode", periodCode);
+    if (!error) {
+      return nextRecord;
+    }
+
+    lastError = error;
+    const missingColumn = extractMissingColumnFromMutationError(error);
+    if (!missingColumn || !Object.prototype.hasOwnProperty.call(nextRecord, missingColumn)) {
+      throw error;
+    }
+    delete nextRecord[missingColumn];
+  }
+
+  throw lastError || new Error("更新团期失败");
 }
 
 async function deactivateServicePeriodsByServiceSlug(serviceSlug) {
@@ -2137,7 +3486,9 @@ function sanitizeServiceGalleryGroups(value, fallbackGallery) {
         return null;
       }
 
-      const label = normalizeText(item.label) || `图集 ${index + 1}`;
+      const label = index === 0
+        ? "封面"
+        : (normalizeText(item.label) || `图集 ${index}`);
       const images = dedupeImageValues(item.images).map(normalizeImageAssetValue).filter(Boolean);
       if (!images.length) {
         return null;
@@ -2158,7 +3509,7 @@ function sanitizeServiceGalleryGroups(value, fallbackGallery) {
   return images.length
     ? [
         {
-          label: "图集",
+          label: "封面",
           images
         }
       ]
@@ -2481,7 +3832,10 @@ async function normalizeServiceImagePayload(payload, slug) {
       }
 
       return Object.assign({}, item, {
-        images: await ensureImageAssetList(item.images, `${assetRoot}/gallery/group-${index + 1}`)
+        images: await ensureImageAssetList(
+          item.images,
+          index === 0 ? `${assetRoot}/gallery/cover` : `${assetRoot}/gallery/group-${index}`
+        )
       });
     })
   );
@@ -2558,6 +3912,38 @@ async function normalizeConfigImagePayload(key, value) {
         });
       })
     );
+    return nextValue;
+  }
+
+  if (key === "journeyPage") {
+    const nextValue = cloneJson(value, {});
+    nextValue.regionCards = await Promise.all(
+      normalizeArray(nextValue.regionCards).map(async (item, index) => {
+        if (!isPlainObject(item)) {
+          return item;
+        }
+
+        const regionCode = normalizeText(item.regionCode || item.value || `region-${index + 1}`);
+        return Object.assign({}, item, {
+          regionCode,
+          image: await ensureImageAssetField(
+            item.image || item.cover || item.cloudFileID,
+            `config/journeyPage/${regionCode || `region-${index + 1}`}`
+          ),
+          cloudFileID: ""
+        });
+      })
+    );
+    return nextValue;
+  }
+
+  if (key === "profilePage") {
+    const nextValue = cloneJson(value, {});
+    nextValue.emptyTripStateImage = await ensureImageAssetField(
+      nextValue.emptyTripStateImage || nextValue.emptyStateImage || nextValue.cloudFileID,
+      "config/profilePage/empty-trip-state"
+    );
+    nextValue.cloudFileID = "";
     return nextValue;
   }
 
@@ -2652,6 +4038,26 @@ function getDefaultServiceVersionName(value) {
   return normalizeText(value) || "标准版";
 }
 
+function resolveServiceCreatorMessage(service, fallbackTravelDetail) {
+  const explicitMessage = normalizeText(service && service.creatorMessage);
+  if (explicitMessage) {
+    return explicitMessage;
+  }
+
+  const detail = isPlainObject(service && service.travelDetail)
+    ? service.travelDetail
+    : (isPlainObject(fallbackTravelDetail) ? fallbackTravelDetail : {});
+  const overview = isPlainObject(detail.overview) ? detail.overview : {};
+  const whyJoinText = normalizeText(overview.whyJoinText);
+  const firstParagraph = whyJoinText ? whyJoinText.split(/\n\s*\n/)[0].trim() : "";
+
+  return firstParagraph || normalizeText(service && service.summary);
+}
+
+function deriveServiceCreatorMessageForBackfill(service) {
+  return resolveServiceCreatorMessage(service) || DEFAULT_SERVICE_CREATOR_MESSAGE;
+}
+
 function sanitizeServiceCosts(value) {
   const input = isPlainObject(value) ? value : {};
 
@@ -2715,10 +4121,13 @@ function sanitizeTravelDetail(value, serviceMeta, existingDetail) {
     id: normalizeText(input.id) || normalizeText(existingDetail && existingDetail.id) || createTravelDetailId(serviceMeta.slug),
     title: normalizeText(input.title) || serviceMeta.name,
     defaultVersionName: getDefaultServiceVersionName(input.defaultVersionName || (existingDetail && existingDetail.defaultVersionName)),
-    consultWeChatQr:
-      normalizeImageAssetValue(input.consultWeChatQr)
-      || normalizeImageAssetValue(existingDetail && existingDetail.consultWeChatQr)
-      || "",
+    consultWeChatQr: "",
+    meetingPoint:
+      normalizeText(input.meetingPoint)
+      || normalizeText(existingDetail && existingDetail.meetingPoint),
+    dismissalPoint:
+      normalizeText(input.dismissalPoint)
+      || normalizeText(existingDetail && existingDetail.dismissalPoint),
     sections: sanitizeServiceSectionList(input.sections),
     overview: {
       coverImage:
@@ -2796,7 +4205,7 @@ function findServiceVersionDefinition(service, versionName) {
   return definitions.find((item) => item.versionName === normalizedVersionName) || null;
 }
 
-function buildServiceSummary(service, creatorNameMap, periodStatsMap, orderStatsMap) {
+function buildServiceSummary(service, creatorNameMap, periodStatsMap, orderStatsMap, adminUser) {
   const serviceSlug = normalizeText(service.slug);
   const periodStats = periodStatsMap[serviceSlug] || {};
   const orderStats = orderStatsMap[serviceSlug] || {};
@@ -2811,6 +4220,7 @@ function buildServiceSummary(service, creatorNameMap, periodStatsMap, orderStats
     status: buildStatusTag(service),
     creatorId: normalizeText(service.creatorId),
     creatorName: creatorNameMap[normalizeText(service.creatorId)] || "",
+    regionCodes: normalizeServiceRegionCodes(service && service.regionCodes),
     destinationSlugs: uniqueStrings(service.destinationSlugs),
     destinationCount: normalizeArray(service.destinationSlugs).length,
     tags,
@@ -2820,12 +4230,13 @@ function buildServiceSummary(service, creatorNameMap, periodStatsMap, orderStats
     nextDepartureDate: normalizeText(periodStats.nextDate),
     remainingSeats: normalizeNumber(periodStats.remainingSeats),
     pendingSectionCount: pendingSummary.pendingSectionCount,
+    access: getServiceAccess(service, adminUser),
     createdAt: normalizeNumber(service && service.createdAt),
     updatedAt: normalizeNumber(service && service.updatedAt)
   };
 }
 
-function mapServiceDetailRecord(service, creatorNameMap) {
+function mapServiceDetailRecord(service, creatorNameMap, adminUser) {
   const detail = isPlainObject(service && service.travelDetail) ? service.travelDetail : {};
   const tags = getServiceRouteTags(service);
 
@@ -2839,6 +4250,8 @@ function mapServiceDetailRecord(service, creatorNameMap) {
     creatorId: normalizeText(service && service.creatorId),
     creatorName: creatorNameMap[normalizeText(service && service.creatorId)] || "",
     creatorRoles: uniqueStrings(service && service.creatorRoles),
+    creatorMessage: resolveServiceCreatorMessage(service, detail),
+    regionCodes: normalizeServiceRegionCodes(service && service.regionCodes),
     destinationSlugs: uniqueStrings(service && service.destinationSlugs),
     summary: normalizeText(service && service.summary),
     cover: getImageAssetOriginal(service && service.cover),
@@ -2876,6 +4289,7 @@ function mapServiceDetailRecord(service, creatorNameMap) {
       });
       return travelDetail;
     })(),
+    access: getServiceAccess(service, adminUser),
     createdAt: normalizeNumber(service && service.createdAt),
     updatedAt: normalizeNumber(service && service.updatedAt)
   };
@@ -2902,7 +4316,7 @@ function sanitizeReviewList(value) {
     .filter(Boolean);
 }
 
-function mapCreatorDetailRecord(creator) {
+function mapCreatorDetailRecord(creator, services, adminUser) {
   return {
     _id: normalizeText(creator && creator._id),
     id: normalizeText(creator && creator.id),
@@ -2911,16 +4325,18 @@ function mapCreatorDetailRecord(creator) {
     status: buildStatusTag(creator),
     avatar: getImageAssetOriginal(creator && creator.avatar),
     stance: normalizeText(creator && creator.stance),
-    tags: normalizeCreatorTags(creator && creator.tags),
-    destinationSlugs: uniqueStrings(creator && creator.destinationSlugs),
+    tags: getCreatorRouteTags(creator, services),
+    regionCodes: collectRegionCodesFromServicesForCreator(creator, services),
+    destinationSlugs: collectDestinationSlugsFromServicesForCreator(creator, services),
     about: normalizeArray(creator && creator.about).map((item) => normalizeText(item)).filter(Boolean),
     reviews: sanitizeReviewList(creator && creator.reviews),
+    access: getCreatorAccess(creator, adminUser),
     createdAt: normalizeNumber(creator && creator.createdAt),
     updatedAt: normalizeNumber(creator && creator.updatedAt)
   };
 }
 
-function mapDestinationDetailRecord(destination) {
+function mapDestinationDetailRecord(destination, adminUser) {
   const regionCode = resolveDestinationRegionCode(destination && destination.regionCode, destination && destination.slug);
   return {
     _id: normalizeText(destination && destination._id),
@@ -2933,12 +4349,13 @@ function mapDestinationDetailRecord(destination) {
     cover: getImageAssetOriginal(destination && destination.cover),
     description: normalizeText(destination && destination.description),
     descriptionDetail: normalizeText(destination && destination.descriptionDetail),
+    access: getDestinationAccess(destination, adminUser),
     createdAt: normalizeNumber(destination && destination.createdAt),
     updatedAt: normalizeNumber(destination && destination.updatedAt)
   };
 }
 
-function mapIdeaDetailRecord(idea, authorNameMap) {
+function mapIdeaDetailRecord(idea, authorNameMap, adminUser) {
   const ideaTheme = normalizeIdeaTheme(
     idea && idea.themeKey,
     normalizeText(idea && idea.themeLabel) || normalizeText(idea && idea.theme),
@@ -2960,6 +4377,7 @@ function mapIdeaDetailRecord(idea, authorNameMap) {
     cover: getImageAssetOriginal(idea && idea.cover),
     authorId: normalizeText(idea && idea.authorId),
     authorName: authorNameMap[normalizeText(idea && idea.authorId)] || "",
+    regionCodes: normalizeServiceRegionCodes(idea && idea.regionCodes),
     destinationSlugs: uniqueStrings(idea && idea.destinationSlugs),
     relatedServiceSlugs: uniqueStrings(idea && idea.relatedServiceSlugs),
     body: normalizeText(idea && idea.body),
@@ -2970,12 +4388,13 @@ function mapIdeaDetailRecord(idea, authorNameMap) {
     publishedAt: normalizeNumber(idea && idea.publishedAt),
     readMoreText: normalizeText(idea && idea.readMoreText) || DEFAULT_IDEA_READ_MORE_TEXT,
     syncStatus: normalizeText(idea && idea.syncStatus) || "draft",
+    access: getIdeaAccess(idea, adminUser),
     createdAt: normalizeNumber(idea && idea.createdAt),
     updatedAt: normalizeNumber(idea && idea.updatedAt)
   };
 }
 
-function mapServicePeriodRecord(record, soldCount = resolvePeriodSoldCount(record)) {
+function mapServicePeriodRecord(record, soldCount = resolvePeriodSoldCount(record), service, adminUser) {
   const normalizedSoldCount = Math.max(0, soldCount);
   const totalSeats = resolvePeriodTotalSeats(record, normalizedSoldCount);
   const remainingSeats = resolvePeriodRemainingSeats(record, normalizedSoldCount);
@@ -2998,9 +4417,13 @@ function mapServicePeriodRecord(record, soldCount = resolvePeriodSoldCount(recor
     price: normalizeNumber(record && record.price),
     minGroup: normalizeNumber(record && record.minGroup, 1),
     totalSeats,
+    singleRoomEnabled: normalizeBoolean(record && record.singleRoomEnabled),
+    singleRoomPrice: Math.max(0, normalizeNumber(record && (record.singleRoomPriceDec || record.singleRoomPrice), 0)),
+    singleRoomNotice: normalizeText(record && record.singleRoomNotice),
     soldCount: normalizedSoldCount,
     remainingSeats,
     status,
+    access: getServicePeriodAccess(service, adminUser),
     createdAt: normalizeNumber(record && record.createdAt),
     updatedAt: normalizeNumber(record && record.updatedAt)
   };
@@ -3020,8 +4443,9 @@ async function getSoldCountByPeriodCode(periodCode) {
   return resolvePeriodSoldCount(rows[0], 0);
 }
 
-async function getSoldCountByPeriodCodeMap() {
-  const rows = await queryRows(
+async function getSoldCountByPeriodCodeMap(options = {}) {
+  const queryFn = options.bestEffort ? queryRowsBestEffort : queryRows;
+  const rows = await queryFn(
     "SELECT `servicePeriodCode`, SUM(COALESCE(`peopleCountInt`, `peopleCount`, 0)) AS `soldCount` FROM `TravelOrder` WHERE COALESCE(`status`, '') <> 'canceled' GROUP BY `servicePeriodCode`"
   );
 
@@ -3036,8 +4460,9 @@ async function getSoldCountByPeriodCodeMap() {
   }, {});
 }
 
-async function getPeriodStatsMap() {
-  const rows = await queryRows(
+async function getPeriodStatsMap(options = {}) {
+  const queryFn = options.bestEffort ? queryRowsBestEffort : queryRows;
+  const rows = await queryFn(
     "SELECT `serviceSlug`, COUNT(*) AS `periodCount`, MIN(`dateStart`) AS `nextDate`, SUM(`remainingSeats`) AS `remainingSeats` FROM `ServicePeriod` GROUP BY `serviceSlug`"
   );
 
@@ -3056,8 +4481,9 @@ async function getPeriodStatsMap() {
   }, {});
 }
 
-async function getOrderStatsMap() {
-  const rows = await queryRows(
+async function getOrderStatsMap(options = {}) {
+  const queryFn = options.bestEffort ? queryRowsBestEffort : queryRows;
+  const rows = await queryFn(
     "SELECT `serviceSlug`, SUM(COALESCE(`peopleCountInt`, `peopleCount`, 0)) AS `soldSeats` FROM `TravelOrder` WHERE COALESCE(`status`, '') <> 'canceled' GROUP BY `serviceSlug`"
   );
 
@@ -3101,6 +4527,43 @@ async function generateServicePeriodCode(serviceSlug, dateStart) {
 function buildStatusTag(record) {
   const status = normalizeText(record && record.status) || "active";
   return status === "inactive" ? "inactive" : status;
+}
+
+function buildPublicUrlFromCloudFileId(fileID) {
+  const normalized = normalizeText(fileID);
+  const matched = normalized.match(/^cloud:\/\/[^/]+\.([^/]+)\/(.+)$/);
+  if (!matched) {
+    return "";
+  }
+
+  const bucket = normalizeText(matched[1]);
+  const filePath = normalizeText(matched[2]);
+  if (!bucket || !filePath) {
+    return "";
+  }
+
+  return `https://${bucket}.tcb.qcloud.la/${filePath}`;
+}
+
+async function resolveImagePreviewUrl(value) {
+  const source = getImageAssetOriginal(value);
+  if (!source) {
+    return "";
+  }
+
+  if (!isImageCloudFileId(source)) {
+    return source;
+  }
+
+  try {
+    const result = await cloud.getTempFileURL({
+      fileList: [source]
+    });
+    const file = normalizeArray(result && result.fileList)[0];
+    return normalizeText(file && file.tempFileURL) || buildPublicUrlFromCloudFileId(source);
+  } catch (error) {
+    return buildPublicUrlFromCloudFileId(source);
+  }
 }
 
 function formatDateInTimeZone(value, timeZone) {
@@ -3157,6 +4620,8 @@ function formatDashboardStatusLabel(status) {
       return "已支付";
     case "traveling":
       return "进行中";
+    case "completed":
+      return "已完成";
     case "canceled":
       return "已取消";
     default:
@@ -3220,7 +4685,8 @@ function summarizeServicePendingSections(service) {
   if (
     !normalizeText(service && service.name)
     || !normalizeText(service && service.creatorId)
-    || !uniqueStrings(service && service.destinationSlugs).length
+    || !resolveServiceCreatorMessage(service, rawTravelDetail)
+    || !normalizeServiceRegionCodes(service && service.regionCodes).length
     || !tags.length
   ) {
     missingSections.push("路线信息");
@@ -3300,6 +4766,90 @@ function listCreatorRefs(creator) {
   return [id, slug, slug ? `creator-${slug}` : ""].filter(Boolean);
 }
 
+function resolveCreatorRefs(reference, creators) {
+  const normalizedReference = normalizeText(reference);
+  if (!normalizedReference) {
+    return [];
+  }
+
+  const matchedCreator = normalizeArray(creators).find((creator) => listCreatorRefs(creator).includes(normalizedReference)) || null;
+  return matchedCreator ? listCreatorRefs(matchedCreator) : [normalizedReference];
+}
+
+function resolveMineScopeCreatorRefs(payload, adminUser, creators) {
+  if (normalizeText(payload && payload.scope) !== "mine") {
+    return null;
+  }
+
+  return resolveCreatorRefs(getCreatorPortalBoundCreatorId(adminUser), creators);
+}
+
+function isBoundCreatorRecord(creator, adminUser) {
+  const boundCreatorId = getCreatorPortalBoundCreatorId(adminUser);
+  return Boolean(boundCreatorId && listCreatorRefs(creator).includes(boundCreatorId));
+}
+
+function getServiceAccess(service, adminUser) {
+  const canEdit = canEditOwnedContent(service, adminUser, "services:write", "services:write:owned");
+  return buildContentAccess(canEdit, canEdit);
+}
+
+function getCreatorAccess(creator, adminUser) {
+  const canEditSelf = hasAdminPermission(adminUser, "creators:write")
+    ? true
+    : (hasAdminPermission(adminUser, "creators:write:self") && isBoundCreatorRecord(creator, adminUser));
+  return buildContentAccess(
+    canEditSelf,
+    hasAdminPermission(adminUser, "creators:write"),
+    { canEditSelf }
+  );
+}
+
+function getDestinationAccess(destination, adminUser) {
+  const canEdit = canEditOwnedContent(destination, adminUser, "destinations:write", "destinations:write:owned");
+  return buildContentAccess(canEdit, canEdit);
+}
+
+function getIdeaAccess(idea, adminUser) {
+  const canEdit = canEditOwnedContent(idea, adminUser, "ideas:write", "ideas:write:owned");
+  return buildContentAccess(canEdit, canEdit);
+}
+
+function canManageServicePeriodsForService(service, adminUser) {
+  return canEditOwnedContent(service, adminUser, "periods:write", "periods:write:owned");
+}
+
+function getServicePeriodAccess(service, adminUser) {
+  const canEdit = service ? canManageServicePeriodsForService(service, adminUser) : hasAdminPermission(adminUser, "periods:write");
+  return buildContentAccess(canEdit, canEdit);
+}
+
+function assertOwnedContentMutation(record, adminUser, fullPermission, ownedPermission, message) {
+  assertCondition(
+    canEditOwnedContent(record, adminUser, fullPermission, ownedPermission),
+    message
+  );
+}
+
+async function findCreatorByReference(reference, existingCreators) {
+  const normalizedReference = normalizeText(reference);
+  if (!normalizedReference) {
+    return null;
+  }
+
+  const creators = Array.isArray(existingCreators) ? existingCreators : await listCollection(COLLECTIONS.creators);
+  return normalizeArray(creators).find((creator) => listCreatorRefs(creator).includes(normalizedReference)) || null;
+}
+
+async function resolveBoundCreator(adminUser) {
+  const boundCreatorId = getCreatorPortalBoundCreatorId(adminUser);
+  if (!boundCreatorId) {
+    return null;
+  }
+
+  return findCreatorByReference(boundCreatorId);
+}
+
 function collectDestinationSlugsFromServicesForCreator(creator, services) {
   const refs = listCreatorRefs(creator);
   const collected = [];
@@ -3313,15 +4863,41 @@ function collectDestinationSlugsFromServicesForCreator(creator, services) {
   return uniqueStrings(collected);
 }
 
+function collectRegionCodesFromServicesForCreator(creator, services) {
+  const refs = listCreatorRefs(creator);
+  const collected = [];
+
+  normalizeArray(services).forEach((service) => {
+    if (refs.includes(normalizeText(service.creatorId))) {
+      collected.push(...normalizeServiceRegionCodes(service && service.regionCodes));
+    }
+  });
+
+  return uniqueStrings(collected);
+}
+
+function collectDestinationSlugsForCreatorScope(creator, services) {
+  if (!creator) {
+    return [];
+  }
+
+  return uniqueStrings(
+    normalizeArray(creator.destinationSlugs).concat(
+      collectDestinationSlugsFromServicesForCreator(creator, services)
+    )
+  );
+}
+
 async function syncCreatorDestinationSlugsForServiceCreatorId(creatorIdField, adminUser) {
   const creatorId = normalizeText(creatorIdField);
   if (!creatorId) {
     return;
   }
 
-  const [creators, services] = await Promise.all([
+  const [creators, services, ideas] = await Promise.all([
     listCollection(COLLECTIONS.creators),
-    listCollection(COLLECTIONS.services)
+    listCollection(COLLECTIONS.services),
+    listCollection(COLLECTIONS.ideas)
   ]);
 
   const creator = creators.find((item) => listCreatorRefs(item).includes(creatorId));
@@ -3330,11 +4906,13 @@ async function syncCreatorDestinationSlugsForServiceCreatorId(creatorIdField, ad
   }
 
   const destinationSlugs = collectDestinationSlugsFromServicesForCreator(creator, services);
+  const regionCodes = collectRegionCodesFromServicesForCreator(creator, services);
   const now = Date.now();
   const operatorId = normalizeText(adminUser && (adminUser.uid || adminUser.id));
 
   await db.collection(COLLECTIONS.creators).doc(creator._id).update({
     data: {
+      regionCodes,
       destinationSlugs,
       updatedAt: now,
       ...(operatorId ? { updatedBy: operatorId } : {})
@@ -3342,21 +4920,27 @@ async function syncCreatorDestinationSlugsForServiceCreatorId(creatorIdField, ad
   });
 }
 
-async function getDashboardSummary() {
+async function getDashboardSummary(adminUser) {
   const todayDateKey = getShanghaiTodayDateString();
   const upcomingDateKey = addDaysToDateString(todayDateKey, DASHBOARD_UPCOMING_DAYS - 1);
-  const [services, servicePeriodRows, orderRows] =
+  const [services, creators, servicePeriodRows, orderRows] =
     await Promise.all([
       listCollection(COLLECTIONS.services),
+      listCollection(COLLECTIONS.creators),
       queryRows(
-        "SELECT `serviceSlug`, `serviceName`, `periodCode`, `versionName`, `dateStart`, `remainingSeats`, `minGroup`, `status` FROM `ServicePeriod` ORDER BY `dateStart` ASC LIMIT 1000"
+        "SELECT `serviceSlug`, `serviceName`, `periodCode`, `versionName`, `dateStart`, `remainingSeats`, `minGroup`, `status`, `creatorId` FROM `ServicePeriod` ORDER BY `dateStart` ASC LIMIT 1000"
       ),
       queryRows(
-        "SELECT `orderNo`, `serviceSlug`, `serviceName`, `travelDateStart`, `status`, `versionName`, `peopleCountInt`, `createdAtTs`, `paidAtTs`, `amount`, `amountDec`, `payable`, `payableDec`, `updatedAt` FROM `TravelOrder` ORDER BY COALESCE(`updatedAt`, `createdAtTs`) DESC LIMIT 1000"
+        "SELECT `orderNo`, `serviceSlug`, `serviceName`, `travelDateStart`, `status`, `versionName`, `peopleCountInt`, `createdAtTs`, `paidAtTs`, `amount`, `amountDec`, `payable`, `payableDec`, `updatedAt`, `creatorSnapshotJson`, `serviceSnapshotJson` FROM `TravelOrder` ORDER BY COALESCE(`updatedAt`, `createdAtTs`) DESC LIMIT 1000"
       )
     ]);
-  const activeServices = services.filter((item) => buildStatusTag(item) !== "inactive").length;
-  const incompleteServices = services
+  const creatorRefSet = buildAdminCreatorRefSet(adminUser, creators);
+  const serviceMap = buildServiceMap(services);
+  const visibleServices = normalizeArray(services).filter((service) => canAccessServiceForAdmin(service, adminUser, creatorRefSet));
+  const visibleServicePeriods = normalizeArray(servicePeriodRows).filter((row) => canAccessServicePeriodForAdmin(row, adminUser, creatorRefSet, serviceMap));
+  const visibleOrderRows = filterOrderRowsForAdmin(orderRows, adminUser, creatorRefSet, serviceMap);
+  const activeServices = visibleServices.filter((item) => buildStatusTag(item) !== "inactive").length;
+  const incompleteServices = visibleServices
     .map((service) => {
       const pendingSummary = summarizeServicePendingSections(service);
       return {
@@ -3370,7 +4954,7 @@ async function getDashboardSummary() {
     })
     .filter((item) => item.pendingSectionCount > 0)
     .sort((left, right) => right.pendingSectionCount - left.pendingSectionCount || left.title.localeCompare(right.title, "zh-CN"));
-  const upcomingPeriods = normalizeArray(servicePeriodRows)
+  const upcomingPeriods = visibleServicePeriods
     .map((row) => ({
       key: normalizeText(row && row.periodCode),
       title: normalizeText(row && row.serviceName) || normalizeText(row && row.serviceSlug) || normalizeText(row && row.periodCode),
@@ -3380,7 +4964,7 @@ async function getDashboardSummary() {
     }))
     .filter((item) => item.dateStart >= todayDateKey && item.dateStart <= upcomingDateKey && isDashboardVisiblePeriodStatus(item.status))
     .sort((left, right) => left.dateStart.localeCompare(right.dateStart));
-  const pendingOrders = normalizeArray(orderRows)
+  const pendingOrders = visibleOrderRows
     .filter((row) => normalizeText(row && row.status) === "pending")
     .map((row) => ({
       key: normalizeText(row && row.orderNo),
@@ -3389,7 +4973,7 @@ async function getDashboardSummary() {
       updatedAtTs: normalizeNumber(row && row.updatedAt, normalizeNumber(row && row.createdAtTs, 0))
     }))
     .sort((left, right) => right.updatedAtTs - left.updatedAtTs);
-  const inventoryAlerts = normalizeArray(servicePeriodRows)
+  const inventoryAlerts = visibleServicePeriods
     .filter((row) => {
       const dateStart = normalizeText(row && row.dateStart);
       const remainingSeats = normalizeNumber(row && row.remainingSeats, 0);
@@ -3438,21 +5022,26 @@ async function getDashboardSummary() {
         items: inventoryAlerts.slice(0, DASHBOARD_PREVIEW_LIMIT)
       }
     ],
-    trends: buildDashboardTrend(orderRows, todayDateKey)
+    trends: buildDashboardTrend(visibleOrderRows, todayDateKey)
   };
 }
 
-async function listServices(payload) {
+async function listServices(payload, adminUser) {
+  assertAdminPermission(adminUser, "services:read");
   const keyword = normalizeText(payload && payload.keyword).toLowerCase();
   const status = normalizeText(payload && payload.status).toLowerCase();
   const tag = normalizeText(payload && payload.tag);
+  const serviceSlug = normalizeText(payload && payload.serviceSlug);
+  const creatorSlug = normalizeText(payload && payload.creatorSlug);
+  const completion = normalizeText(payload && payload.completion);
   const limit = clampLimit(payload && payload.limit);
-  const [services, creators, periodStatsMap, orderStatsMap] = await Promise.all([
+  const shouldPage = shouldReturnPagedResult(payload);
+  const [services, creators, periodStatsMap] = await Promise.all([
     listCollection(COLLECTIONS.services),
     listCollection(COLLECTIONS.creators),
-    getPeriodStatsMap(),
-    getOrderStatsMap()
+    shouldPage ? getPeriodStatsMap({ bestEffort: true }) : Promise.resolve({})
   ]);
+  const orderStatsMap = {};
   const creatorNameMap = creators.reduce((map, creator) => {
     const id = normalizeText(creator && creator.id);
     const slug = normalizeText(creator && creator.slug);
@@ -3466,15 +5055,30 @@ async function listServices(payload) {
     }
     return map;
   }, {});
+  const creatorRefs = resolveCreatorRefs(creatorSlug, creators);
+  const mineCreatorRefs = resolveMineScopeCreatorRefs(payload, adminUser, creators);
+  const activeCreatorRefs = Array.isArray(mineCreatorRefs) ? mineCreatorRefs : creatorRefs;
 
-  return services
+  const items = services
+    .map((service) => buildServiceSummary(service, creatorNameMap, periodStatsMap, orderStatsMap, adminUser))
     .filter((service) => {
-      const serviceStatus = buildStatusTag(service).toLowerCase();
-      const serviceTags = getServiceRouteTags(service);
-      if (status && status !== serviceStatus) {
+      const serviceStatus = normalizeText(service.status).toLowerCase();
+      if (serviceSlug && normalizeText(service.slug) !== serviceSlug) {
         return false;
       }
-      if (tag && !serviceTags.includes(tag)) {
+      if (status && status !== "all" && status !== serviceStatus) {
+        return false;
+      }
+      if (tag && !normalizeArray(service.tags).includes(tag)) {
+        return false;
+      }
+      if (activeCreatorRefs.length && !activeCreatorRefs.includes(normalizeText(service.creatorId))) {
+        return false;
+      }
+      if (Array.isArray(mineCreatorRefs) && !activeCreatorRefs.length) {
+        return false;
+      }
+      if (completion === "incomplete" && normalizeNumber(service.pendingSectionCount) <= 0) {
         return false;
       }
 
@@ -3484,17 +5088,45 @@ async function listServices(payload) {
           service.slug,
           service.summary,
           service.type,
-          creatorNameMap[normalizeText(service.creatorId)],
-          serviceTags.join(" ")
+          service.creatorName,
+          normalizeArray(service.tags).join(" ")
         ],
         keyword
       );
-    })
-    .slice(0, limit)
-    .map((service) => buildServiceSummary(service, creatorNameMap, periodStatsMap, orderStatsMap));
+    });
+
+  if (shouldPage) {
+    return buildPagedResult(items, payload, {
+      defaultPageSize: 10,
+      defaultSortBy: "updatedAt",
+      defaultSortDirection: "desc",
+      getSortValue: (item, sortBy) => {
+        switch (sortBy) {
+          case "name":
+            return item.name;
+          case "creatorName":
+            return item.creatorName;
+          case "periodCount":
+            return item.periodCount;
+          case "remainingSeats":
+            return item.remainingSeats;
+          case "updatedAt":
+            return item.updatedAt;
+          case "status":
+            return item.status;
+          default:
+            return item.updatedAt;
+        }
+      },
+      getItemKey: (item) => item.id || item.slug
+    });
+  }
+
+  return items.slice(0, limit);
 }
 
-async function getServiceDetail(payload) {
+async function getServiceDetail(payload, adminUser) {
+  assertAdminPermission(adminUser, "services:read");
   const service = await findServiceDoc(payload);
   assertCondition(service, "未找到对应路线");
 
@@ -3507,11 +5139,24 @@ async function getServiceDetail(payload) {
     return map;
   }, {});
 
-  return mapServiceDetailRecord(service, creatorNameMap);
+  return mapServiceDetailRecord(service, creatorNameMap, adminUser);
 }
 
 async function saveService(payload, adminUser) {
+  assertCondition(
+    hasAdminPermission(adminUser, "services:write") || hasAdminPermission(adminUser, "services:write:owned"),
+    "当前账号没有编辑路线的权限"
+  );
   const existing = payload && payload._id ? await findServiceDocById(payload._id) : null;
+  if (existing) {
+    assertOwnedContentMutation(
+      existing,
+      adminUser,
+      "services:write",
+      "services:write:owned",
+      "当前账号只能编辑自己新建的路线"
+    );
+  }
   const previousCreatorId = existing ? normalizeText(existing.creatorId) : "";
   const name = normalizeText(payload && payload.name);
   const type = normalizeServiceType(
@@ -3550,13 +5195,22 @@ async function saveService(payload, adminUser) {
 
   const preparedSave = await copyDraftServiceAssetsForSave(payload, slug);
   const normalizedPayload = await normalizeServiceImagePayload(preparedSave.payload, slug);
+  const creators = await listCollection(COLLECTIONS.creators);
+  const matchedCreator = isCreatorPortalUser(adminUser)
+    ? await resolveBoundCreator(adminUser)
+    : creators.find((creator) => listCreatorRefs(creator).includes(normalizeText(normalizedPayload && normalizedPayload.creatorId)));
+  assertCondition(matchedCreator, "请选择已存在的创作者");
 
   const now = Date.now();
   const logicalId = existing ? normalizeText(existing.id) : (normalizeText(normalizedPayload && normalizedPayload.id) || createServiceLogicalId(slug));
   const creatorRoles = uniqueStrings(normalizedPayload && normalizedPayload.creatorRoles);
+  const creatorMessage = normalizeText(normalizedPayload && normalizedPayload.creatorMessage);
+  const regionCodes = normalizeServiceRegionCodes(normalizedPayload && normalizedPayload.regionCodes);
   const routeTags = normalizeRouteTags(normalizedPayload && normalizedPayload.tags, existing ? getServiceRouteTags(existing) : []);
+  assertCondition(regionCodes.length >= 1, "请至少选择 1 个路线区域");
   assertCondition(routeTags.length >= 1, "请至少选择 1 个路线标签");
   assertCondition(routeTags.length <= 3, "路线标签最多选择 3 个");
+  assertCondition(creatorMessage, "请填写创作者的话");
   const nextDoc = {
     id: logicalId,
     slug,
@@ -3565,8 +5219,10 @@ async function saveService(payload, adminUser) {
     galleryGroups: sanitizeServiceGalleryGroups(normalizedPayload && normalizedPayload.galleryGroups, normalizedPayload && normalizedPayload.gallery),
     type,
     name,
-    creatorId: normalizeText(normalizedPayload && normalizedPayload.creatorId),
+    creatorId: normalizeText(matchedCreator && matchedCreator.id) || normalizeText(normalizedPayload && normalizedPayload.creatorId),
     creatorRoles: creatorRoles.length ? creatorRoles : getDefaultCreatorRoles(type),
+    creatorMessage,
+    regionCodes,
     destinationSlugs: uniqueStrings(normalizedPayload && normalizedPayload.destinationSlugs),
     summary: normalizeText(normalizedPayload && normalizedPayload.summary),
     tags: routeTags,
@@ -3592,7 +5248,7 @@ async function saveService(payload, adminUser) {
     if (nextDoc.status === "inactive") {
       await deactivateServicePeriodsByServiceSlug(slug);
     }
-    const detail = await getServiceDetail({ _id: createResult && createResult._id });
+    const detail = await getServiceDetail({ _id: createResult && createResult._id }, adminUser);
     await deleteServiceAssetFiles(preparedSave.migratedSourceRefs);
     await syncCreatorDestinationSlugsForServiceCreatorId(nextDoc.creatorId, adminUser);
     return detail;
@@ -3608,7 +5264,7 @@ async function saveService(payload, adminUser) {
   if (nextDoc.status === "inactive") {
     await deactivateServicePeriodsByServiceSlug(slug);
   }
-  const detail = await getServiceDetail({ _id: existing._id });
+  const detail = await getServiceDetail({ _id: existing._id }, adminUser);
   await deleteServiceAssetFiles(preparedSave.migratedSourceRefs.concat(getRemovedServiceAssetRefs(existing, nextDoc)));
   await syncCreatorDestinationSlugsForServiceCreatorId(nextDoc.creatorId, adminUser);
   if (previousCreatorId && previousCreatorId !== normalizeText(nextDoc.creatorId)) {
@@ -3690,8 +5346,19 @@ function collectIdeaAssetRefs(source) {
 }
 
 async function deleteService(payload, adminUser) {
+  assertCondition(
+    hasAdminPermission(adminUser, "services:write") || hasAdminPermission(adminUser, "services:write:owned"),
+    "当前账号没有删除路线的权限"
+  );
   const existing = await findServiceDoc(payload);
   assertCondition(existing, "未找到对应路线");
+  assertOwnedContentMutation(
+    existing,
+    adminUser,
+    "services:write",
+    "services:write:owned",
+    "当前账号只能删除自己新建的路线"
+  );
 
   const serviceCreatorId = normalizeText(existing.creatorId);
   const serviceSlug = normalizeText(existing.slug);
@@ -3722,14 +5389,24 @@ async function deleteService(payload, adminUser) {
   };
 }
 
-async function getCreatorDetail(payload) {
+async function getCreatorDetail(payload, adminUser) {
+  assertAdminPermission(adminUser, "creators:read");
   const creator = await findContentDoc(COLLECTIONS.creators, payload);
   assertCondition(creator, "未找到对应创作者");
-  return mapCreatorDetailRecord(creator);
+  const services = await listCollection(COLLECTIONS.services);
+  return mapCreatorDetailRecord(creator, services, adminUser);
 }
 
 async function saveCreator(payload, adminUser) {
+  assertCondition(
+    hasAdminPermission(adminUser, "creators:write") || hasAdminPermission(adminUser, "creators:write:self"),
+    "当前账号没有编辑创作者的权限"
+  );
   const existing = await findContentDoc(COLLECTIONS.creators, payload);
+  if (isCreatorPortalUser(adminUser)) {
+    assertCondition(existing, "创作者后台账号只能编辑已绑定的创作者资料");
+    assertCondition(isBoundCreatorRecord(existing, adminUser), "当前账号只能编辑自己的创作者资料");
+  }
   const requestedSlug = normalizeText(payload && payload.slug).toLowerCase();
   const name = normalizeText(payload && payload.name);
   const slug = existing
@@ -3757,10 +5434,6 @@ async function saveCreator(payload, adminUser) {
     assertCondition(!duplicatedId, "该创作者 ID 已存在");
   }
 
-  const creatorTags = normalizeCreatorTags(payload && payload.tags, existing && existing.tags);
-  assertCondition(creatorTags.length >= 1, "请至少选择 1 个创作者标签");
-  assertCondition(creatorTags.length <= 2, "创作者标签最多选择 2 个");
-
   const operatorId = normalizeText(adminUser && (adminUser.uid || adminUser.id));
   const now = Date.now();
   const normalizedPayload = await normalizeCreatorImagePayload(payload, slug);
@@ -3769,13 +5442,14 @@ async function saveCreator(payload, adminUser) {
     id: existing ? normalizeText(existing.id) : (normalizeText(payload && payload.id) || createCreatorLogicalId(slug)),
     slug
   };
+  const regionCodes = collectRegionCodesFromServicesForCreator(creatorForDestinationAggregation, services);
   const nextDoc = {
     id: existing ? normalizeText(existing.id) : (normalizeText(payload && payload.id) || createCreatorLogicalId(slug)),
     slug,
     name,
     avatar: getImageAssetOriginal(normalizedPayload && normalizedPayload.avatar),
     stance: normalizeText(payload && payload.stance),
-    tags: creatorTags,
+    regionCodes,
     destinationSlugs: collectDestinationSlugsFromServicesForCreator(creatorForDestinationAggregation, services),
     about: normalizeArray(payload && payload.about).map((item) => normalizeText(item)).filter(Boolean),
     reviews: sanitizeReviewList(payload && payload.reviews),
@@ -3788,14 +5462,20 @@ async function saveCreator(payload, adminUser) {
     nextDoc.createdAt = now;
     nextDoc.createdBy = operatorId;
     const createResult = await db.collection(COLLECTIONS.creators).add({ data: nextDoc });
-    return getCreatorDetail({ _id: createResult && createResult._id });
+    return getCreatorDetail({ _id: createResult && createResult._id }, adminUser);
   }
 
-  await db.collection(COLLECTIONS.creators).doc(existing._id).update({ data: nextDoc });
-  return getCreatorDetail({ _id: existing._id });
+  await db.collection(COLLECTIONS.creators).doc(existing._id).update({
+    data: {
+      ...nextDoc,
+      tags: _.remove()
+    }
+  });
+  return getCreatorDetail({ _id: existing._id }, adminUser);
 }
 
 async function deleteCreator(payload, adminUser) {
+  assertAdminPermission(adminUser, "creators:write");
   const existing = await findContentDoc(COLLECTIONS.creators, payload);
   assertCondition(existing, "未找到对应创作者");
 
@@ -3821,14 +5501,1311 @@ async function deleteCreator(payload, adminUser) {
   };
 }
 
-async function getDestinationDetail(payload) {
+function normalizeCreatorRegistrationAbout(value) {
+  return normalizeArray(value)
+    .map((item) => normalizeText(item))
+    .filter(Boolean);
+}
+
+function normalizeCreatorRegistrationDoc(doc) {
+  if (!doc) {
+    return null;
+  }
+
+  const registrationId = normalizeText(doc._id || doc.registrationId);
+  return {
+    _id: registrationId,
+    registrationId,
+    authUserId: normalizeText(doc.authUserId),
+    authEmail: normalizeEmail(doc.authEmail),
+    contactEmail: normalizeEmail(doc.contactEmail),
+    applicantName: normalizeText(doc.applicantName),
+    phone: normalizeText(doc.phone),
+    gender: normalizeText(doc.gender),
+    birthday: normalizeText(doc.birthday),
+    documentType: normalizeText(doc.documentType),
+    documentNumber: normalizeText(doc.documentNumber),
+    wechat: normalizeText(doc.wechat),
+    avatar: normalizeText(doc.avatar),
+    stance: normalizeText(doc.stance),
+    about: normalizeCreatorRegistrationAbout(doc.about),
+    status: normalizeText(doc.status) || "draft",
+    rejectionReason: normalizeText(doc.rejectionReason),
+    linkedCreatorId: normalizeText(doc.linkedCreatorId),
+    linkedCreatorSlug: normalizeText(doc.linkedCreatorSlug),
+    accessProvisionStatus: CREATOR_REGISTRATION_ACCESS_PROVISION_STATUSES.has(normalizeText(doc.accessProvisionStatus))
+      ? normalizeText(doc.accessProvisionStatus)
+      : "pending",
+    linkedAdminAccountId: normalizeText(doc.linkedAdminAccountId),
+    linkedAdminUsername: normalizeText(doc.linkedAdminUsername),
+    linkedAdminDisplayName: normalizeText(doc.linkedAdminDisplayName),
+    activationTokenHash: normalizeText(doc.activationTokenHash),
+    activationExpiresAt: normalizeNumber(doc.activationExpiresAt, 0),
+    activationConsumedAt: normalizeNumber(doc.activationConsumedAt, 0),
+    activationEmailStatus: CREATOR_REGISTRATION_ACTIVATION_EMAIL_STATUSES.has(normalizeText(doc.activationEmailStatus))
+      ? normalizeText(doc.activationEmailStatus)
+      : "pending",
+    activationEmailSentAt: normalizeNumber(doc.activationEmailSentAt, 0),
+    activationEmailError: normalizeText(doc.activationEmailError),
+    accessProvisionError: normalizeText(doc.accessProvisionError),
+    approvalEmailStatus: APPROVAL_EMAIL_STATUSES.has(normalizeText(doc.approvalEmailStatus))
+      ? normalizeText(doc.approvalEmailStatus)
+      : "pending",
+    approvalEmailSentAt: normalizeNumber(doc.approvalEmailSentAt, 0),
+    approvalEmailError: normalizeText(doc.approvalEmailError),
+    submittedAt: normalizeNumber(doc.submittedAt, 0),
+    reviewedAt: normalizeNumber(doc.reviewedAt, 0),
+    reviewedBy: normalizeText(doc.reviewedBy),
+    createdAt: normalizeNumber(doc.createdAt, 0),
+    updatedAt: normalizeNumber(doc.updatedAt, 0)
+  };
+}
+
+function normalizeCreatorRegistrationDetail(doc) {
+  return normalizeCreatorRegistrationDoc(doc);
+}
+
+function looksLikeOpaqueIdentifier(value) {
+  return /^\d{8,}$/.test(String(value || "").trim()) || /^[A-Za-z0-9_-]{24,}$/.test(String(value || "").trim());
+}
+
+function getMeaningfulAdminAccountLabel(account) {
+  const candidates = [
+    normalizeText(account && account.username),
+    normalizeText(account && account.displayName),
+    normalizeText(account && account.email),
+    normalizeText(account && account.phone)
+  ].filter(Boolean);
+
+  return candidates.find((value) => !looksLikeOpaqueIdentifier(value)) || candidates[0] || "";
+}
+
+function findLinkedAdminAccountForRegistration(detail, accounts) {
+  const linkedAccountId = normalizeText(detail && detail.linkedAdminAccountId);
+  const authUserId = normalizeText(detail && detail.authUserId);
+  const authEmail = normalizeEmail(detail && detail.authEmail);
+
+  return normalizeArray(accounts).find((account) => (
+    normalizeText(account && account._id) === linkedAccountId
+    || (authUserId && normalizeText(account && account.uid) === authUserId)
+    || (authEmail && normalizeEmail(account && account.email) === authEmail)
+  )) || null;
+}
+
+function enrichCreatorRegistrationAdminAccount(detail, accounts) {
+  const linkedAccount = findLinkedAdminAccountForRegistration(detail, accounts);
+  if (!linkedAccount) {
+    return detail;
+  }
+
+  return Object.assign({}, detail, {
+    linkedAdminAccountId: normalizeText(linkedAccount._id) || detail.linkedAdminAccountId,
+    linkedAdminUsername: getMeaningfulAdminAccountLabel(linkedAccount),
+    linkedAdminDisplayName: normalizeText(linkedAccount.displayName)
+  });
+}
+
+async function hydrateCreatorRegistrationDetail(doc) {
+  const detail = normalizeCreatorRegistrationDetail(doc);
+  if (!detail) {
+    return detail;
+  }
+
+  const accounts = await listAdminAccountsData();
+  const hydrated = enrichCreatorRegistrationAdminAccount(detail, accounts);
+
+  return Object.assign({}, hydrated, {
+    avatarPreviewUrl: await resolveImagePreviewUrl(detail.avatar)
+  });
+}
+
+function buildCreatorRegistrationFailedAccessPatch(error) {
+  return {
+    accessProvisionStatus: "failed",
+    linkedAdminAccountId: "",
+    activationTokenHash: "",
+    activationExpiresAt: 0,
+    activationConsumedAt: 0,
+    activationEmailStatus: "pending",
+    activationEmailSentAt: 0,
+    activationEmailError: "",
+    accessProvisionError: normalizeText(error && error.message) || "创作者后台开通失败，请人工处理",
+    approvalEmailStatus: "pending",
+    approvalEmailSentAt: 0,
+    approvalEmailError: ""
+  };
+}
+
+async function getCreatorRegistrationDocById(registrationId) {
+  const normalizedRegistrationId = normalizeText(registrationId);
+  if (!normalizedRegistrationId) {
+    return null;
+  }
+
+  const byField = await findCollectionDocByField(COLLECTIONS.creatorRegistrations, "_id", normalizedRegistrationId);
+  if (byField) {
+    return byField;
+  }
+
+  try {
+    const result = await db.collection(COLLECTIONS.creatorRegistrations).doc(normalizedRegistrationId).get();
+    return result && result.data ? result.data : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function createCreatorFromRegistration(registration, adminUser) {
+  const linkedCreatorReference = normalizeText(registration && (registration.linkedCreatorId || registration.linkedCreatorSlug));
+  if (linkedCreatorReference) {
+    const existingCreator = await findCreatorByReference(linkedCreatorReference);
+    assertCondition(existingCreator, "申请已关联的创作者不存在");
+    return {
+      _id: normalizeText(existingCreator._id),
+      id: normalizeText(existingCreator.id),
+      slug: normalizeText(existingCreator.slug),
+      name: normalizeText(existingCreator.name)
+    };
+  }
+
+  const creatorName = normalizeText(registration && registration.applicantName);
+  assertCondition(creatorName, "申请缺少创作者名称");
+
+  const slug = await generateCreatorSlug(creatorName);
+  const logicalId = createCreatorLogicalId(slug);
+  const operatorId = normalizeText(adminUser && (adminUser.uid || adminUser.id));
+  const now = Date.now();
+  const nextDoc = {
+    id: logicalId,
+    slug,
+    name: creatorName,
+    avatar: getImageAssetOriginal(registration && registration.avatar),
+    stance: normalizeText(registration && registration.stance),
+    destinationSlugs: [],
+    about: normalizeCreatorRegistrationAbout(registration && registration.about),
+    reviews: [],
+    status: "active",
+    createdAt: now,
+    updatedAt: now,
+    createdBy: operatorId,
+    updatedBy: operatorId
+  };
+
+  const createResult = await db.collection(COLLECTIONS.creators).add({ data: nextDoc });
+  return {
+    _id: normalizeText(createResult && createResult._id),
+    id: logicalId,
+    slug,
+    name: creatorName
+  };
+}
+
+async function ensureApprovedCreatorActive(linkedCreator, adminUser) {
+  const creatorId = normalizeText(linkedCreator && linkedCreator._id);
+  if (!creatorId) {
+    return;
+  }
+
+  await db.collection(COLLECTIONS.creators).doc(creatorId).update({
+    data: {
+      status: "active",
+      updatedAt: Date.now(),
+      updatedBy: normalizeText(adminUser && (adminUser.uid || adminUser.id))
+    }
+  });
+}
+
+function buildCreatorRegistrationApprovalTransport() {
+  const host = normalizeText(process.env.CREATOR_APPROVAL_SMTP_HOST);
+  const user = normalizeText(process.env.CREATOR_APPROVAL_SMTP_USER);
+  const pass = normalizeText(process.env.CREATOR_APPROVAL_SMTP_PASS);
+  const sender = normalizeText(process.env.CREATOR_APPROVAL_SENDER);
+
+  assertCondition(
+    host && user && pass && sender,
+    "创作者审核通知邮件未配置"
+  );
+
+  return {
+    sender,
+    transporter: nodemailer.createTransport({
+      host,
+      port: normalizeNumber(process.env.CREATOR_APPROVAL_SMTP_PORT, 465),
+      secure: normalizeBoolean(process.env.CREATOR_APPROVAL_SMTP_SECURE || "true"),
+      auth: {
+        user,
+        pass
+      }
+    })
+  };
+}
+
+async function sendCreatorRegistrationApprovalEmail(registration) {
+  const { sender, transporter } = buildCreatorRegistrationApprovalTransport();
+  return transporter.sendMail(buildCreatorPortalEmailPayload({
+    registration,
+    linkedCreator: {
+      slug: normalizeText(registration && registration.linkedCreatorSlug),
+      id: normalizeText(registration && registration.linkedCreatorId),
+      name: normalizeText(registration && registration.applicantName)
+    },
+    sender,
+    creatorPortalHomeUrl: normalizeText(process.env.CREATOR_PORTAL_HOME_URL || process.env.YEZAIADMIN_LOGIN_URL),
+    normalizeText,
+    normalizeEmail,
+    assertCondition
+  }));
+}
+
+function summarizeEmailDelivery(delivery) {
+  return {
+    messageId: normalizeText(delivery && delivery.messageId),
+    accepted: normalizeArray(delivery && delivery.accepted).map(normalizeText).filter(Boolean),
+    rejected: normalizeArray(delivery && delivery.rejected).map(normalizeText).filter(Boolean),
+    pending: normalizeArray(delivery && delivery.pending).map(normalizeText).filter(Boolean),
+    response: normalizeText(delivery && delivery.response)
+  };
+}
+
+function assertEmailDeliveryAccepted(delivery) {
+  const summary = summarizeEmailDelivery(delivery);
+  assertCondition(
+    summary.rejected.length === 0,
+    `邮件服务器拒收：${summary.rejected.join(", ")}${summary.response ? `；${summary.response}` : ""}`
+  );
+  return summary;
+}
+
+async function deliverCreatorRegistrationApprovalEmail(registration) {
+  const sentAt = Date.now();
+
+  try {
+    const delivery = await sendCreatorRegistrationApprovalEmail(registration);
+    console.info("Creator registration approval email delivery", {
+      registrationId: normalizeText(registration && registration.registrationId),
+      to: normalizeEmail(registration && registration.contactEmail),
+      delivery: assertEmailDeliveryAccepted(delivery)
+    });
+    return {
+      approvalEmailStatus: "sent",
+      approvalEmailSentAt: sentAt,
+      approvalEmailError: ""
+    };
+  } catch (error) {
+    return {
+      approvalEmailStatus: "failed",
+      approvalEmailSentAt: 0,
+      approvalEmailError: normalizeText(error && error.message) || "邮件发送失败"
+    };
+  }
+}
+
+async function sendCreatorRegistrationRejectionEmail(registration) {
+  const { sender, transporter } = buildCreatorRegistrationApprovalTransport();
+  return transporter.sendMail(buildCreatorRejectionEmailPayload({
+    registration,
+    sender,
+    normalizeText,
+    normalizeEmail,
+    assertCondition
+  }));
+}
+
+async function deliverCreatorRegistrationRejectionEmail(registration) {
+  const sentAt = Date.now();
+
+  try {
+    const delivery = await sendCreatorRegistrationRejectionEmail(registration);
+    console.info("Creator registration rejection email delivery", {
+      registrationId: normalizeText(registration && registration.registrationId),
+      to: normalizeEmail(registration && registration.contactEmail),
+      delivery: assertEmailDeliveryAccepted(delivery)
+    });
+    return {
+      approvalEmailStatus: "sent",
+      approvalEmailSentAt: sentAt,
+      approvalEmailError: ""
+    };
+  } catch (error) {
+    return {
+      approvalEmailStatus: "failed",
+      approvalEmailSentAt: 0,
+      approvalEmailError: normalizeText(error && error.message) || "邮件发送失败"
+    };
+  }
+}
+
+async function sendCreatorRegistrationActivationEmail(payload) {
+  const { sender, transporter } = buildCreatorRegistrationApprovalTransport();
+
+  return transporter.sendMail(buildCreatorActivationEmailPayload({
+    registration: payload && payload.registration,
+    linkedCreator: payload && payload.linkedCreator,
+    token: normalizeText(payload && payload.token),
+    sender,
+    creatorPortalHomeUrl: normalizeText(process.env.CREATOR_PORTAL_HOME_URL || process.env.YEZAIADMIN_LOGIN_URL),
+    creatorActivationUrl: normalizeText(process.env.CREATOR_PORTAL_ACTIVATION_URL || process.env.YEZAIADMIN_ACTIVATION_URL),
+    normalizeText,
+    normalizeEmail,
+    assertCondition
+  }));
+}
+
+async function deliverCreatorRegistrationActivationEmail(payload) {
+  const sentAt = Date.now();
+
+  try {
+    const delivery = await sendCreatorRegistrationActivationEmail(payload);
+    const registration = payload && payload.registration;
+    console.info("Creator registration activation email delivery", {
+      registrationId: normalizeText(registration && registration.registrationId),
+      to: normalizeEmail(registration && registration.contactEmail),
+      delivery: assertEmailDeliveryAccepted(delivery)
+    });
+    return {
+      activationEmailStatus: "sent",
+      activationEmailSentAt: sentAt,
+      activationEmailError: ""
+    };
+  } catch (error) {
+    return {
+      activationEmailStatus: "failed",
+      activationEmailSentAt: 0,
+      activationEmailError: normalizeText(error && error.message) || "邮件发送失败"
+    };
+  }
+}
+
+function matchesCreatorRegistrationStatus(status, filter) {
+  const normalizedFilter = normalizeText(filter).toLowerCase();
+  if (!normalizedFilter || normalizedFilter === "all") {
+    return true;
+  }
+
+  return normalizeText(status).toLowerCase() === normalizedFilter;
+}
+
+function matchesCreatorRegistrationKeyword(doc, keyword) {
+  const normalizedKeyword = normalizeText(keyword).toLowerCase();
+  if (!normalizedKeyword) {
+    return true;
+  }
+
+  return matchesKeyword([
+    doc && doc.registrationId,
+    doc && doc.applicantName,
+    doc && doc.contactEmail,
+    doc && doc.authEmail,
+    doc && doc.phone,
+    doc && doc.stance,
+    doc && doc.linkedCreatorSlug,
+    doc && doc.linkedCreatorId
+  ], normalizedKeyword);
+}
+
+async function listCreatorRegistrations(payload, adminUser) {
+  assertAdminPermission(adminUser, "creator_registrations:read");
+  const keyword = normalizeText(payload && payload.keyword);
+  const status = normalizeText(payload && payload.status);
+  const adminAccounts = await listAdminAccountsData();
+  const registrations = normalizeArray(await listOptionalCollection(COLLECTIONS.creatorRegistrations))
+    .map(normalizeCreatorRegistrationDoc)
+    .map((item) => enrichCreatorRegistrationAdminAccount(item, adminAccounts))
+    .filter((item) => item && matchesCreatorRegistrationStatus(item.status, status) && matchesCreatorRegistrationKeyword(item, keyword));
+
+  if (shouldReturnPagedResult(payload)) {
+    return buildPagedResult(registrations, payload, {
+      defaultPageSize: 10,
+      defaultSortBy: "updatedAt",
+      defaultSortDirection: "desc",
+      getSortValue: (item, sortBy) => {
+        switch (sortBy) {
+          case "applicantName":
+            return item.applicantName;
+          case "contactEmail":
+            return item.contactEmail;
+          case "status":
+            return item.status;
+          case "submittedAt":
+            return item.submittedAt;
+          case "reviewedAt":
+            return item.reviewedAt;
+          case "updatedAt":
+          default:
+            return item.updatedAt;
+        }
+      },
+      getItemKey: (item) => item.registrationId
+    });
+  }
+
+  return registrations;
+}
+
+async function getCreatorRegistrationDetail(payload, adminUser) {
+  assertAdminPermission(adminUser, "creator_registrations:read");
+  const registrationId = normalizeText(payload && (payload.registrationId || payload._id || payload.id));
+  assertCondition(registrationId, "缺少申请记录 ID");
+
+  const existing = await getCreatorRegistrationDocById(registrationId);
+  assertCondition(existing, "未找到对应申请记录");
+
+  return hydrateCreatorRegistrationDetail(existing);
+}
+
+async function reviewCreatorRegistration(payload, adminUser) {
+  assertAdminPermission(adminUser, "creator_registrations:review");
+  const registrationId = normalizeText(payload && (payload.registrationId || payload._id || payload.id));
+  const action = normalizeText(payload && payload.action).toLowerCase();
+  const rejectionReason = normalizeText(payload && payload.rejectionReason);
+  assertCondition(registrationId, "缺少申请记录 ID");
+  assertCondition(["approve", "reject"].includes(action), "不支持的审核动作");
+
+  const existing = await getCreatorRegistrationDocById(registrationId);
+  assertCondition(existing, "未找到对应申请记录");
+
+  const currentStatus = normalizeText(existing.status) || "draft";
+  assertCondition(CREATOR_REGISTRATION_REVIEWABLE_STATUSES.has(currentStatus), "当前状态不可审核");
+  if (action === "reject") {
+    assertCondition(rejectionReason, "请填写驳回原因");
+  }
+
+  const now = Date.now();
+  const nextStatus = action === "approve" ? "approved" : "rejected";
+  const nextDoc = normalizeCreatorRegistrationDoc(existing);
+  nextDoc.status = nextStatus;
+  nextDoc.rejectionReason = action === "reject" ? rejectionReason : "";
+  nextDoc.reviewedAt = now;
+  nextDoc.reviewedBy = normalizeText(adminUser && (adminUser.uid || adminUser.id));
+  nextDoc.updatedAt = now;
+  nextDoc.accessProvisionStatus = "pending";
+  nextDoc.linkedAdminAccountId = "";
+  nextDoc.activationTokenHash = "";
+  nextDoc.activationExpiresAt = 0;
+  nextDoc.activationConsumedAt = 0;
+  nextDoc.activationEmailStatus = "pending";
+  nextDoc.activationEmailSentAt = 0;
+  nextDoc.activationEmailError = "";
+  nextDoc.accessProvisionError = "";
+  nextDoc.approvalEmailStatus = "pending";
+  nextDoc.approvalEmailSentAt = 0;
+  nextDoc.approvalEmailError = "";
+
+  if (action === "approve") {
+    Object.assign(nextDoc, await provisionCreatorRegistrationAccess(nextDoc, adminUser, {
+      now,
+      registrationId
+    }));
+  } else {
+    const emailPatch = await deliverCreatorRegistrationRejectionEmail(nextDoc);
+    nextDoc.approvalEmailStatus = emailPatch.approvalEmailStatus;
+    nextDoc.approvalEmailSentAt = emailPatch.approvalEmailSentAt;
+    nextDoc.approvalEmailError = emailPatch.approvalEmailError;
+  }
+
+  await db.collection(COLLECTIONS.creatorRegistrations).doc(registrationId).update({
+    data: {
+      status: nextDoc.status,
+      rejectionReason: nextDoc.rejectionReason,
+      linkedCreatorId: nextDoc.linkedCreatorId,
+      linkedCreatorSlug: nextDoc.linkedCreatorSlug,
+      accessProvisionStatus: nextDoc.accessProvisionStatus,
+      linkedAdminAccountId: nextDoc.linkedAdminAccountId,
+      activationTokenHash: nextDoc.activationTokenHash,
+      activationExpiresAt: nextDoc.activationExpiresAt,
+      activationConsumedAt: nextDoc.activationConsumedAt,
+      activationEmailStatus: nextDoc.activationEmailStatus,
+      activationEmailSentAt: nextDoc.activationEmailSentAt,
+      activationEmailError: nextDoc.activationEmailError,
+      accessProvisionError: nextDoc.accessProvisionError,
+      approvalEmailStatus: nextDoc.approvalEmailStatus,
+      approvalEmailSentAt: nextDoc.approvalEmailSentAt,
+      approvalEmailError: nextDoc.approvalEmailError,
+      reviewedAt: nextDoc.reviewedAt,
+      reviewedBy: nextDoc.reviewedBy,
+      updatedAt: nextDoc.updatedAt
+    }
+  });
+
+  return hydrateCreatorRegistrationDetail(nextDoc);
+}
+
+async function provisionCreatorRegistrationAccess(registration, adminUser, options = {}) {
+  const nextDoc = normalizeCreatorRegistrationDoc(registration);
+  const now = normalizeNumber(options.now, Date.now());
+  const registrationId = normalizeText(options.registrationId || nextDoc.registrationId);
+  const linkedCreator = await createCreatorFromRegistration(nextDoc, adminUser);
+  await ensureApprovedCreatorActive(linkedCreator, adminUser);
+  nextDoc.linkedCreatorId = normalizeText(linkedCreator && linkedCreator.id);
+  nextDoc.linkedCreatorSlug = normalizeText(linkedCreator && linkedCreator.slug);
+
+  try {
+    const accessOutcome = await buildApprovalAccessOutcome({
+      registration: nextDoc,
+      linkedCreator,
+      adminUser,
+      getEndUserInfo: (uid) => auth.getEndUserInfo(uid),
+      listAdminAccountsData,
+      saveAdminAccount,
+      deliverCreatorRegistrationApprovalEmail,
+      deliverCreatorRegistrationActivationEmail,
+      normalizeText,
+      normalizeEmail,
+      assertCondition,
+      now
+    });
+
+    Object.assign(nextDoc, accessOutcome);
+  } catch (error) {
+    console.error("Creator registration access provisioning failed", {
+      registrationId,
+      linkedCreatorId: nextDoc.linkedCreatorId,
+      error
+    });
+    Object.assign(nextDoc, buildCreatorRegistrationFailedAccessPatch(error));
+  }
+
+  return nextDoc;
+}
+
+async function resendCreatorRegistrationApprovalEmail(payload, adminUser) {
+  assertAdminPermission(adminUser, "creator_registrations:review");
+  const registrationId = normalizeText(payload && (payload.registrationId || payload._id || payload.id));
+  assertCondition(registrationId, "缺少申请记录 ID");
+
+  const existing = await getCreatorRegistrationDocById(registrationId);
+  assertCondition(existing, "未找到对应申请记录");
+
+  const nextDoc = normalizeCreatorRegistrationDoc(existing);
+  assertCondition(["approved", "rejected"].includes(nextDoc.status), "仅已通过或已驳回申请支持重发通知邮件");
+  if (nextDoc.status === "approved") {
+    assertCondition(
+      nextDoc.accessProvisionStatus === "provisioned",
+      "仅已开通可直接登录的申请支持重发通知邮件"
+    );
+  }
+
+  const emailPatch = nextDoc.status === "rejected"
+    ? await deliverCreatorRegistrationRejectionEmail(nextDoc)
+    : await deliverCreatorRegistrationApprovalEmail(nextDoc);
+  nextDoc.approvalEmailStatus = emailPatch.approvalEmailStatus;
+  nextDoc.approvalEmailSentAt = emailPatch.approvalEmailSentAt;
+  nextDoc.approvalEmailError = emailPatch.approvalEmailError;
+  nextDoc.updatedAt = Date.now();
+
+  await db.collection(COLLECTIONS.creatorRegistrations).doc(registrationId).update({
+    data: {
+      approvalEmailStatus: nextDoc.approvalEmailStatus,
+      approvalEmailSentAt: nextDoc.approvalEmailSentAt,
+      approvalEmailError: nextDoc.approvalEmailError,
+      updatedAt: nextDoc.updatedAt
+    }
+  });
+
+  return hydrateCreatorRegistrationDetail(nextDoc);
+}
+
+async function resendCreatorRegistrationActivationEmail(payload, adminUser) {
+  assertAdminPermission(adminUser, "creator_registrations:review");
+  const registrationId = normalizeText(payload && (payload.registrationId || payload._id || payload.id));
+  assertCondition(registrationId, "缺少申请记录 ID");
+
+  const existing = await getCreatorRegistrationDocById(registrationId);
+  assertCondition(existing, "未找到对应申请记录");
+
+  const nextDoc = normalizeCreatorRegistrationDoc(existing);
+  assertCondition(nextDoc.status === "approved", "仅已通过申请支持重发激活邮件");
+  assertCondition(nextDoc.accessProvisionStatus === "activation_pending", "仅待激活申请支持重发激活邮件");
+
+  const token = createActivationToken();
+  const patch = await deliverCreatorRegistrationActivationEmail({
+    registration: nextDoc,
+    linkedCreator: {
+      id: nextDoc.linkedCreatorId,
+      slug: nextDoc.linkedCreatorSlug,
+      name: nextDoc.applicantName
+    },
+    token
+  });
+  nextDoc.activationTokenHash = hashActivationToken(token);
+  nextDoc.activationExpiresAt = Date.now() + ACTIVATION_EXPIRATION_MS;
+  nextDoc.activationEmailStatus = patch.activationEmailStatus;
+  nextDoc.activationEmailSentAt = patch.activationEmailSentAt;
+  nextDoc.activationEmailError = patch.activationEmailError;
+  nextDoc.updatedAt = Date.now();
+
+  await db.collection(COLLECTIONS.creatorRegistrations).doc(registrationId).update({
+    data: {
+      activationTokenHash: nextDoc.activationTokenHash,
+      activationExpiresAt: nextDoc.activationExpiresAt,
+      activationEmailStatus: nextDoc.activationEmailStatus,
+      activationEmailSentAt: nextDoc.activationEmailSentAt,
+      activationEmailError: nextDoc.activationEmailError,
+      updatedAt: nextDoc.updatedAt
+    }
+  });
+
+  return hydrateCreatorRegistrationDetail(nextDoc);
+}
+
+async function retryCreatorRegistrationAccessProvision(payload, adminUser) {
+  assertAdminPermission(adminUser, "creator_registrations:review");
+  const registrationId = normalizeText(payload && (payload.registrationId || payload._id || payload.id));
+  assertCondition(registrationId, "缺少申请记录 ID");
+
+  const existing = await getCreatorRegistrationDocById(registrationId);
+  assertCondition(existing, "未找到对应申请记录");
+
+  const nextDoc = normalizeCreatorRegistrationDoc(existing);
+  assertCondition(nextDoc.status === "approved", "仅已通过申请支持重新开通访问");
+  assertCondition(
+    ["pending", "failed", "conflict"].includes(nextDoc.accessProvisionStatus),
+    "当前申请不需要重新开通访问"
+  );
+
+  nextDoc.updatedAt = Date.now();
+  Object.assign(nextDoc, await provisionCreatorRegistrationAccess(nextDoc, adminUser, {
+    now: nextDoc.updatedAt,
+    registrationId
+  }));
+
+  await db.collection(COLLECTIONS.creatorRegistrations).doc(registrationId).update({
+    data: {
+      linkedCreatorId: nextDoc.linkedCreatorId,
+      linkedCreatorSlug: nextDoc.linkedCreatorSlug,
+      accessProvisionStatus: nextDoc.accessProvisionStatus,
+      linkedAdminAccountId: nextDoc.linkedAdminAccountId,
+      activationTokenHash: nextDoc.activationTokenHash,
+      activationExpiresAt: nextDoc.activationExpiresAt,
+      activationConsumedAt: nextDoc.activationConsumedAt,
+      activationEmailStatus: nextDoc.activationEmailStatus,
+      activationEmailSentAt: nextDoc.activationEmailSentAt,
+      activationEmailError: nextDoc.activationEmailError,
+      accessProvisionError: nextDoc.accessProvisionError,
+      approvalEmailStatus: nextDoc.approvalEmailStatus,
+      approvalEmailSentAt: nextDoc.approvalEmailSentAt,
+      approvalEmailError: nextDoc.approvalEmailError,
+      updatedAt: nextDoc.updatedAt
+    }
+  });
+
+  return hydrateCreatorRegistrationDetail(nextDoc);
+}
+
+function getCreatorProfileKey(creator) {
+  return normalizeText(creator && creator.id) || normalizeText(creator && creator.slug);
+}
+
+function sortRegistrationsByRecency(left, right) {
+  return Math.max(
+    normalizeNumber(right && right.updatedAt),
+    normalizeNumber(right && right.reviewedAt),
+    normalizeNumber(right && right.submittedAt)
+  ) - Math.max(
+    normalizeNumber(left && left.updatedAt),
+    normalizeNumber(left && left.reviewedAt),
+    normalizeNumber(left && left.submittedAt)
+  );
+}
+
+function findLatestCreatorRegistrationForProfile(creator, registrations) {
+  const creatorRefs = listCreatorRefs(creator);
+  return normalizeArray(registrations)
+    .filter((registration) => {
+      const linkedCreatorId = normalizeText(registration && registration.linkedCreatorId);
+      const linkedCreatorSlug = normalizeText(registration && registration.linkedCreatorSlug);
+      return creatorRefs.includes(linkedCreatorId) || creatorRefs.includes(linkedCreatorSlug);
+    })
+    .sort(sortRegistrationsByRecency)[0] || null;
+}
+
+function selectCreatorPortalAccountForProfile(creator, accounts, registration) {
+  const creatorRefs = listCreatorRefs(creator);
+  const directMatch = normalizeArray(accounts)
+    .filter((account) =>
+      normalizeAdminAccountType(account && account.accountType, "admin") === "creator_portal"
+      && creatorRefs.includes(normalizeText(account && account.boundCreatorId))
+    )
+    .sort((left, right) => {
+      const leftStatusRank = normalizeText(left && left.status) === "active" ? 0 : 1;
+      const rightStatusRank = normalizeText(right && right.status) === "active" ? 0 : 1;
+      if (leftStatusRank !== rightStatusRank) {
+        return leftStatusRank - rightStatusRank;
+      }
+      return normalizeNumber(right && right.updatedAt) - normalizeNumber(left && left.updatedAt);
+    })[0] || null;
+
+  if (directMatch) {
+    return directMatch;
+  }
+
+  return registration ? findLinkedAdminAccountForRegistration(registration, accounts) : null;
+}
+
+function resolveCreatorProfilePortalAccessStatus(registration, adminAccount) {
+  const accountStatus = normalizeText(adminAccount && adminAccount.status);
+  const registrationAccessStatus = normalizeText(registration && registration.accessProvisionStatus);
+  const registrationStatus = normalizeText(registration && registration.status);
+
+  if (accountStatus === "inactive") {
+    return "inactive";
+  }
+
+  if (registrationAccessStatus === "activation_pending") {
+    return "activation_pending";
+  }
+
+  if (registrationAccessStatus === "conflict") {
+    return "conflict";
+  }
+
+  if (registrationAccessStatus === "failed") {
+    return "failed";
+  }
+
+  if (registrationAccessStatus === "provisioned") {
+    return "provisioned";
+  }
+
+  if (accountStatus === "active") {
+    return "provisioned";
+  }
+
+  if (registrationAccessStatus === "pending" || registrationStatus === "submitted") {
+    return "pending";
+  }
+
+  return "none";
+}
+
+function matchesCreatorProfileApplicationStatus(filter, registration) {
+  const normalizedFilter = normalizeText(filter).toLowerCase();
+  if (!normalizedFilter || normalizedFilter === "all") {
+    return true;
+  }
+
+  const actualStatus = normalizeText(registration && registration.status).toLowerCase() || "none";
+  return actualStatus === normalizedFilter;
+}
+
+function matchesCreatorProfilePortalAccessStatus(filter, status) {
+  const normalizedFilter = normalizeText(filter).toLowerCase();
+  if (!normalizedFilter || normalizedFilter === "all") {
+    return true;
+  }
+
+  return normalizeText(status).toLowerCase() === normalizedFilter;
+}
+
+function resolveCreatorProfilePersonName(registration, adminAccount, creator) {
+  const applicantName = normalizeText(registration && registration.applicantName);
+  const realName = normalizeText(adminAccount && adminAccount.realName);
+  const applicantUpdatedAt = Math.max(
+    normalizeNumber(registration && registration.updatedAt),
+    normalizeNumber(registration && registration.reviewedAt),
+    normalizeNumber(registration && registration.submittedAt),
+    normalizeNumber(registration && registration.createdAt)
+  );
+  const realNameUpdatedAt = Math.max(
+    normalizeNumber(adminAccount && adminAccount.updatedAt),
+    normalizeNumber(adminAccount && adminAccount.createdAt)
+  );
+
+  if (applicantName && realName && realNameUpdatedAt > applicantUpdatedAt) {
+    return realName;
+  }
+
+  return (
+    applicantName
+    || realName
+    || normalizeText(adminAccount && adminAccount.displayName)
+    || normalizeText(registration && registration.linkedAdminDisplayName)
+    || normalizeText(creator && creator.name)
+  );
+}
+
+function resolveCreatorProfileStatus(creator, adminAccount) {
+  const creatorStatus = buildStatusTag(creator);
+  const adminAccountStatus = normalizeText(adminAccount && adminAccount.status);
+
+  if (creatorStatus === "deleted") {
+    return "deleted";
+  }
+
+  if (creatorStatus === "inactive" || adminAccountStatus === "inactive") {
+    return "inactive";
+  }
+
+  return "active";
+}
+
+function buildCreatorProfileOrderSummaryMaps(orderRows, creators, services) {
+  const creatorKeyByRef = normalizeArray(creators).reduce((map, creator) => {
+    const creatorKey = getCreatorProfileKey(creator);
+    if (!creatorKey) {
+      return map;
+    }
+
+    listCreatorRefs(creator).forEach((ref) => {
+      map[ref] = creatorKey;
+    });
+    return map;
+  }, {});
+
+  const serviceOwnerMap = normalizeArray(services).reduce((map, service) => {
+    const serviceSlug = normalizeText(service && service.slug);
+    const creatorRef = normalizeText(service && service.creatorId);
+    const creatorKey = creatorKeyByRef[creatorRef];
+    if (serviceSlug && creatorKey) {
+      map[serviceSlug] = creatorKey;
+    }
+    return map;
+  }, {});
+
+  return normalizeArray(orderRows).reduce((result, row) => {
+    const status = normalizeText(row && row.status);
+    if (!EFFECTIVE_ORDER_STATUSES.has(status)) {
+      return result;
+    }
+
+    const serviceSlug = normalizeText(row && row.serviceSlug);
+    const creatorKey = serviceOwnerMap[serviceSlug];
+    if (!creatorKey) {
+      return result;
+    }
+
+    if (!result[creatorKey]) {
+      result[creatorKey] = {
+        effectiveOrderCount: 0,
+        lastOrderAt: 0,
+        lastOrderNo: ""
+      };
+    }
+
+    const updatedAtTs = normalizeNumber(row && (row.updatedAt || row.createdAtTs));
+    result[creatorKey].effectiveOrderCount += 1;
+    if (updatedAtTs >= normalizeNumber(result[creatorKey].lastOrderAt)) {
+      result[creatorKey].lastOrderAt = updatedAtTs;
+      result[creatorKey].lastOrderNo = normalizeText(row && row.orderNo);
+    }
+
+    return result;
+  }, {});
+}
+
+async function listCreatorProfileOrderRows() {
+  return queryRows(
+    "SELECT `orderNo`, `userOpenid`, `serviceSlug`, `serviceName`, `servicePeriodCode`, `status`, `peopleCountInt`, `travelDateStart`, `updatedAt`, `createdAtTs` FROM `TravelOrder` ORDER BY COALESCE(`updatedAt`, `createdAtTs`) DESC"
+  );
+}
+
+async function listCreatorProfilePeriodRows() {
+  return queryRows(
+    "SELECT `serviceSlug`, `serviceName`, `periodCode`, `versionName`, `durationDays`, `dateStart`, `dateEnd`, `price`, `minGroup`, `remainingSeats`, `status`, `updatedAt` FROM `ServicePeriod` ORDER BY `dateStart` DESC"
+  );
+}
+
+function buildCreatorProfileListItem(creator, context) {
+  const creatorKey = getCreatorProfileKey(creator);
+  const destinationSlugs = collectDestinationSlugsFromServicesForCreator(creator, context.services);
+  const regionCodes = collectRegionCodesFromServicesForCreator(creator, context.services);
+  const tags = getCreatorRouteTags(creator, context.services);
+  const creatorRefs = listCreatorRefs(creator);
+  const relatedServices = normalizeArray(context.services).filter((service) =>
+    creatorRefs.includes(normalizeText(service && service.creatorId))
+  );
+  const registration = findLatestCreatorRegistrationForProfile(creator, context.registrations);
+  const adminAccount = selectCreatorPortalAccountForProfile(creator, context.accounts, registration);
+  const orderSummary = context.orderSummaryMap[creatorKey] || {
+    effectiveOrderCount: 0,
+    lastOrderAt: 0,
+    lastOrderNo: ""
+  };
+  const periodCount = relatedServices.reduce((total, service) => {
+    const serviceSlug = normalizeText(service && service.slug);
+    const periodStats = context.periodStatsMap && serviceSlug ? context.periodStatsMap[serviceSlug] : null;
+    return total + normalizeNumber(periodStats && periodStats.periodCount);
+  }, 0);
+
+  return {
+    creatorId: normalizeText(creator && creator.id) || normalizeText(creator && creator.slug),
+    creatorSlug: normalizeText(creator && creator.slug),
+    creatorName: normalizeText(creator && creator.name),
+    personName: resolveCreatorProfilePersonName(registration, adminAccount, creator),
+    contentStatus: resolveCreatorProfileStatus(creator, adminAccount),
+    stance: normalizeText(creator && creator.stance),
+    tags,
+    regionCodes,
+    regionCount: regionCodes.length,
+    destinationCount: destinationSlugs.length,
+    serviceCount: relatedServices.length,
+    periodCount,
+    ideaCount: normalizeArray(context.ideas).filter((idea) =>
+      creatorRefs.includes(normalizeText(idea && idea.authorId))
+    ).length,
+    effectiveOrderCount: normalizeNumber(orderSummary.effectiveOrderCount),
+    lastOrderAt: normalizeNumber(orderSummary.lastOrderAt),
+    lastOrderNo: normalizeText(orderSummary.lastOrderNo),
+    applicantName: normalizeText(registration && registration.applicantName),
+    contactEmail: normalizeEmail(registration && (registration.contactEmail || registration.authEmail)),
+    phone: normalizeText(registration && registration.phone),
+    registrationId: normalizeText(registration && registration.registrationId),
+    registrationStatus: normalizeText(registration && registration.status) || "none",
+    portalAccessStatus: resolveCreatorProfilePortalAccessStatus(registration, adminAccount),
+    linkedAdminAccountId: normalizeText(adminAccount && adminAccount._id) || normalizeText(registration && registration.linkedAdminAccountId),
+    linkedAdminUsername: normalizeText(adminAccount && adminAccount.username) || normalizeText(registration && registration.linkedAdminUsername),
+    linkedAdminDisplayName: normalizeText(adminAccount && adminAccount.displayName) || normalizeText(registration && registration.linkedAdminDisplayName),
+    linkedAdminRealName: normalizeText(adminAccount && adminAccount.realName),
+    adminAccountStatus: normalizeText(adminAccount && adminAccount.status),
+    createdAt: normalizeNumber(creator && creator.createdAt),
+    updatedAt: normalizeNumber(creator && creator.updatedAt)
+  };
+}
+
+async function listCreatorProfiles(payload, adminUser) {
+  assertPlatformAdmin(adminUser, "当前账号没有查看创作者档案的权限");
+  assertAdminPermission(adminUser, "ops:read");
+  const keyword = normalizeText(payload && payload.keyword).toLowerCase();
+  const contentStatus = normalizeText(payload && payload.contentStatus).toLowerCase();
+  const applicationStatus = normalizeText(payload && payload.applicationStatus).toLowerCase();
+  const portalAccessStatus = normalizeText(payload && payload.portalAccessStatus).toLowerCase();
+  const hasServices = normalizeText(payload && payload.hasServices).toLowerCase();
+  const hasOrders = normalizeText(payload && payload.hasOrders).toLowerCase();
+  const limit = clampLimit(payload && payload.limit);
+
+  const [creators, services, ideas, registrations, accounts, orderRows, periodStatsMap] = await Promise.all([
+    listCollection(COLLECTIONS.creators),
+    listCollection(COLLECTIONS.services),
+    listCollection(COLLECTIONS.ideas),
+    listOptionalCollection(COLLECTIONS.creatorRegistrations),
+    listAdminAccountsData(),
+    listCreatorProfileOrderRows(),
+    getPeriodStatsMap({ bestEffort: true })
+  ]);
+
+  const normalizedRegistrations = normalizeArray(registrations).map(normalizeCreatorRegistrationDoc);
+  const orderSummaryMap = buildCreatorProfileOrderSummaryMaps(orderRows, creators, services);
+
+  const items = normalizeArray(creators)
+    .map((creator) => buildCreatorProfileListItem(creator, {
+      services,
+      ideas,
+      registrations: normalizedRegistrations,
+      accounts,
+      orderSummaryMap,
+      periodStatsMap
+    }))
+    .filter((item) => {
+      if (contentStatus && contentStatus !== "all" && normalizeText(item && item.contentStatus).toLowerCase() !== contentStatus) {
+        return false;
+      }
+      if (!matchesCreatorProfileApplicationStatus(applicationStatus, { status: item && item.registrationStatus })) {
+        return false;
+      }
+      if (!matchesCreatorProfilePortalAccessStatus(portalAccessStatus, item && item.portalAccessStatus)) {
+        return false;
+      }
+      if (hasServices === "yes" && normalizeNumber(item && item.serviceCount) <= 0) {
+        return false;
+      }
+      if (hasServices === "no" && normalizeNumber(item && item.serviceCount) > 0) {
+        return false;
+      }
+      if (hasOrders === "yes" && normalizeNumber(item && item.effectiveOrderCount) <= 0) {
+        return false;
+      }
+      if (hasOrders === "no" && normalizeNumber(item && item.effectiveOrderCount) > 0) {
+        return false;
+      }
+
+      return matchesKeyword([
+        item && item.creatorName,
+        item && item.creatorSlug,
+        item && item.stance,
+        item && item.contactEmail,
+        item && item.phone,
+        item && item.personName,
+        item && item.applicantName,
+        item && item.linkedAdminUsername,
+        item && item.linkedAdminDisplayName,
+        item && item.linkedAdminRealName,
+        ...(item && item.tags ? item.tags : [])
+      ], keyword);
+    });
+
+  if (shouldReturnPagedResult(payload)) {
+    return buildPagedResult(items, payload, {
+      defaultPageSize: 10,
+      defaultSortBy: "updatedAt",
+      defaultSortDirection: "desc",
+      getSortValue: (item, sortBy) => {
+        switch (sortBy) {
+          case "creatorName":
+            return item.creatorName;
+          case "serviceCount":
+            return item.serviceCount;
+          case "periodCount":
+            return item.periodCount;
+          case "ideaCount":
+            return item.ideaCount;
+          case "effectiveOrderCount":
+            return item.effectiveOrderCount;
+          case "lastOrderAt":
+            return item.lastOrderAt;
+          case "registrationStatus":
+            return item.registrationStatus;
+          case "portalAccessStatus":
+            return item.portalAccessStatus;
+          case "updatedAt":
+          default:
+            return item.updatedAt;
+        }
+      },
+      getItemKey: (item) => item.creatorId || item.creatorSlug
+    });
+  }
+
+  return items.slice(0, limit);
+}
+
+async function getCreatorProfileDetail(payload, adminUser) {
+  assertPlatformAdmin(adminUser, "当前账号没有查看创作者档案的权限");
+  assertAdminPermission(adminUser, "ops:read");
+  const creatorReference = normalizeText(payload && (payload.creatorId || payload.creatorSlug || payload.id || payload.slug || payload._id));
+  assertCondition(creatorReference, "缺少创作者 ID");
+
+  const [creators, services, ideas, registrations, accounts, orderRows, periodRows, users] = await Promise.all([
+    listCollection(COLLECTIONS.creators),
+    listCollection(COLLECTIONS.services),
+    listCollection(COLLECTIONS.ideas),
+    listOptionalCollection(COLLECTIONS.creatorRegistrations),
+    listAdminAccountsData(),
+    listCreatorProfileOrderRows(),
+    listCreatorProfilePeriodRows(),
+    listCollection(COLLECTIONS.users)
+  ]);
+
+  const creator = normalizeArray(creators).find((item) => listCreatorRefs(item).includes(creatorReference)) || null;
+  assertCondition(creator, "未找到对应创作者");
+
+  const normalizedRegistrations = normalizeArray(registrations).map(normalizeCreatorRegistrationDoc);
+  const registration = findLatestCreatorRegistrationForProfile(creator, normalizedRegistrations);
+  const adminAccount = selectCreatorPortalAccountForProfile(creator, accounts, registration);
+  const creatorRefs = listCreatorRefs(creator);
+  const relatedServices = normalizeArray(services)
+    .filter((service) => creatorRefs.includes(normalizeText(service && service.creatorId)))
+    .map((service) => ({
+      slug: normalizeText(service && service.slug),
+      name: normalizeText(service && service.name),
+      status: buildStatusTag(service),
+      updatedAt: normalizeNumber(service && service.updatedAt)
+    }))
+    .sort((left, right) => normalizeNumber(right && right.updatedAt) - normalizeNumber(left && left.updatedAt));
+  const relatedIdeas = normalizeArray(ideas)
+    .filter((idea) => creatorRefs.includes(normalizeText(idea && idea.authorId)))
+    .map((idea) => ({
+      slug: normalizeText(idea && idea.slug),
+      title: normalizeText(idea && idea.title),
+      status: buildStatusTag(idea),
+      updatedAt: normalizeNumber(idea && idea.updatedAt)
+    }))
+    .sort((left, right) => normalizeNumber(right && right.updatedAt) - normalizeNumber(left && left.updatedAt));
+  const serviceMap = normalizeArray(services).reduce((map, service) => {
+    const slug = normalizeText(service && service.slug);
+    if (slug) {
+      map[slug] = service;
+    }
+    return map;
+  }, {});
+  const orderSummaryMap = buildCreatorProfileOrderSummaryMaps(orderRows, [creator], services);
+  const orderSummary = orderSummaryMap[getCreatorProfileKey(creator)] || {
+    effectiveOrderCount: 0,
+    lastOrderAt: 0,
+    lastOrderNo: ""
+  };
+  const userMap = buildOrderUserMap(users);
+  const serviceRefs = new Set(relatedServices.map((service) => normalizeText(service && service.slug)).filter(Boolean));
+  const activeServiceRefs = new Set(
+    relatedServices
+      .filter((service) => normalizeText(service && service.status) === "active")
+      .map((service) => normalizeText(service && service.slug))
+      .filter(Boolean)
+  );
+  const periodSoldCountMap = normalizeArray(orderRows).reduce((map, row) => {
+    if (normalizeText(row && row.status) === "canceled") {
+      return map;
+    }
+
+    const periodCode = normalizeText(row && row.servicePeriodCode);
+    if (!periodCode) {
+      return map;
+    }
+
+    map[periodCode] = normalizeNumber(map[periodCode]) + Math.max(0, normalizeNumber(row && row.peopleCountInt));
+    return map;
+  }, {});
+  const relatedPeriods = normalizeArray(periodRows)
+    .filter((row) => serviceRefs.has(normalizeText(row && row.serviceSlug)))
+    .map((row) => {
+      const mapped = mapServicePeriodRecord(
+        row,
+        periodSoldCountMap[normalizeText(row && row.periodCode)] || 0,
+        serviceMap[normalizeText(row && row.serviceSlug)] || null,
+        adminUser
+      );
+
+      return {
+        periodCode: normalizeText(mapped && mapped.periodCode),
+        serviceSlug: normalizeText(mapped && mapped.serviceSlug),
+        serviceName: normalizeText(mapped && mapped.serviceName),
+        dateStart: normalizeText(mapped && mapped.dateStart),
+        status: normalizeText(mapped && mapped.status),
+        updatedAt: normalizeNumber(mapped && mapped.updatedAt)
+      };
+    });
+  const activePeriodRefs = new Set(
+    relatedPeriods
+      .filter((period) => normalizeText(period && period.status) !== "inactive")
+      .map((period) => normalizeText(period && period.periodCode))
+      .filter(Boolean)
+  );
+  const relatedOrderRows = normalizeArray(orderRows)
+    .filter((row) => serviceRefs.has(normalizeText(row && row.serviceSlug)));
+  const activeOrderCount = relatedOrderRows.filter((row) => {
+    const serviceSlug = normalizeText(row && row.serviceSlug);
+    if (!activeServiceRefs.has(serviceSlug)) {
+      return false;
+    }
+
+    const periodCode = normalizeText(row && row.servicePeriodCode);
+    if (!periodCode) {
+      return true;
+    }
+
+    return activePeriodRefs.has(periodCode);
+  }).length;
+  const recentOrders = relatedOrderRows
+    .slice(0, 20)
+    .map((row) => {
+      const userSummary = resolveOrderUserSummary(userMap, row && row.userOpenid);
+      return {
+        orderNo: normalizeText(row && row.orderNo),
+        serviceSlug: normalizeText(row && row.serviceSlug),
+        serviceName: normalizeText(row && row.serviceName),
+        servicePeriodCode: normalizeText(row && row.servicePeriodCode),
+        userId: userSummary.userId,
+        userNickname: userSummary.userNickname,
+        peopleCount: normalizeNumber(row && row.peopleCountInt),
+        status: normalizeText(row && row.status),
+        travelDateStart: normalizeText(row && row.travelDateStart),
+        updatedAtTs: normalizeNumber(row && (row.updatedAt || row.createdAtTs))
+      };
+    });
+
+  return {
+    creatorId: normalizeText(creator && creator.id) || normalizeText(creator && creator.slug),
+    creatorSlug: normalizeText(creator && creator.slug),
+    name: normalizeText(creator && creator.name),
+    personName: resolveCreatorProfilePersonName(registration, adminAccount, creator),
+    status: buildStatusTag(creator),
+    avatar: normalizeText(creator && creator.avatar),
+    stance: normalizeText(creator && creator.stance),
+    tags: getCreatorRouteTags(creator, services),
+    regionCodes: collectRegionCodesFromServicesForCreator(creator, services),
+    destinationSlugs: collectDestinationSlugsFromServicesForCreator(creator, services),
+    about: normalizeArray(creator && creator.about).map((item) => normalizeText(item)).filter(Boolean),
+    reviews: sanitizeReviewList(creator && creator.reviews),
+    regionCount: collectRegionCodesFromServicesForCreator(creator, services).length,
+    destinationCount: collectDestinationSlugsFromServicesForCreator(creator, services).length,
+    serviceCount: relatedServices.length,
+    ideaCount: relatedIdeas.length,
+    effectiveOrderCount: normalizeNumber(orderSummary.effectiveOrderCount),
+    activeServiceCount: relatedServices.filter((service) => normalizeText(service && service.status) === "active").length,
+    activePeriodCount: relatedPeriods.filter((period) => normalizeText(period && period.status) !== "inactive").length,
+    activeOrderCount: activeOrderCount,
+    historicalServiceCount: relatedServices.length,
+    historicalPeriodCount: relatedPeriods.length,
+    historicalOrderCount: relatedOrderRows.length,
+    lastOrderAt: normalizeNumber(orderSummary.lastOrderAt),
+    lastOrderNo: normalizeText(orderSummary.lastOrderNo),
+    createdAt: normalizeNumber(creator && creator.createdAt),
+    updatedAt: normalizeNumber(creator && creator.updatedAt),
+    registration: registration ? {
+      registrationId: normalizeText(registration && registration.registrationId),
+      applicantName: normalizeText(registration && registration.applicantName),
+      authUserId: normalizeText(registration && registration.authUserId),
+      authEmail: normalizeEmail(registration && registration.authEmail),
+      contactEmail: normalizeEmail(registration && registration.contactEmail),
+      phone: normalizeText(registration && registration.phone),
+      gender: normalizeText(registration && registration.gender),
+      birthday: normalizeText(registration && registration.birthday),
+      documentType: normalizeText(registration && registration.documentType),
+      documentNumber: normalizeText(registration && registration.documentNumber),
+      wechat: normalizeText(registration && registration.wechat),
+      status: normalizeText(registration && registration.status) || "none",
+      rejectionReason: normalizeText(registration && registration.rejectionReason),
+      accessProvisionStatus: normalizeText(registration && registration.accessProvisionStatus) || "none",
+      linkedAdminAccountId: normalizeText(adminAccount && adminAccount._id) || normalizeText(registration && registration.linkedAdminAccountId),
+      linkedAdminUsername: normalizeText(adminAccount && adminAccount.username) || normalizeText(registration && registration.linkedAdminUsername),
+      linkedAdminDisplayName: normalizeText(adminAccount && adminAccount.displayName) || normalizeText(registration && registration.linkedAdminDisplayName),
+      submittedAt: normalizeNumber(registration && registration.submittedAt),
+      reviewedAt: normalizeNumber(registration && registration.reviewedAt),
+      updatedAt: normalizeNumber(registration && registration.updatedAt)
+    } : null,
+    adminAccount: adminAccount ? {
+      _id: normalizeText(adminAccount && adminAccount._id),
+      uid: normalizeText(adminAccount && adminAccount.uid),
+      username: normalizeText(adminAccount && adminAccount.username),
+      displayName: normalizeText(adminAccount && adminAccount.displayName),
+      email: normalizeText(adminAccount && adminAccount.email),
+      phone: normalizeText(adminAccount && adminAccount.phone),
+      realName: normalizeText(adminAccount && adminAccount.realName),
+      gender: normalizeText(adminAccount && adminAccount.gender),
+      birthday: normalizeText(adminAccount && adminAccount.birthday),
+      documentType: normalizeText(adminAccount && adminAccount.documentType),
+      documentNumber: normalizeText(adminAccount && adminAccount.documentNumber),
+      documents: normalizeIdentityDocuments(adminAccount && adminAccount.documents, {
+        documentType: normalizeText(adminAccount && adminAccount.documentType),
+        documentNumber: normalizeText(adminAccount && adminAccount.documentNumber)
+      }),
+      wechat: normalizeText(adminAccount && adminAccount.wechat),
+      accountType: normalizeAdminAccountType(adminAccount && adminAccount.accountType, "creator_portal"),
+      boundCreatorId: normalizeText(adminAccount && adminAccount.boundCreatorId),
+      status: normalizeText(adminAccount && adminAccount.status) || "inactive",
+      createdAt: normalizeNumber(adminAccount && adminAccount.createdAt),
+      updatedAt: normalizeNumber(adminAccount && adminAccount.updatedAt)
+    } : null,
+    relatedServices,
+    relatedPeriods,
+    relatedIdeas,
+    recentOrders
+  };
+}
+
+async function getDestinationDetail(payload, adminUser) {
+  assertPlatformAdmin(adminUser, "当前账号没有查看目的地的权限");
+  assertAdminPermission(adminUser, "destinations:read");
   const destination = await findContentDoc(COLLECTIONS.destinations, payload);
   assertCondition(destination, "未找到对应目的地");
-  return mapDestinationDetailRecord(destination);
+  return mapDestinationDetailRecord(destination, adminUser);
 }
 
 async function saveDestination(payload, adminUser) {
+  assertPlatformAdmin(adminUser, "当前账号没有编辑目的地的权限");
+  assertCondition(
+    hasAdminPermission(adminUser, "destinations:write") || hasAdminPermission(adminUser, "destinations:write:owned"),
+    "当前账号没有编辑目的地的权限"
+  );
   const existing = await findContentDoc(COLLECTIONS.destinations, payload);
+  if (existing) {
+    assertOwnedContentMutation(
+      existing,
+      adminUser,
+      "destinations:write",
+      "destinations:write:owned",
+      "当前账号只能编辑自己新建的目的地"
+    );
+  }
   const requestedSlug = normalizeText(payload && payload.slug).toLowerCase();
   const name = normalizeText(payload && payload.name);
   const slug = existing
@@ -3886,35 +6863,35 @@ async function saveDestination(payload, adminUser) {
     nextDoc.createdAt = now;
     nextDoc.createdBy = operatorId;
     const createResult = await db.collection(COLLECTIONS.destinations).add({ data: nextDoc });
-    return getDestinationDetail({ _id: createResult && createResult._id });
+    return getDestinationDetail({ _id: createResult && createResult._id }, adminUser);
   }
 
   await db.collection(COLLECTIONS.destinations).doc(existing._id).update({ data: nextDoc });
-  return getDestinationDetail({ _id: existing._id });
+  return getDestinationDetail({ _id: existing._id }, adminUser);
 }
 
 async function deleteDestination(payload, adminUser) {
+  assertPlatformAdmin(adminUser, "当前账号没有删除目的地的权限");
+  assertCondition(
+    hasAdminPermission(adminUser, "destinations:write") || hasAdminPermission(adminUser, "destinations:write:owned"),
+    "当前账号没有删除目的地的权限"
+  );
   const existing = await findContentDoc(COLLECTIONS.destinations, payload);
   assertCondition(existing, "未找到对应目的地");
+  assertOwnedContentMutation(
+    existing,
+    adminUser,
+    "destinations:write",
+    "destinations:write:owned",
+    "当前账号只能删除自己新建的目的地"
+  );
 
   const destinationSlug = normalizeText(existing.slug);
-  const [creators, services, ideas] = await Promise.all([
-    listCollection(COLLECTIONS.creators),
-    listCollection(COLLECTIONS.services),
-    listCollection(COLLECTIONS.ideas)
-  ]);
+  const services = await listCollection(COLLECTIONS.services);
 
-  assertCondition(
-    creators.every((creator) => !normalizeArray(creator.destinationSlugs).includes(destinationSlug)),
-    "该目的地仍有关联创作者，不能直接删除"
-  );
   assertCondition(
     services.every((service) => !normalizeArray(service.destinationSlugs).includes(destinationSlug)),
     "该目的地仍有关联路线，不能直接删除"
-  );
-  assertCondition(
-    ideas.every((idea) => !normalizeArray(idea.destinationSlugs).includes(destinationSlug)),
-    "该目的地仍有关联故事，不能直接删除"
   );
 
   await db.collection(COLLECTIONS.destinations).doc(existing._id).remove();
@@ -3927,7 +6904,8 @@ async function deleteDestination(payload, adminUser) {
   };
 }
 
-async function getIdeaDetail(payload) {
+async function getIdeaDetail(payload, adminUser) {
+  assertAdminPermission(adminUser, "ideas:read");
   const idea = await findContentDoc(COLLECTIONS.ideas, payload);
   assertCondition(idea, "未找到对应故事");
 
@@ -3939,11 +6917,24 @@ async function getIdeaDetail(payload) {
     return map;
   }, {});
 
-  return mapIdeaDetailRecord(idea, authorNameMap);
+  return mapIdeaDetailRecord(idea, authorNameMap, adminUser);
 }
 
 async function saveIdea(payload, adminUser) {
+  assertCondition(
+    hasAdminPermission(adminUser, "ideas:write") || hasAdminPermission(adminUser, "ideas:write:owned"),
+    "当前账号没有编辑故事的权限"
+  );
   const existing = await findContentDoc(COLLECTIONS.ideas, payload);
+  if (existing) {
+    assertOwnedContentMutation(
+      existing,
+      adminUser,
+      "ideas:write",
+      "ideas:write:owned",
+      "当前账号只能编辑自己新建的故事"
+    );
+  }
   const title = normalizeText(payload && payload.title);
   const requestedSlug = normalizeText(payload && payload.slug).toLowerCase();
   const sourceType = normalizeIdeaSourceType(payload && payload.sourceType);
@@ -3958,7 +6949,7 @@ async function saveIdea(payload, adminUser) {
 
   assertCondition(title, "故事标题不能为空");
   assertCondition(slug, "故事 slug 生成失败，请稍后重试");
-  assertCondition(ideaTheme.themeLabel, "请选择或输入故事主题");
+  assertCondition(ideaTheme.themeLabel, "请选择故事主题");
 
   if (existing) {
     assertCondition(
@@ -3975,9 +6966,11 @@ async function saveIdea(payload, adminUser) {
   }
 
   const creators = await listCollection(COLLECTIONS.creators);
-  const matchedAuthor = creators.find((creator) =>
-    listCreatorRefs(creator).includes(normalizeText(payload && payload.authorId))
-  );
+  const matchedAuthor = isCreatorPortalUser(adminUser)
+    ? await resolveBoundCreator(adminUser)
+    : creators.find((creator) =>
+      listCreatorRefs(creator).includes(normalizeText(payload && payload.authorId))
+    );
   assertCondition(matchedAuthor, "请选择已存在的创作者");
 
   const operatorId = normalizeText(adminUser && (adminUser.uid || adminUser.id));
@@ -3990,6 +6983,7 @@ async function saveIdea(payload, adminUser) {
   const publishedAt = normalizeNumber(normalizedPayload && normalizedPayload.publishedAt, 0);
   const readMoreText = normalizeText(normalizedPayload && normalizedPayload.readMoreText) || DEFAULT_IDEA_READ_MORE_TEXT;
   const syncStatus = normalizeText(normalizedPayload && normalizedPayload.syncStatus) || "draft";
+  const regionCodes = normalizeServiceRegionCodes(normalizedPayload && normalizedPayload.regionCodes);
 
   if (sourceType === "mini") {
     assertCondition(body, "小程序全文模式必须填写正文内容");
@@ -4017,6 +7011,7 @@ async function saveIdea(payload, adminUser) {
     summary: normalizeText(normalizedPayload && normalizedPayload.summary),
     cover: getImageAssetOriginal(normalizedPayload && normalizedPayload.cover),
     authorId: normalizeText(matchedAuthor && matchedAuthor.id) || normalizeText(normalizedPayload && normalizedPayload.authorId),
+    regionCodes,
     destinationSlugs: uniqueStrings(normalizedPayload && normalizedPayload.destinationSlugs),
     relatedServiceSlugs: uniqueStrings(normalizedPayload && normalizedPayload.relatedServiceSlugs),
     body,
@@ -4038,16 +7033,27 @@ async function saveIdea(payload, adminUser) {
     nextDoc.createdAt = now;
     nextDoc.createdBy = operatorId;
     const createResult = await db.collection(COLLECTIONS.ideas).add({ data: nextDoc });
-    return getIdeaDetail({ _id: createResult && createResult._id });
+    return getIdeaDetail({ _id: createResult && createResult._id }, adminUser);
   }
 
   await db.collection(COLLECTIONS.ideas).doc(existing._id).update({ data: nextDoc });
-  return getIdeaDetail({ _id: existing._id });
+  return getIdeaDetail({ _id: existing._id }, adminUser);
 }
 
 async function deleteIdea(payload, adminUser) {
+  assertCondition(
+    hasAdminPermission(adminUser, "ideas:write") || hasAdminPermission(adminUser, "ideas:write:owned"),
+    "当前账号没有删除故事的权限"
+  );
   const existing = await findContentDoc(COLLECTIONS.ideas, payload);
   assertCondition(existing, "未找到对应故事");
+  assertOwnedContentMutation(
+    existing,
+    adminUser,
+    "ideas:write",
+    "ideas:write:owned",
+    "当前账号只能删除自己新建的故事"
+  );
 
   const ideaSlug = normalizeText(existing.slug);
   await db.collection(COLLECTIONS.ideas).doc(existing._id).remove();
@@ -4060,65 +7066,199 @@ async function deleteIdea(payload, adminUser) {
   };
 }
 
-async function listCreators(payload) {
+async function listCreators(payload, adminUser) {
+  assertAdminPermission(adminUser, "creators:read");
   const keyword = normalizeText(payload && payload.keyword).toLowerCase();
+  const status = normalizeText(payload && payload.status).toLowerCase();
   const tag = normalizeText(payload && payload.tag);
+  const creatorSlug = normalizeText(payload && payload.creatorSlug);
   const limit = clampLimit(payload && payload.limit);
-  const [creators, services] = await Promise.all([
+  const boundCreatorId = getCreatorPortalBoundCreatorId(adminUser);
+  const [creators, services, ideas] = await Promise.all([
     listCollection(COLLECTIONS.creators),
-    listCollection(COLLECTIONS.services)
+    listCollection(COLLECTIONS.services),
+    listCollection(COLLECTIONS.ideas)
   ]);
+  const mineCreatorRefs = resolveMineScopeCreatorRefs(payload, adminUser, creators);
 
-  return creators
+  const items = creators
+    .map((creator) => {
+      const destinationSlugs = collectDestinationSlugsFromServicesForCreator(creator, services);
+      const regionCodes = collectRegionCodesFromServicesForCreator(creator, services);
+      const tags = getCreatorRouteTags(creator, services);
+      const creatorRefs = listCreatorRefs(creator);
+
+      return {
+        id: normalizeText(creator.id) || normalizeText(creator.slug),
+        slug: normalizeText(creator.slug),
+        name: normalizeText(creator.name),
+        status: buildStatusTag(creator),
+        stance: normalizeText(creator.stance),
+        tags,
+        regionCodes,
+        regionCount: regionCodes.length,
+        destinationSlugs,
+        destinationCount: destinationSlugs.length,
+        serviceCount: services.filter((service) => creatorRefs.includes(normalizeText(service.creatorId))).length,
+        ideaCount: ideas.filter((idea) => creatorRefs.includes(normalizeText(idea.authorId))).length,
+        access: getCreatorAccess(creator, adminUser),
+        createdAt: normalizeNumber(creator && creator.createdAt),
+        updatedAt: normalizeNumber(creator && creator.updatedAt)
+      };
+    })
     .filter((creator) => {
-      const creatorTags = normalizeCreatorTags(creator.tags);
-      if (tag && !creatorTags.includes(tag)) {
+      const isBoundCreator = Boolean(boundCreatorId && listCreatorRefs(creator).includes(boundCreatorId));
+      if (Array.isArray(mineCreatorRefs) && !matchesCreatorRefSet(new Set(mineCreatorRefs), listCreatorRefs(creator))) {
+        return false;
+      }
+      if (creatorSlug && creator.slug !== creatorSlug) {
+        return false;
+      }
+      if (
+        status
+        && status !== "all"
+        && status !== normalizeText(creator.status).toLowerCase()
+        && !isBoundCreator
+      ) {
+        return false;
+      }
+      if (tag && !normalizeArray(creator.tags).includes(tag)) {
         return false;
       }
 
-      return matchesKeyword([creator.name, creator.slug, creator.stance, ...creatorTags], keyword);
-    })
-    .slice(0, limit)
-    .map((creator) => ({
-      id: normalizeText(creator.id) || normalizeText(creator.slug),
-      slug: normalizeText(creator.slug),
-      name: normalizeText(creator.name),
-      status: buildStatusTag(creator),
-      stance: normalizeText(creator.stance),
-      tags: normalizeCreatorTags(creator.tags),
-      destinationSlugs: uniqueStrings(creator.destinationSlugs),
-      destinationCount: normalizeArray(creator.destinationSlugs).length,
-      serviceCount: services.filter((service) => listCreatorRefs(creator).includes(normalizeText(service.creatorId))).length,
-      createdAt: normalizeNumber(creator && creator.createdAt),
-      updatedAt: normalizeNumber(creator && creator.updatedAt)
-    }));
+      return matchesKeyword([creator.name, creator.slug, creator.stance, ...normalizeArray(creator.tags)], keyword);
+    });
+
+  if (shouldReturnPagedResult(payload)) {
+    return buildPagedResult(items, payload, {
+      defaultPageSize: 10,
+      defaultSortBy: "updatedAt",
+      defaultSortDirection: "desc",
+      getSortValue: (item, sortBy) => {
+        switch (sortBy) {
+          case "name":
+            return item.name;
+          case "destinationCount":
+            return item.destinationCount;
+          case "serviceCount":
+            return item.serviceCount;
+          case "ideaCount":
+            return item.ideaCount;
+          case "updatedAt":
+            return item.updatedAt;
+          case "status":
+            return item.status;
+          default:
+            return item.updatedAt;
+        }
+      },
+      getItemKey: (item) => item.id || item.slug
+    });
+  }
+
+  return items.slice(0, limit);
 }
 
-async function listDestinations(payload) {
+async function getCreatorRelationSummaries(payload) {
+  const creatorSlugs = uniqueStrings(normalizeArray(payload && payload.creatorSlugs));
+  if (!creatorSlugs.length) {
+    return {};
+  }
+
+  const [creators, destinations, services, ideas] = await Promise.all([
+    listCollection(COLLECTIONS.creators),
+    listCollection(COLLECTIONS.destinations),
+    listCollection(COLLECTIONS.services),
+    listCollection(COLLECTIONS.ideas)
+  ]);
+
+  const destinationNameMap = normalizeArray(destinations).reduce((map, destination) => {
+    const slug = normalizeText(destination && destination.slug);
+    if (slug) {
+      map[slug] = normalizeText(destination && destination.name) || slug;
+    }
+    return map;
+  }, {});
+
+  return normalizeArray(creators)
+    .filter((creator) => creatorSlugs.includes(normalizeText(creator && creator.slug)))
+    .reduce((result, creator) => {
+      const creatorSlug = normalizeText(creator && creator.slug);
+      const creatorRefs = listCreatorRefs(creator);
+      const matchedServices = normalizeArray(services).filter((service) =>
+        creatorRefs.includes(normalizeText(service && service.creatorId))
+      );
+      const matchedIdeas = normalizeArray(ideas).filter((idea) =>
+        creatorRefs.includes(normalizeText(idea && idea.authorId))
+      );
+      const regionCodes = collectRegionCodesFromServicesForCreator(creator, services);
+      const destinationSlugs = collectDestinationSlugsFromServicesForCreator(creator, services);
+
+      result[creatorSlug] = {
+        regionCount: regionCodes.length,
+        regions: regionCodes.map((code) => ({
+          code,
+          label: getDestinationRegionLabel(code) || code
+        })),
+        destinationCount: destinationSlugs.length,
+        destinations: destinationSlugs.map((slug) => ({
+          slug,
+          name: destinationNameMap[slug] || slug
+        })),
+        serviceCount: matchedServices.length,
+        services: uniqueStrings(matchedServices.map((service) => normalizeText(service && service.slug)))
+          .map((slug) => {
+            const service = matchedServices.find((item) => normalizeText(item && item.slug) === slug);
+            return {
+              slug,
+              name: normalizeText(service && service.name) || slug
+            };
+          }),
+        ideaCount: matchedIdeas.length,
+        ideas: uniqueStrings(matchedIdeas.map((idea) => normalizeText(idea && idea.slug)))
+          .map((slug) => {
+            const idea = matchedIdeas.find((item) => normalizeText(item && item.slug) === slug);
+            return {
+              slug,
+              title: normalizeText(idea && idea.title) || slug
+            };
+          })
+      };
+
+      return result;
+    }, {});
+}
+
+async function listDestinations(payload, adminUser) {
+  assertPlatformAdmin(adminUser, "当前账号没有查看目的地的权限");
+  assertAdminPermission(adminUser, "destinations:read");
   const keyword = normalizeText(payload && payload.keyword).toLowerCase();
+  const status = normalizeText(payload && payload.status).toLowerCase();
+  const destinationSlug = normalizeText(payload && payload.destinationSlug);
   const limit = clampLimit(payload && payload.limit);
   const [destinations, creators, services] = await Promise.all([
     listCollection(COLLECTIONS.destinations),
     listCollection(COLLECTIONS.creators),
     listCollection(COLLECTIONS.services)
   ]);
+  const mineCreatorRefs = resolveMineScopeCreatorRefs(payload, adminUser, creators);
+  const mineCreator = Array.isArray(mineCreatorRefs)
+    ? normalizeArray(creators).find((creator) => matchesCreatorRefSet(new Set(mineCreatorRefs), listCreatorRefs(creator))) || null
+    : null;
+  const mineDestinationSlugSet = Array.isArray(mineCreatorRefs)
+    ? new Set(collectDestinationSlugsForCreatorScope(mineCreator, services))
+    : null;
 
-  return destinations
-    .filter((destination) =>
-      matchesKeyword(
-        [
-          destination.name,
-          destination.slug,
-          destination.description,
-          getDestinationRegionLabel(resolveDestinationRegionCode(destination.regionCode, destination.slug))
-        ],
-        keyword
-      )
-    )
-    .slice(0, limit)
+  const items = destinations
     .map((destination) => {
       const slug = normalizeText(destination.slug);
       const regionCode = resolveDestinationRegionCode(destination.regionCode, slug);
+      const relatedServices = services.filter((service) => normalizeArray(service.destinationSlugs).includes(slug));
+      const relatedCreatorRefs = uniqueStrings(relatedServices.map((service) => normalizeText(service && service.creatorId)));
+      const relatedCreators = creators.filter((creator) => {
+        const creatorRefs = listCreatorRefs(creator);
+        return relatedCreatorRefs.some((creatorRef) => creatorRefs.includes(creatorRef));
+      });
       return {
         id: normalizeText(destination.id) || slug,
         slug,
@@ -4127,20 +7267,74 @@ async function listDestinations(payload) {
         regionCode,
         regionLabel: getDestinationRegionLabel(regionCode),
         description: normalizeText(destination.description),
-        creatorSlugs: creators
-          .filter((creator) => normalizeArray(creator.destinationSlugs).includes(slug))
+        creatorSlugs: relatedCreators
           .map((creator) => normalizeText(creator.slug))
           .filter(Boolean),
-        creatorCount: creators.filter((creator) => normalizeArray(creator.destinationSlugs).includes(slug)).length,
-        serviceCount: services.filter((service) => normalizeArray(service.destinationSlugs).includes(slug)).length,
+        creatorCount: relatedCreators.length,
+        serviceCount: relatedServices.length,
+        access: getDestinationAccess(destination, adminUser),
         createdAt: normalizeNumber(destination && destination.createdAt),
         updatedAt: normalizeNumber(destination && destination.updatedAt)
       };
+    })
+    .filter((destination) => {
+      if (mineDestinationSlugSet && !mineDestinationSlugSet.has(destination.slug)) {
+        return false;
+      }
+      if (destinationSlug && destination.slug !== destinationSlug) {
+        return false;
+      }
+      if (status && status !== "all" && status !== normalizeText(destination.status).toLowerCase()) {
+        return false;
+      }
+
+      return matchesKeyword(
+        [
+          destination.name,
+          destination.slug,
+          destination.description,
+          destination.regionLabel
+        ],
+        keyword
+      );
     });
+
+  if (shouldReturnPagedResult(payload)) {
+    return buildPagedResult(items, payload, {
+      defaultPageSize: 10,
+      defaultSortBy: "updatedAt",
+      defaultSortDirection: "desc",
+      getSortValue: (item, sortBy) => {
+        switch (sortBy) {
+          case "name":
+            return item.name;
+          case "regionLabel":
+            return item.regionLabel;
+          case "creatorCount":
+            return item.creatorCount;
+          case "serviceCount":
+            return item.serviceCount;
+          case "updatedAt":
+            return item.updatedAt;
+          case "status":
+            return item.status;
+          default:
+            return item.updatedAt;
+        }
+      },
+      getItemKey: (item) => item.id || item.slug
+    });
+  }
+
+  return items.slice(0, limit);
 }
 
-async function listIdeas(payload) {
+async function listIdeas(payload, adminUser) {
+  assertAdminPermission(adminUser, "ideas:read");
   const keyword = normalizeText(payload && payload.keyword).toLowerCase();
+  const status = normalizeText(payload && payload.status).toLowerCase();
+  const ideaSlug = normalizeText(payload && payload.ideaSlug);
+  const creatorSlug = normalizeText(payload && payload.creatorSlug);
   const limit = clampLimit(payload && payload.limit);
   const [ideas, creators] = await Promise.all([
     listCollection(COLLECTIONS.ideas),
@@ -4152,20 +7346,9 @@ async function listIdeas(payload) {
     map[`creator-${normalizeText(creator.slug)}`] = normalizeText(creator.name);
     return map;
   }, {});
+  const creatorRefs = resolveCreatorRefs(creatorSlug, creators);
 
-  return ideas
-    .filter((idea) => {
-      const ideaTheme = normalizeIdeaTheme(
-        idea && idea.themeKey,
-        normalizeText(idea && idea.themeLabel) || normalizeText(idea && idea.theme),
-        idea && idea.isCustomTheme
-      );
-      return matchesKeyword(
-        [idea.title, idea.slug, idea.summary, ideaTheme.themeLabel, authorMap[normalizeText(idea.authorId)]],
-        keyword
-      );
-    })
-    .slice(0, limit)
+  const items = ideas
     .map((idea) => {
       const ideaTheme = normalizeIdeaTheme(
         idea && idea.themeKey,
@@ -4182,51 +7365,200 @@ async function listIdeas(payload) {
         isCustomTheme: ideaTheme.isCustomTheme,
         sourceType: normalizeIdeaSourceType(idea && idea.sourceType),
         status: buildStatusTag(idea),
+        authorId: normalizeText(idea && idea.authorId),
         authorName: authorMap[normalizeText(idea.authorId)] || "",
+        regionCodes: normalizeServiceRegionCodes(idea && idea.regionCodes),
+        regionCount: normalizeServiceRegionCodes(idea && idea.regionCodes).length,
+        destinationSlugs: uniqueStrings(idea && idea.destinationSlugs),
         destinationCount: normalizeArray(idea.destinationSlugs).length,
         summary: normalizeText(idea.summary),
+        access: getIdeaAccess(idea, adminUser),
         createdAt: normalizeNumber(idea && idea.createdAt),
         updatedAt: normalizeNumber(idea && idea.updatedAt)
       };
+    })
+    .filter((idea) => {
+      if (ideaSlug && idea.slug !== ideaSlug) {
+        return false;
+      }
+      if (creatorRefs.length && !creatorRefs.includes(normalizeText(idea.authorId))) {
+        return false;
+      }
+      if (status && status !== "all" && status !== normalizeText(idea.status).toLowerCase()) {
+        return false;
+      }
+
+      return matchesKeyword(
+        [idea.title, idea.slug, idea.summary, idea.themeLabel, idea.authorName],
+        keyword
+      );
     });
+
+  if (shouldReturnPagedResult(payload)) {
+    return buildPagedResult(items, payload, {
+      defaultPageSize: 10,
+      defaultSortBy: "updatedAt",
+      defaultSortDirection: "desc",
+      getSortValue: (item, sortBy) => {
+        switch (sortBy) {
+          case "title":
+            return item.title;
+          case "theme":
+            return item.theme;
+          case "authorName":
+            return item.authorName;
+          case "destinationCount":
+            return item.destinationCount;
+          case "updatedAt":
+            return item.updatedAt;
+          case "status":
+            return item.status;
+          default:
+            return item.updatedAt;
+        }
+      },
+      getItemKey: (item) => item.id || item.slug
+    });
+  }
+
+  return items.slice(0, limit);
 }
 
-async function listServicePeriods(payload) {
+async function listServicePeriods(payload, adminUser) {
+  assertAdminPermission(adminUser, "periods:read");
   const keyword = normalizeText(payload && payload.keyword).toLowerCase();
   const serviceSlug = normalizeText(payload && payload.serviceSlug);
+  const status = normalizeText(payload && payload.status).toLowerCase();
+  const dateScope = normalizeText(payload && payload.dateScope).toLowerCase();
+  const stock = normalizeText(payload && payload.stock).toLowerCase();
   const limit = clampLimit(payload && payload.limit, 100);
-  const [rows, soldCountMap] = await Promise.all([
+  const [rows, soldCountMap, services, creators] = await Promise.all([
     queryRows(
       "SELECT `serviceSlug`, `serviceName`, `periodCode`, `versionName`, `durationDays`, `dateStart`, `dateEnd`, `price`, `minGroup`, `remainingSeats`, `status`, `updatedAt` FROM `ServicePeriod` ORDER BY `dateStart` DESC LIMIT 500"
     ),
-    getSoldCountByPeriodCodeMap()
+    getSoldCountByPeriodCodeMap({ bestEffort: true }),
+    listCollection(COLLECTIONS.services),
+    listCollection(COLLECTIONS.creators)
   ]);
+  const serviceMap = normalizeArray(services).reduce((map, service) => {
+    const slug = normalizeText(service && service.slug);
+    if (slug) {
+      map[slug] = service;
+    }
+    return map;
+  }, {});
+  const creatorRefSet = buildAdminCreatorRefSet(adminUser, creators);
+  const todayDateKey = getShanghaiTodayDateString();
+  const upcomingDateKey = addDaysToDateString(todayDateKey, 13);
 
-  return rows
+  const items = rows
+    .map((row) => Object.assign(
+      mapServicePeriodRecord(
+        row,
+        soldCountMap[normalizeText(row.periodCode)] || 0,
+        serviceMap[normalizeText(row.serviceSlug)] || null,
+        adminUser
+      ),
+      {
+        updatedAt: normalizeNumber(row.updatedAt)
+      }
+    ))
     .filter((row) => {
+      if (!canAccessServicePeriodForAdmin(row, adminUser, creatorRefSet, serviceMap)) {
+        return false;
+      }
       if (serviceSlug && normalizeText(row.serviceSlug) !== serviceSlug) {
+        return false;
+      }
+      if (status === "active" && !["available", "confirmed", "soldout", "closed"].includes(normalizeText(row.status))) {
+        return false;
+      }
+      if (status && status !== "all" && status !== "active" && normalizeText(row.status) !== status) {
+        return false;
+      }
+      if (dateScope === "upcoming" && (row.dateStart < todayDateKey || row.dateStart > upcomingDateKey)) {
+        return false;
+      }
+      if (
+        stock === "warning"
+        && !(normalizeNumber(row.remainingSeats) > 0
+          && normalizeNumber(row.remainingSeats) <= 3
+          && normalizeText(row.status) !== "inactive"
+          && normalizeText(row.status) !== "closed")
+      ) {
         return false;
       }
 
       return matchesKeyword([row.serviceName, row.serviceSlug, row.periodCode, row.versionName], keyword);
-    })
-    .slice(0, limit)
-    .map((row) => Object.assign(
-      mapServicePeriodRecord(row, soldCountMap[normalizeText(row.periodCode)] || 0),
-      {
-        updatedAt: normalizeNumber(row.updatedAt)
-      }
-    ));
+    });
+
+  if (shouldReturnPagedResult(payload)) {
+    return buildPagedResult(items, payload, {
+      defaultPageSize: 10,
+      defaultSortBy: "updatedAt",
+      defaultSortDirection: "desc",
+      getSortValue: (item, sortBy) => {
+        switch (sortBy) {
+          case "serviceName":
+            return item.serviceName;
+          case "versionName":
+            return item.versionName;
+          case "durationDays":
+            return item.durationDays;
+          case "dateStart":
+            return item.dateStart;
+          case "price":
+            return item.price;
+          case "totalSeats":
+            return item.totalSeats;
+          case "soldCount":
+            return item.soldCount;
+          case "remainingSeats":
+            return item.remainingSeats;
+          case "minGroup":
+            return item.minGroup;
+          case "updatedAt":
+            return item.updatedAt;
+          case "status":
+            return item.status;
+          default:
+            return item.updatedAt;
+        }
+      },
+      getItemKey: (item) => item.periodCode
+    });
+  }
+
+  return items.slice(0, limit);
 }
 
-async function getServicePeriodDetail(payload) {
+async function getServicePeriodDetail(payload, adminUser) {
+  assertAdminPermission(adminUser, "periods:read");
   const record = await findServicePeriodByCode(payload && payload.periodCode);
   assertCondition(record, "未找到对应团期");
-  const soldCount = await getSoldCountByPeriodCode(record.periodCode);
-  return mapServicePeriodRecord(record, soldCount);
+  const [soldCount, service, creators] = await Promise.all([
+    getSoldCountByPeriodCode(record.periodCode),
+    findServiceDocBySlug(record && record.serviceSlug),
+    listCollection(COLLECTIONS.creators)
+  ]);
+  const creatorRefSet = buildAdminCreatorRefSet(adminUser, creators);
+  assertCondition(
+    canAccessServicePeriodForAdmin(
+      record,
+      adminUser,
+      creatorRefSet,
+      service ? { [normalizeText(service && service.slug)]: service } : {}
+    ),
+    "未找到对应团期"
+  );
+  return mapServicePeriodRecord(record, soldCount, service, adminUser);
 }
 
 async function saveServicePeriod(payload, adminUser) {
+  assertCondition(
+    hasAdminPermission(adminUser, "periods:write") || hasAdminPermission(adminUser, "periods:write:owned"),
+    "当前账号没有编辑团期的权限"
+  );
   const originalPeriodCode = normalizeText(payload && (payload.originalPeriodCode || payload.periodCode));
   const existing = originalPeriodCode ? await findServicePeriodByCode(originalPeriodCode) : null;
   let periodCode = normalizeText(payload && payload.periodCode);
@@ -4235,6 +7567,10 @@ async function saveServicePeriod(payload, adminUser) {
   const requestedVersionName = normalizeText(payload && payload.versionName);
 
   assertCondition(service, "请选择已存在的路线");
+  assertCondition(
+    canManageServicePeriodsForService(service, adminUser),
+    "当前账号只能维护自己可编辑路线下的团期"
+  );
   let versionDefinition = findServiceVersionDefinition(service, requestedVersionName);
   if (!versionDefinition && existing) {
     const existingVersionName = normalizeText(existing && existing.versionName);
@@ -4285,6 +7621,14 @@ async function saveServicePeriod(payload, adminUser) {
     normalizePositiveInteger(payload && payload.totalSeats, normalizePositiveInteger(payload && payload.remainingSeats, 0))
   );
   const remainingSeats = Math.max(0, totalSeats - soldCount);
+  const singleRoomEnabled = normalizeBoolean(payload && payload.singleRoomEnabled);
+  const singleRoomPrice = singleRoomEnabled
+    ? Math.max(0, normalizeNumber(payload && payload.singleRoomPrice, 0))
+    : 0;
+  const singleRoomNotice = singleRoomEnabled ? normalizeText(payload && payload.singleRoomNotice) : "";
+  if (singleRoomEnabled) {
+    assertCondition(singleRoomPrice > 0, "开启单房申请时，请填写大于 0 的单房差参考价");
+  }
   const operatorId = normalizeText(adminUser && (adminUser.uid || adminUser.id));
   const now = Date.now();
   const record = {
@@ -4305,6 +7649,10 @@ async function saveServicePeriod(payload, adminUser) {
     minGroupInt: minGroup,
     totalSeats,
     totalSeatsInt: totalSeats,
+    singleRoomEnabled,
+    singleRoomPrice,
+    singleRoomPriceDec: toDecimalString(singleRoomPrice),
+    singleRoomNotice,
     remainingSeats,
     remainingSeatsInt: remainingSeats,
     status: resolveServicePeriodStatus(payload && payload.status, service, remainingSeats, dateStart, dateEnd, soldCount, minGroup),
@@ -4315,40 +7663,31 @@ async function saveServicePeriod(payload, adminUser) {
 
   if (!existing) {
     const createRecord = buildServicePeriodCreateRecord(record, operatorId, now);
-    let { error } = await rdb.from("ServicePeriod").insert(createRecord);
-    if (error && shouldFallbackLegacyServicePeriodFields(error)) {
-      ({ error } = await rdb.from("ServicePeriod").insert(stripOptionalTotalSeatFields(createRecord)));
-    }
-    if (error) {
-      throw new Error(error.message || "创建团期失败");
-    }
-    return getServicePeriodDetail({ periodCode });
+    await insertServicePeriodRecordWithCompatibility(createRecord);
+    return getServicePeriodDetail({ periodCode }, adminUser);
   }
 
-  let { error } = await rdb
-    .from("ServicePeriod")
-    .update(record)
-    .eq("periodCode", originalPeriodCode);
-  if (error && shouldFallbackLegacyServicePeriodFields(error)) {
-    ({ error } = await rdb
-      .from("ServicePeriod")
-      .update(stripOptionalTotalSeatFields(record))
-      .eq("periodCode", originalPeriodCode));
-  }
+  await updateServicePeriodRecordWithCompatibility(record, originalPeriodCode);
 
-  if (error) {
-    throw new Error(error.message || "更新团期失败");
-  }
-
-  return getServicePeriodDetail({ periodCode });
+  return getServicePeriodDetail({ periodCode }, adminUser);
 }
 
-async function deleteServicePeriod(payload) {
+async function deleteServicePeriod(payload, adminUser) {
+  assertCondition(
+    hasAdminPermission(adminUser, "periods:write") || hasAdminPermission(adminUser, "periods:write:owned"),
+    "当前账号没有删除团期的权限"
+  );
   const periodCode = normalizeText(payload && payload.periodCode);
   assertCondition(periodCode, "缺少团期编码");
 
   const existing = await findServicePeriodByCode(periodCode);
   assertCondition(existing, "未找到对应团期");
+  const service = await findServiceDocBySlug(existing && existing.serviceSlug);
+  assertCondition(service, "未找到团期所属路线");
+  assertCondition(
+    canManageServicePeriodsForService(service, adminUser),
+    "当前账号只能删除自己可编辑路线下的团期"
+  );
 
   const orderCount = await queryCount(
     "SELECT COUNT(*) AS `total` FROM `TravelOrder` WHERE `servicePeriodCode` = {{periodCode}}",
@@ -4388,18 +7727,897 @@ async function getConfigOverview() {
   };
 }
 
-async function listOrders(payload) {
+function getReferralRelationDedupeKey(item) {
+  const inviterUserId = normalizeText(item && item.inviterUserId);
+  const inviteeUserId = normalizeText(item && item.inviteeUserId);
+  const referralCode = normalizeText(item && item.referralCode).toUpperCase();
+
+  if (!inviterUserId || !inviteeUserId || !referralCode) {
+    return "";
+  }
+
+  return `${inviterUserId}::${inviteeUserId}::${referralCode}`;
+}
+
+function getReferralRelationFirstTime(item) {
+  return normalizeNumber(item && item.firstValidScanAt, 0)
+    || normalizeNumber(item && item.createdAt, 0)
+    || normalizeNumber(item && item.updatedAt, 0);
+}
+
+function dedupeReferralRelationItems(items) {
+  const keyedItems = new Map();
+  const unkeyedItems = [];
+
+  normalizeArray(items).forEach((item) => {
+    const key = getReferralRelationDedupeKey(item);
+    if (!key) {
+      unkeyedItems.push(item);
+      return;
+    }
+
+    const existing = keyedItems.get(key);
+    if (!existing) {
+      keyedItems.set(key, item);
+      return;
+    }
+
+    const existingTime = getReferralRelationFirstTime(existing);
+    const itemTime = getReferralRelationFirstTime(item);
+    if ((itemTime && !existingTime) || (itemTime && existingTime && itemTime < existingTime)) {
+      keyedItems.set(key, item);
+    }
+  });
+
+  return unkeyedItems.concat(Array.from(keyedItems.values()));
+}
+
+async function listReferralRelations(payload) {
+  const keyword = normalizeText(payload && payload.keyword).toLowerCase();
+  const status = normalizeText(payload && payload.status).toLowerCase();
+  const [relations, users] = await Promise.all([
+    listOptionalCollection(COLLECTIONS.referralRelations),
+    listCollection(COLLECTIONS.users)
+  ]);
+  const userMap = buildUserIdSummaryMap(users);
+
+  const filteredItems = normalizeArray(relations)
+    .map((doc) => {
+      const inviterSummary = resolveUserSummaryByUserId(userMap, doc && doc.inviterUserId);
+      const inviteeSummary = resolveUserSummaryByUserId(userMap, doc && doc.inviteeUserId);
+
+      return {
+        relationId: normalizeText(doc && doc._id),
+        inviterUserId: inviterSummary.userId,
+        inviterNickname: inviterSummary.userNickname,
+        inviteeUserId: inviteeSummary.userId,
+        inviteeNickname: inviteeSummary.userNickname,
+        referralCode: normalizeText(doc && (doc.firstValidScanCode || doc.referralCode)),
+        sourceScene: normalizeText(doc && (doc.firstValidScanScene || doc.sourceScene)),
+        status: normalizeText(doc && doc.status) || "active",
+        firstValidScanAt: normalizeNumber(doc && doc.firstValidScanAt, 0),
+        createdAt: normalizeNumber(doc && doc.createdAt, 0),
+        updatedAt: normalizeNumber(doc && doc.updatedAt, 0)
+      };
+    })
+    .filter((item) => {
+      if (status && normalizeText(item.status).toLowerCase() !== status) {
+        return false;
+      }
+      if (!keyword) {
+        return true;
+      }
+      return [
+        item.relationId,
+        item.inviterNickname,
+        item.inviteeNickname,
+        item.referralCode
+      ].some((value) => normalizeText(value).toLowerCase().includes(keyword));
+    });
+  const items = dedupeReferralRelationItems(filteredItems);
+
+  if (shouldReturnPagedResult(payload)) {
+    return buildPagedResult(items, payload, {
+      defaultSortBy: "firstValidScanAt",
+      defaultSortDirection: "desc",
+      getSortValue: (item, sortBy) => {
+        switch (sortBy) {
+          case "inviterNickname":
+            return item.inviterNickname;
+          case "inviteeNickname":
+            return item.inviteeNickname;
+          case "status":
+            return item.status;
+          case "createdAt":
+            return item.createdAt;
+          case "firstValidScanAt":
+          default:
+            return item.firstValidScanAt;
+        }
+      },
+      getItemKey: (item) => item.relationId
+    });
+  }
+
+  return items;
+}
+
+async function listReferralRewardLedgers(payload) {
+  const keyword = normalizeText(payload && payload.keyword).toLowerCase();
+  const status = normalizeText(payload && payload.status).toLowerCase();
+  const [ledgers, users] = await Promise.all([
+    listOptionalCollection(COLLECTIONS.referralRewardLedgers),
+    listCollection(COLLECTIONS.users)
+  ]);
+  const userMap = buildUserIdSummaryMap(users);
+
+  const items = normalizeArray(ledgers)
+    .map((doc) => {
+      const inviterSummary = resolveUserSummaryByUserId(userMap, doc && doc.inviterUserId);
+      const inviteeSummary = resolveUserSummaryByUserId(userMap, doc && doc.inviteeUserId);
+
+      const normalizedStatus = normalizeReferralRewardLedgerOperationalStatus(doc && doc.status);
+
+      return {
+        ledgerId: normalizeText(doc && doc._id),
+        inviterUserId: inviterSummary.userId,
+        inviterNickname: inviterSummary.userNickname,
+        inviteeUserId: inviteeSummary.userId,
+        inviteeNickname: inviteeSummary.userNickname,
+        sourceOrderNo: normalizeText(doc && doc.sourceOrderNo),
+        serviceName: normalizeText(doc && doc.serviceName),
+        rewardAmount: normalizeNumber(doc && doc.rewardAmount, 0),
+        status: normalizedStatus,
+        settlementMonth: normalizeText(doc && doc.settlementMonth),
+        payoutBatchId: normalizeText(doc && doc.payoutBatchId),
+        earnedAt: normalizeNumber(doc && doc.earnedAt, 0),
+        updatedAt: normalizeNumber(doc && doc.updatedAt, 0)
+      };
+    })
+    .filter((item) => {
+      if (status && normalizeText(item.status).toLowerCase() !== status) {
+        return false;
+      }
+      if (!keyword) {
+        return true;
+      }
+      return [
+        item.ledgerId,
+        item.inviterNickname,
+        item.inviteeNickname,
+        item.sourceOrderNo,
+        item.serviceName,
+        item.settlementMonth
+      ].some((value) => normalizeText(value).toLowerCase().includes(keyword));
+    });
+
+  if (shouldReturnPagedResult(payload)) {
+    return buildPagedResult(items, payload, {
+      defaultSortBy: "earnedAt",
+      defaultSortDirection: "desc",
+      getSortValue: (item, sortBy) => {
+        switch (sortBy) {
+          case "inviterNickname":
+            return item.inviterNickname;
+          case "inviteeNickname":
+            return item.inviteeNickname;
+          case "rewardAmount":
+            return item.rewardAmount;
+          case "status":
+            return item.status;
+          case "updatedAt":
+            return item.updatedAt;
+          case "earnedAt":
+          default:
+            return item.earnedAt;
+        }
+      },
+      getItemKey: (item) => item.ledgerId
+    });
+  }
+
+  return items;
+}
+
+function normalizeReferralRewardLedgerOperationalStatus(status) {
+  const normalized = normalizeText(status).toLowerCase();
+  switch (normalized) {
+    case "under_review":
+      return "payable";
+    case "payable":
+    case "paid":
+    case "failed":
+      return normalized;
+    case "earned":
+      return "awaiting_account";
+    case "batched":
+      return "payable";
+    case "reversed":
+      return "failed";
+    case "awaiting_account":
+    default:
+      return "awaiting_account";
+  }
+}
+
+function normalizeReferralPayoutAccountOperationalStatus(status) {
+  const normalized = normalizeText(status).toLowerCase();
+  if (normalized === "under_review") {
+    return "payable";
+  }
+  return normalized || "awaiting_account";
+}
+
+async function updateReferralRewardLedgerPayoutStatus(payload, adminUser) {
+  const ledgerId = normalizeText(payload && (payload.ledgerId || payload.rewardLedgerId || payload._id));
+  const nextStatus = normalizeText(payload && payload.status).toLowerCase();
+  const note = normalizeText(payload && payload.note);
+  assertCondition(ledgerId, "请选择奖励台账");
+  assertCondition(["paid", "failed"].includes(nextStatus), "只支持标记为已打款或打款失败");
+
+  const ledgerResult = await db.collection(COLLECTIONS.referralRewardLedgers).doc(ledgerId).get();
+  const ledger = ledgerResult && ledgerResult.data ? ledgerResult.data : null;
+  assertCondition(ledger, "奖励台账不存在");
+
+  const currentStatus = normalizeReferralRewardLedgerOperationalStatus(ledger && ledger.status);
+  if (nextStatus === "paid") {
+    assertCondition(["payable", "failed"].includes(currentStatus), "只有待打款或打款失败的奖励可以标记为已打款");
+  } else {
+    assertCondition(["payable", "paid"].includes(currentStatus), "只有待打款或已打款的奖励可以标记为打款失败");
+  }
+
+  const now = Date.now();
+  const updateData = {
+    status: nextStatus,
+    payoutMarkedAt: now,
+    payoutMarkedBy: getOrderDebugOperatorId(adminUser),
+    updatedAt: now
+  };
+  if (nextStatus === "paid") {
+    updateData.paidAt = now;
+    updateData.paidAtTs = now;
+    updateData.payoutFailureReason = "";
+  } else {
+    updateData.payoutFailedAt = now;
+    updateData.payoutFailureReason = note || "后台标记打款失败";
+  }
+
+  await db.collection(COLLECTIONS.referralRewardLedgers).doc(ledgerId).update({
+    data: updateData
+  });
+
+  return {
+    ledgerId,
+    status: nextStatus
+  };
+}
+
+async function listReferralPayoutAccounts(payload) {
+  const keyword = normalizeText(payload && payload.keyword).toLowerCase();
+  const status = normalizeText(payload && payload.status).toLowerCase();
+  const [accounts, users] = await Promise.all([
+    listOptionalCollection(COLLECTIONS.payoutAccounts),
+    listCollection(COLLECTIONS.users)
+  ]);
+  const userMap = buildUserIdSummaryMap(users);
+
+  const items = normalizeArray(accounts)
+    .map((doc) => {
+      const userSummary = resolveUserSummaryByUserId(userMap, doc && doc.userId);
+
+      return {
+        payoutAccountId: normalizeText(doc && doc._id),
+        userId: userSummary.userId,
+        userNickname: userSummary.userNickname,
+        accountName: normalizeText(doc && doc.accountName),
+        accountNameMasked: maskName(doc && doc.accountName),
+        phone: normalizeText(doc && doc.phone),
+        phoneMasked: maskPhone(doc && doc.phone),
+        bankName: normalizeText(doc && doc.bankName),
+        bankAccountNo: normalizeText(doc && doc.bankAccountNo),
+        bankAccountMasked: maskBankAccount(doc && doc.bankAccountNo),
+        idNumberLast4: normalizeText(doc && (
+          doc.idNumberLast4
+          || doc.idCardLast4
+          || doc.identityNumberLast4
+          || doc.certificateLast4
+        )),
+        status: normalizeReferralPayoutAccountOperationalStatus(doc && doc.status),
+        rejectionReason: normalizeText(doc && doc.rejectionReason),
+        submittedAt: normalizeNumber(doc && doc.submittedAt, 0),
+        reviewedAt: normalizeNumber(doc && doc.reviewedAt, 0),
+        updatedAt: normalizeNumber(doc && doc.updatedAt, 0)
+      };
+    })
+    .filter((item) => {
+      if (status && normalizeText(item.status).toLowerCase() !== status) {
+        return false;
+      }
+      if (!keyword) {
+        return true;
+      }
+      return [
+        item.userNickname,
+        item.bankName,
+        item.bankAccountMasked,
+        item.phoneMasked
+      ].some((value) => normalizeText(value).toLowerCase().includes(keyword));
+    });
+
+  if (shouldReturnPagedResult(payload)) {
+    return buildPagedResult(items, payload, {
+      defaultSortBy: "submittedAt",
+      defaultSortDirection: "desc",
+      getSortValue: (item, sortBy) => {
+        switch (sortBy) {
+          case "userNickname":
+            return item.userNickname;
+          case "status":
+            return item.status;
+          case "updatedAt":
+            return item.updatedAt;
+          case "submittedAt":
+          default:
+            return item.submittedAt;
+        }
+      },
+      getItemKey: (item) => item.payoutAccountId
+    });
+  }
+
+  return items;
+}
+
+function getOrderDebugOperatorId(adminUser) {
+  return normalizeText(adminUser && (adminUser.uid || adminUser.id || adminUser.username));
+}
+
+function formatSettlementMonth(timestamp) {
+  const targetTs = normalizeNumber(timestamp, 0);
+  if (!targetTs) {
+    return "";
+  }
+
+  return formatDateInTimeZone(targetTs, "Asia/Shanghai").slice(0, 7);
+}
+
+async function getShareReferralCampaignConfigForDebug() {
+  const doc = await readConfig("shareReferralCampaign");
+  const value = isPlainObject(doc && doc.value) ? doc.value : {};
+
+  return Object.assign({}, DEFAULT_SHARE_REFERRAL_CONFIG, value);
+}
+
+async function getOrderRowByOrderNo(orderNo) {
+  const normalizedOrderNo = normalizeText(orderNo);
+  assertCondition(normalizedOrderNo, "缺少订单号");
+
+  const rows = await queryRows(
+    "SELECT * FROM `TravelOrder` WHERE `orderNo` = {{orderNo}} LIMIT 1",
+    { orderNo: normalizedOrderNo }
+  );
+
+  return rows[0] || null;
+}
+
+async function findOrderDebugRecord(orderNo) {
+  const normalizedOrderNo = normalizeText(orderNo);
+  if (!normalizedOrderNo) {
+    return null;
+  }
+
+  try {
+    const result = await db.collection(COLLECTIONS.orderDebugRecords)
+      .where({ orderNo: normalizedOrderNo })
+      .limit(1)
+      .get();
+    const rows = normalizeArray(result && result.data);
+    return rows.find((item) => normalizeText(item && item.orderNo) === normalizedOrderNo) || rows[0] || null;
+  } catch (error) {
+    if (isMissingCollectionError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+function mapOrderDebugRecord(record) {
+  return {
+    isTestOrder: Boolean(record && record.isTestOrder),
+    originalTravelDateEnd: normalizeText(record && record.originalTravelDateEnd),
+    originalServiceSnapshotJson: normalizeText(record && record.originalServiceSnapshotJson),
+    markedAt: normalizeNumber(record && record.markedAt, 0),
+    markedBy: normalizeText(record && record.markedBy),
+    updatedAt: normalizeNumber(record && record.updatedAt, 0),
+    updatedBy: normalizeText(record && record.updatedBy)
+  };
+}
+
+async function upsertOrderDebugRecord(orderRecord, adminUser, patch = {}) {
+  const orderNo = normalizeText(orderRecord && orderRecord.orderNo);
+  assertCondition(orderNo, "缺少订单号");
+
+  const operatorId = getOrderDebugOperatorId(adminUser);
+  const now = Date.now();
+  const existing = await findOrderDebugRecord(orderNo);
+  const nextData = Object.assign(
+    {
+      orderNo,
+      isTestOrder: true,
+      originalTravelDateEnd: normalizeText(orderRecord && orderRecord.travelDateEnd),
+      originalServiceSnapshotJson: normalizeText(orderRecord && orderRecord.serviceSnapshotJson),
+      markedAt: normalizeNumber(existing && existing.markedAt, now),
+      markedBy: normalizeText(existing && existing.markedBy) || operatorId
+    },
+    existing || {},
+    patch,
+    {
+      orderNo,
+      isTestOrder: true,
+      updatedAt: now,
+      updatedBy: operatorId
+    }
+  );
+
+  if (existing && normalizeText(existing._id)) {
+    const updateData = Object.assign({}, nextData);
+    delete updateData._id;
+    await db.collection(COLLECTIONS.orderDebugRecords).doc(existing._id).update({
+      data: updateData
+    });
+    return Object.assign({}, existing, updateData);
+  }
+
+  const createResult = await db.collection(COLLECTIONS.orderDebugRecords).add({
+    data: Object.assign({}, nextData, {
+      createdAt: now,
+      createdBy: operatorId
+    })
+  });
+
+  return Object.assign({ _id: createResult && createResult._id }, nextData);
+}
+
+async function assertOrderIsMarkedForDebug(orderNo) {
+  const record = await findOrderDebugRecord(orderNo);
+  assertCondition(record && record.isTestOrder, "请先将该订单标记为测试订单");
+  return record;
+}
+
+async function unmarkOrderDebugRecord(orderNo, adminUser) {
+  const normalizedOrderNo = normalizeText(orderNo);
+  assertCondition(normalizedOrderNo, "缺少订单号");
+
+  const record = await assertOrderIsMarkedForDebug(normalizedOrderNo);
+  const now = Date.now();
+  await db.collection(COLLECTIONS.orderDebugRecords).doc(record._id).update({
+    data: {
+      isTestOrder: false,
+      unmarkedAt: now,
+      unmarkedBy: getOrderDebugOperatorId(adminUser),
+      updatedAt: now,
+      updatedBy: getOrderDebugOperatorId(adminUser)
+    }
+  });
+
+  return Object.assign({}, record, {
+    isTestOrder: false,
+    unmarkedAt: now,
+    unmarkedBy: getOrderDebugOperatorId(adminUser),
+    updatedAt: now,
+    updatedBy: getOrderDebugOperatorId(adminUser)
+  });
+}
+
+function mapOrderDebugListItem(record, orderRecord) {
+  return {
+    orderNo: normalizeText(record && record.orderNo),
+    isTestOrder: Boolean(record && record.isTestOrder),
+    serviceName: normalizeText(orderRecord && orderRecord.serviceName),
+    servicePeriodCode: normalizeText(orderRecord && orderRecord.servicePeriodCode),
+    status: normalizeText(orderRecord && orderRecord.status),
+    travelDateStart: normalizeText(orderRecord && orderRecord.travelDateStart),
+    travelDateEnd: normalizeText(orderRecord && orderRecord.travelDateEnd),
+    userOpenid: normalizeText(orderRecord && orderRecord.userOpenid),
+    markedAt: normalizeNumber(record && record.markedAt, 0),
+    markedBy: normalizeText(record && record.markedBy),
+    updatedAt: normalizeNumber(record && record.updatedAt, 0),
+    updatedBy: normalizeText(record && record.updatedBy)
+  };
+}
+
+async function listOrderDebugTestOrders(payload, adminUser) {
+  assertOrderDebugToolAccess(adminUser);
+  const limit = Math.min(50, clampLimit(payload && payload.limit));
+  const records = normalizeArray(await listOptionalCollection(COLLECTIONS.orderDebugRecords))
+    .filter((record) => record && record.isTestOrder && normalizeText(record.orderNo))
+    .sort((left, right) => normalizeNumber(right.updatedAt || right.markedAt, 0) - normalizeNumber(left.updatedAt || left.markedAt, 0))
+    .slice(0, limit);
+
+  const orders = await Promise.all(records.map((record) => getOrderRowByOrderNo(record.orderNo)));
+  return records.map((record, index) => mapOrderDebugListItem(record, orders[index]));
+}
+
+async function appendOrderDebugEvent(orderRecord, adminUser, source, note) {
+  await appendOrderStatusEvent({
+    orderNo: orderRecord && orderRecord.orderNo,
+    userOpenid: orderRecord && orderRecord.userOpenid,
+    status: orderRecord && orderRecord.status,
+    fromStatus: orderRecord && orderRecord.status,
+    source,
+    note,
+    operatorId: getOrderDebugOperatorId(adminUser)
+  });
+}
+
+function isAllowedDebugOrderTransition(currentStatus, nextStatus) {
+  if (currentStatus === nextStatus) {
+    return true;
+  }
+
+  if (nextStatus === "paid") {
+    return currentStatus === "pending";
+  }
+
+  if (nextStatus === "completed") {
+    return currentStatus === "paid" || currentStatus === "traveling";
+  }
+
+  return false;
+}
+
+function buildDebugOrderStatusUpdateData(nextStatus, now) {
+  const data = {
+    status: nextStatus,
+    updatedAt: now
+  };
+
+  if (nextStatus === "paid") {
+    data.paidAtTs = now;
+  }
+
+  return data;
+}
+
+async function updateTravelOrderByOrderNo(orderNo, data) {
+  const { error } = await rdb
+    .from("TravelOrder")
+    .update(data)
+    .eq("orderNo", orderNo);
+
+  if (error) {
+    throw new Error(error.message || "订单更新失败");
+  }
+}
+
+async function transitionDebugOrderStatus(orderRecord, nextStatus, adminUser, source) {
+  const orderNo = normalizeText(orderRecord && orderRecord.orderNo);
+  const currentStatus = normalizeText(orderRecord && orderRecord.status);
+  assertCondition(orderNo, "缺少订单号");
+  assertCondition(isAllowedDebugOrderTransition(currentStatus, nextStatus), "当前订单状态不允许执行该调试动作");
+
+  if (currentStatus === nextStatus) {
+    return orderRecord;
+  }
+
+  const now = Date.now();
+  const updateData = buildDebugOrderStatusUpdateData(nextStatus, now);
+  await updateTravelOrderByOrderNo(orderNo, updateData);
+  const updatedOrder = Object.assign({}, orderRecord, updateData);
+  await appendOrderStatusEvent({
+    orderNo,
+    userOpenid: orderRecord && orderRecord.userOpenid,
+    status: nextStatus,
+    fromStatus: currentStatus,
+    source,
+    operatorId: getOrderDebugOperatorId(adminUser)
+  });
+
+  return updatedOrder;
+}
+
+function buildOrderServiceSnapshotWithTravelEnd(orderRecord, nextEndDate) {
+  const snapshot = parseJsonText(orderRecord && orderRecord.serviceSnapshotJson, {});
+  const nextSnapshot = isPlainObject(snapshot) ? cloneJson(snapshot, {}) : {};
+  const currentTravelPeriod = isPlainObject(nextSnapshot.travelPeriod) ? nextSnapshot.travelPeriod : {};
+
+  nextSnapshot.travelPeriod = Object.assign({}, currentTravelPeriod, {
+    dateStart: normalizeText(currentTravelPeriod.dateStart) || normalizeText(orderRecord && orderRecord.travelDateStart),
+    dateEnd: nextEndDate
+  });
+
+  return JSON.stringify(nextSnapshot);
+}
+
+async function setDebugOrderEndDatePast(orderRecord, adminUser) {
+  const orderNo = normalizeText(orderRecord && orderRecord.orderNo);
+  const today = getShanghaiTodayDateString();
+  const nextEndDate = addDaysToDateString(today, -1);
+  const serviceSnapshotJson = buildOrderServiceSnapshotWithTravelEnd(orderRecord, nextEndDate);
+  const now = Date.now();
+  const updateData = {
+    travelDateEnd: nextEndDate,
+    travelDateEndDate: nextEndDate,
+    serviceSnapshotJson,
+    updatedAt: now
+  };
+
+  await updateTravelOrderByOrderNo(orderNo, updateData);
+  await appendOrderDebugEvent(
+    Object.assign({}, orderRecord, updateData),
+    adminUser,
+    "debug_tool_set_order_end_past",
+    `订单结束日期设为 ${nextEndDate}`
+  );
+  await upsertOrderDebugRecord(orderRecord, adminUser, {
+    lastTravelDateEnd: nextEndDate
+  });
+
+  return Object.assign({}, orderRecord, updateData);
+}
+
+async function findActiveReferralRelationByInviteeUserIdForDebug(inviteeUserId) {
+  const normalizedUserId = normalizeText(inviteeUserId);
+  if (!normalizedUserId) {
+    return null;
+  }
+
+  const relations = await listOptionalCollection(COLLECTIONS.referralRelations);
+  return normalizeArray(relations).find((item) => (
+    normalizeText(item && item.inviteeUserId) === normalizedUserId
+    && (normalizeText(item && item.status) || "active") === "active"
+  )) || null;
+}
+
+async function findRewardLedgerByOrderNoForDebug(orderNo, campaignKey) {
+  const normalizedOrderNo = normalizeText(orderNo);
+  const normalizedCampaignKey = normalizeText(campaignKey);
+  const ledgers = await listOptionalCollection(COLLECTIONS.referralRewardLedgers);
+
+  return normalizeArray(ledgers).find((item) => (
+    normalizeText(item && item.sourceOrderNo) === normalizedOrderNo
+    && normalizeText(item && item.campaignKey) === normalizedCampaignKey
+  )) || null;
+}
+
+function buildShareReferralRewardLedgerForDebug(orderRecord, relation, config, now = Date.now()) {
+  const normalizedNow = normalizeNumber(now, Date.now());
+  const rewardAmount = Math.max(0, normalizeNumber(config && config.cashRewardAmount, DEFAULT_SHARE_REFERRAL_CONFIG.cashRewardAmount));
+
+  return {
+    campaignKey: normalizeText(config && config.campaignKey) || DEFAULT_SHARE_REFERRAL_CONFIG.campaignKey,
+    campaignName: normalizeText(config && config.campaignName) || DEFAULT_SHARE_REFERRAL_CONFIG.campaignName,
+    inviterUserId: normalizeText(relation && relation.inviterUserId),
+    inviteeUserId: normalizeText(relation && relation.inviteeUserId),
+    relationId: normalizeText(relation && relation._id),
+    inviteeOpenid: normalizeText(orderRecord && orderRecord.userOpenid),
+    sourceOrderNo: normalizeText(orderRecord && orderRecord.orderNo),
+    sourceServiceSlug: normalizeText(orderRecord && orderRecord.serviceSlug),
+    serviceName: normalizeText(orderRecord && orderRecord.serviceName),
+    travelDateStart: normalizeText(orderRecord && orderRecord.travelDateStart),
+    travelDateEnd: normalizeText(orderRecord && orderRecord.travelDateEnd),
+    rewardAmount,
+    grossAmount: rewardAmount,
+    netAmount: rewardAmount,
+    status: "awaiting_account",
+    settlementMonth: formatSettlementMonth(normalizedNow),
+    settlementPlannedDay: Math.max(1, Math.min(28, normalizePositiveInteger(config && config.monthlySettlementDay) || DEFAULT_SHARE_REFERRAL_CONFIG.monthlySettlementDay)),
+    earnedAt: normalizedNow,
+    updatedAt: normalizedNow,
+    createdBy: "debug_tool"
+  };
+}
+
+async function updateCompletedTravelStatsForDebug(userDoc, occurredAt = Date.now()) {
+  const userId = normalizeText(userDoc && userDoc._id);
+  if (!userId) {
+    return;
+  }
+
+  await db.collection(COLLECTIONS.users).doc(userId).update({
+    data: {
+      effectiveOrderCount: Math.max(1, normalizeNumber(userDoc && userDoc.effectiveOrderCount, 0)),
+      effectiveRouteCount: Math.max(1, normalizeNumber(userDoc && userDoc.effectiveRouteCount, 0)),
+      lastTravelAt: Math.max(normalizeNumber(userDoc && userDoc.lastTravelAt, 0), normalizeNumber(occurredAt, Date.now())),
+      updatedAt: Date.now()
+    }
+  });
+}
+
+async function syncShareReferralRewardForDebugCompletedOrder(orderRecord, adminUser) {
+  const orderNo = normalizeText(orderRecord && orderRecord.orderNo);
+  assertCondition(orderNo, "缺少订单号");
+  assertCondition(normalizeText(orderRecord && orderRecord.status) === "completed", "订单完成后才能结算分享家奖励");
+
+  const inviteeUser = await findUserForDetail({ userOpenid: orderRecord && orderRecord.userOpenid });
+  if (!inviteeUser || !normalizeText(inviteeUser._id)) {
+    return { created: false, reason: "未找到下单用户" };
+  }
+
+  await updateCompletedTravelStatsForDebug(inviteeUser, Date.now());
+
+  const relation = await findActiveReferralRelationByInviteeUserIdForDebug(inviteeUser._id);
+  if (!relation) {
+    return { created: false, reason: "该下单用户没有有效分享家关系" };
+  }
+
+  const config = await getShareReferralCampaignConfigForDebug();
+  const campaignKey = normalizeText(config && config.campaignKey) || DEFAULT_SHARE_REFERRAL_CONFIG.campaignKey;
+  const existing = await findRewardLedgerByOrderNoForDebug(orderNo, campaignKey);
+  if (existing) {
+    return { created: false, ledgerId: normalizeText(existing._id), reason: "奖励台账已存在" };
+  }
+
+  const ledger = buildShareReferralRewardLedgerForDebug(orderRecord, relation, config, Date.now());
+  const createResult = await db.collection(COLLECTIONS.referralRewardLedgers).add({ data: ledger });
+  await appendOrderDebugEvent(orderRecord, adminUser, "debug_tool_settle_referral_reward", "触发分享家奖励结算");
+
+  return {
+    created: true,
+    ledgerId: normalizeText(createResult && createResult._id)
+  };
+}
+
+function mapDebugServicePeriod(periodRecord) {
+  if (!periodRecord) {
+    return null;
+  }
+
+  return {
+    periodCode: normalizeText(periodRecord.periodCode),
+    serviceSlug: normalizeText(periodRecord.serviceSlug),
+    serviceName: normalizeText(periodRecord.serviceName),
+    versionName: normalizeText(periodRecord.versionName),
+    dateStart: normalizeText(periodRecord.dateStart),
+    dateEnd: normalizeText(periodRecord.dateEnd),
+    status: normalizeText(periodRecord.status),
+    updatedAt: normalizeNumber(periodRecord.updatedAt, 0)
+  };
+}
+
+async function getOrderDebugToolDetail(payload, adminUser) {
+  assertOrderDebugToolAccess(adminUser);
+  const orderNo = normalizeText(payload && payload.orderNo);
+  assertCondition(orderNo, "请输入订单号");
+
+  const order = await getOrderDetail({ orderNo }, adminUser);
+  const [rawOrder, debugRecord, periodRecord, rewardPage] = await Promise.all([
+    getOrderRowByOrderNo(orderNo),
+    findOrderDebugRecord(orderNo),
+    order && order.servicePeriodCode ? findServicePeriodByCode(order.servicePeriodCode) : Promise.resolve(null),
+    listReferralRewardLedgers({ keyword: orderNo })
+  ]);
+
+  return {
+    toolEnabled: isOrderDebugToolEnabled(),
+    envId: getCurrentEnvId(),
+    order,
+    rawOrder: {
+      travelDateEnd: normalizeText(rawOrder && rawOrder.travelDateEnd),
+      serviceSnapshotJson: normalizeText(rawOrder && rawOrder.serviceSnapshotJson)
+    },
+    servicePeriod: mapDebugServicePeriod(periodRecord),
+    debug: mapOrderDebugRecord(debugRecord),
+    rewardLedgers: normalizeArray(rewardPage).filter((item) => normalizeText(item && item.sourceOrderNo) === orderNo)
+  };
+}
+
+async function handleOrderDebugToolAction(payload, adminUser) {
+  assertOrderDebugToolAccess(adminUser);
+  const action = normalizeText(payload && payload.action);
+  const orderNo = normalizeText(payload && payload.orderNo);
+  assertCondition(ORDER_DEBUG_MUTATION_ACTIONS.has(action), "不支持的订单调试动作");
+
+  if (action === "mockPayout") {
+    const ledgerId = normalizeText(payload && payload.ledgerId);
+    const payoutStatus = normalizeText(payload && payload.payoutStatus).toLowerCase();
+    assertCondition(ledgerId, "请选择奖励台账");
+    assertCondition(ORDER_DEBUG_PAYOUT_STATUSES.has(payoutStatus), "不支持的模拟打款状态");
+
+    const ledgerResult = await db.collection(COLLECTIONS.referralRewardLedgers).doc(ledgerId).get();
+    const ledger = ledgerResult && ledgerResult.data ? ledgerResult.data : null;
+    assertCondition(ledger, "未找到奖励台账");
+    const ledgerOrderNo = normalizeText(ledger && ledger.sourceOrderNo);
+    await assertOrderIsMarkedForDebug(ledgerOrderNo);
+    const now = Date.now();
+    await db.collection(COLLECTIONS.referralRewardLedgers).doc(ledgerId).update({
+      data: {
+        status: payoutStatus,
+        payoutBatchId: normalizeText(ledger && ledger.payoutBatchId) || `debug-${ledgerOrderNo || ledgerId}`,
+        payoutMockedAt: now,
+        payoutMockedBy: getOrderDebugOperatorId(adminUser),
+        updatedAt: now
+      }
+    });
+    const debugOrder = await getOrderRowByOrderNo(ledgerOrderNo);
+    if (debugOrder) {
+      await appendOrderDebugEvent(debugOrder, adminUser, `debug_tool_mock_payout_${payoutStatus}`, `模拟打款状态：${payoutStatus}`);
+    }
+    return getOrderDebugToolDetail({ orderNo: ledgerOrderNo }, adminUser);
+  }
+
+  const orderRecord = await getOrderRowByOrderNo(orderNo);
+  assertCondition(orderRecord, "未找到对应订单");
+
+  if (action === "markTestOrder") {
+    await upsertOrderDebugRecord(orderRecord, adminUser);
+    await appendOrderDebugEvent(orderRecord, adminUser, "debug_tool_mark_test_order", "标记为测试订单");
+    return getOrderDebugToolDetail({ orderNo }, adminUser);
+  }
+
+  if (action === "unmarkTestOrder") {
+    await unmarkOrderDebugRecord(orderNo, adminUser);
+    await appendOrderDebugEvent(orderRecord, adminUser, "debug_tool_unmark_test_order", "取消测试订单标记");
+    return getOrderDebugToolDetail({ orderNo }, adminUser);
+  }
+
+  await assertOrderIsMarkedForDebug(orderNo);
+
+  if (action === "confirmOrder") {
+    const updatedOrder = await transitionDebugOrderStatus(orderRecord, "paid", adminUser, "debug_tool_confirm_order");
+    return getOrderDebugToolDetail({ orderNo: updatedOrder.orderNo }, adminUser);
+  }
+
+  if (action === "setOrderEndDatePast") {
+    const updatedOrder = await setDebugOrderEndDatePast(orderRecord, adminUser);
+    return getOrderDebugToolDetail({ orderNo: updatedOrder.orderNo }, adminUser);
+  }
+
+  if (action === "runAutoComplete") {
+    const endDate = normalizeText(orderRecord.travelDateEnd || orderRecord.travelDateStart);
+    const today = getShanghaiTodayDateString();
+    assertCondition(normalizeText(orderRecord.status) === "completed" || endDate < today, "订单结束日期尚未早于今天，不能自动完成");
+    const completedOrder = normalizeText(orderRecord.status) === "completed"
+      ? orderRecord
+      : await transitionDebugOrderStatus(orderRecord, "completed", adminUser, "debug_tool_auto_complete_order");
+    await syncShareReferralRewardForDebugCompletedOrder(completedOrder, adminUser);
+    return getOrderDebugToolDetail({ orderNo: completedOrder.orderNo }, adminUser);
+  }
+
+  if (action === "settleReward") {
+    await syncShareReferralRewardForDebugCompletedOrder(orderRecord, adminUser);
+    return getOrderDebugToolDetail({ orderNo }, adminUser);
+  }
+
+  throw new Error("不支持的订单调试动作");
+}
+
+async function listOrders(payload, adminUser) {
   const keyword = normalizeText(payload && payload.keyword).toLowerCase();
   const userId = normalizeText(payload && payload.userId);
+  const status = normalizeText(payload && payload.status).toLowerCase();
+  const servicePeriodCode = normalizeText(payload && payload.servicePeriodCode);
+  const travelerRecordId = normalizeText(payload && (payload.travelerRecordId || payload.travelerId || payload._id));
+  const travelerProfileId = normalizeText(payload && (payload.travelerProfileId || payload.profileId));
   const limit = clampLimit(payload && payload.limit);
-  const [rows, users, orderEventDocs] = await Promise.all([
+  const [rows, users, orderEventDocs, travelerDocs, services, creators] = await Promise.all([
     queryRows(
-      "SELECT `orderNo`, `userOpenid`, `serviceSlug`, `serviceName`, `travelDateStart`, `status`, `versionName`, `peopleCountInt`, `createdAtTs`, `paidAtTs`, `canceledAtTs`, `updatedAt` FROM `TravelOrder` ORDER BY COALESCE(`updatedAt`, `createdAtTs`) DESC LIMIT 200"
+      "SELECT `orderNo`, `userOpenid`, `serviceSlug`, `serviceName`, `servicePeriodCode`, `travelDateStart`, `status`, `versionName`, `peopleCountInt`, `createdAtTs`, `paidAtTs`, `canceledAtTs`, `updatedAt`, `travelersJson`, `creatorSnapshotJson`, `serviceSnapshotJson` FROM `TravelOrder` ORDER BY COALESCE(`updatedAt`, `createdAtTs`) DESC LIMIT 200"
     ),
     listCollection(COLLECTIONS.users),
-    listOptionalCollection(ORDER_EVENTS_COLLECTION)
+    listOptionalCollection(ORDER_EVENTS_COLLECTION),
+    listCollection(COLLECTIONS.userTravelers),
+    listCollection(COLLECTIONS.services),
+    listCollection(COLLECTIONS.creators)
   ]);
   const userMap = buildOrderUserMap(users);
+  const travelerLookup = buildTravelerProfileLookup(travelerDocs);
+  const creatorRefSet = buildAdminCreatorRefSet(adminUser, creators);
+  const serviceMap = buildServiceMap(services);
+  const targetTravelerDoc = normalizeArray(travelerDocs).find((doc) => {
+    const docRecordId = normalizeText(doc && doc._id);
+    const docProfileId = normalizeText(doc && (doc.profileId || doc.travelerId));
+
+    if (travelerRecordId && docRecordId === travelerRecordId) {
+      return true;
+    }
+
+    return Boolean(travelerProfileId && docProfileId === travelerProfileId);
+  }) || null;
+  const targetTravelerState = targetTravelerDoc
+    ? buildTravelerBackfillStateByUser([targetTravelerDoc])[normalizeText(targetTravelerDoc && targetTravelerDoc.userOpenid)]
+    : null;
   const orderEventMap = normalizeArray(orderEventDocs).reduce((map, doc) => {
     const orderNo = normalizeText(doc && doc.orderNo);
     if (!orderNo) {
@@ -4414,7 +8632,7 @@ async function listOrders(payload) {
     return map;
   }, {});
 
-  return rows
+  const items = rows
     .map((row) => {
       const userSummary = resolveOrderUserSummary(userMap, row.userOpenid);
       const statusLogs = buildOrderStatusLogs(row, orderEventMap[normalizeText(row.orderNo)]);
@@ -4424,18 +8642,56 @@ async function listOrders(payload) {
         updatedAtTs: resolveLastOrderUpdateTs(row, statusLogs)
       };
     })
-    .filter(({ row, userSummary }) =>
+    .filter(({ row, userSummary }) => {
+      if (!canAccessOrderForAdmin(row, adminUser, creatorRefSet, serviceMap)) {
+        return false;
+      }
+
+      if (travelerRecordId || travelerProfileId) {
+        if (!targetTravelerDoc) {
+          return false;
+        }
+
+        const matchedTraveler = normalizeArray(parseJsonText(row && row.travelersJson, []))
+          .map((item) => ({
+            rawTraveler: item,
+            traveler: normalizeTravelerSnapshot(item)
+          }))
+          .some(({ rawTraveler, traveler }) => {
+            const matchedDoc = matchTravelerProfileDoc(traveler, travelerLookup, row && row.userOpenid)
+              || (resolveTravelerProfileBackfillMatch(rawTraveler, traveler, row && row.userOpenid, targetTravelerState).doc || null);
+
+            if (!matchedDoc) {
+              return false;
+            }
+
+            const matchedRecordId = normalizeText(matchedDoc && matchedDoc._id);
+            const matchedProfileId = normalizeText(matchedDoc && (matchedDoc.profileId || matchedDoc.travelerId));
+
+            return matchedRecordId === normalizeText(targetTravelerDoc && targetTravelerDoc._id)
+              || matchedProfileId === normalizeText(targetTravelerDoc && (targetTravelerDoc.profileId || targetTravelerDoc.travelerId));
+          });
+
+        if (!matchedTraveler) {
+          return false;
+        }
+      }
+
+      return (
       (!userId || userSummary.userId === userId)
+      && (!servicePeriodCode || normalizeText(row.servicePeriodCode) === servicePeriodCode)
+      && (!status || status === "all" || normalizeText(row.status).toLowerCase() === status)
       && matchesKeyword(
-        [row.orderNo, row.serviceName, row.serviceSlug, row.travelDateStart, row.versionName, row.status, userSummary.userNickname, userSummary.userId],
+        [row.orderNo, row.serviceName, row.serviceSlug, row.servicePeriodCode, row.travelDateStart, row.versionName, row.status, formatDashboardStatusLabel(row.status), userSummary.userNickname, userSummary.userId],
         keyword
       )
-    )
-    .slice(0, limit)
+      );
+    })
     .map(({ row, userSummary, updatedAtTs }) => ({
       orderNo: normalizeText(row.orderNo),
       serviceSlug: normalizeText(row.serviceSlug),
       serviceName: normalizeText(row.serviceName),
+      servicePeriodCode: normalizeText(row.servicePeriodCode),
       travelDateStart: normalizeText(row.travelDateStart),
       status: normalizeText(row.status),
       versionName: normalizeText(row.versionName),
@@ -4444,9 +8700,38 @@ async function listOrders(payload) {
       peopleCount: normalizeNumber(row.peopleCountInt),
       updatedAtTs
     }));
+
+  if (shouldReturnPagedResult(payload)) {
+    return buildPagedResult(items, payload, {
+      defaultPageSize: 10,
+      defaultSortBy: "updatedAtTs",
+      defaultSortDirection: "desc",
+      getSortValue: (item, sortBy) => {
+        switch (sortBy) {
+          case "userNickname":
+            return item.userNickname;
+          case "serviceName":
+            return item.serviceName;
+          case "versionName":
+            return item.versionName;
+          case "travelDateStart":
+            return item.travelDateStart;
+          case "updatedAtTs":
+            return item.updatedAtTs;
+          case "status":
+            return item.status;
+          default:
+            return item.updatedAtTs;
+        }
+      },
+      getItemKey: (item) => item.orderNo
+    });
+  }
+
+  return items.slice(0, limit);
 }
 
-async function getOrderDetail(payload) {
+async function getOrderDetail(payload, adminUser) {
   const orderNo = normalizeText(payload && payload.orderNo);
   assertCondition(orderNo, "缺少订单号");
 
@@ -4456,32 +8741,73 @@ async function getOrderDetail(payload) {
   );
   const row = rows[0];
   assertCondition(row, "未找到对应订单");
-  const [users, orderEventDocs] = await Promise.all([
+  const [users, orderEventDocs, travelerDocs, services, creators] = await Promise.all([
     listCollection(COLLECTIONS.users),
-    listOptionalCollection(ORDER_EVENTS_COLLECTION)
+    listOptionalCollection(ORDER_EVENTS_COLLECTION),
+    listCollection(COLLECTIONS.userTravelers),
+    listCollection(COLLECTIONS.services),
+    listCollection(COLLECTIONS.creators)
   ]);
+  const creatorRefSet = buildAdminCreatorRefSet(adminUser, creators);
+  const serviceMap = buildServiceMap(services);
+  assertCondition(canAccessOrderForAdmin(row, adminUser, creatorRefSet, serviceMap), "未找到对应订单");
   const userSummary = resolveOrderUserSummary(buildOrderUserMap(users), row.userOpenid);
   const statusLogs = buildOrderStatusLogs(
     row,
     normalizeArray(orderEventDocs).filter((doc) => normalizeText(doc && doc.orderNo) === orderNo)
   );
-  const travelers = normalizeArray(parseJsonText(row.travelersJson, [])).map(normalizeTravelerSnapshot);
+  const travelerLookup = buildTravelerProfileLookup(travelerDocs);
+  const travelers = normalizeArray(parseJsonText(row.travelersJson, []))
+    .map(normalizeTravelerSnapshot)
+    .map((traveler) => {
+      const matchedDoc = matchTravelerProfileDoc(traveler, travelerLookup, row.userOpenid);
+      return Object.assign({}, traveler, {
+        matchedTravelerRecordId: normalizeText(matchedDoc && matchedDoc._id) || normalizeText(traveler.travelerRecordId),
+        matchedProfileId: normalizeText(matchedDoc && (matchedDoc.profileId || matchedDoc.travelerId)) || normalizeText(traveler.profileId),
+        isLinkedToTravelerProfile: Boolean(
+          normalizeText(matchedDoc && matchedDoc._id)
+          || normalizeText(traveler.travelerRecordId)
+          || normalizeText(traveler.profileId)
+        )
+      });
+    });
   const serviceSnapshot = parseJsonText(row.serviceSnapshotJson, {}) || {};
+  const snapshotSingleRoom =
+    serviceSnapshot && typeof serviceSnapshot.singleRoom === "object" && serviceSnapshot.singleRoom !== null
+      ? serviceSnapshot.singleRoom
+      : {};
+  const orderContactName = normalizeText(row.orderContactName || row.travelerName);
+  const orderContactPhone = normalizeText(row.orderContactPhone || row.travelerPhone);
+  const emergencyContactName = normalizeText(row.emergencyContactName || orderContactName);
+  const emergencyContactPhone = normalizeText(row.emergencyContactPhone || orderContactPhone);
   const normalizedServiceSnapshot = {
     ...serviceSnapshot,
     contact:
       serviceSnapshot && typeof serviceSnapshot.contact === "object" && serviceSnapshot.contact !== null
         ? {
-            name: normalizeText(serviceSnapshot.contact.name || row.travelerName),
-            phone: normalizeText(serviceSnapshot.contact.phone || row.travelerPhone)
+            name: normalizeText(serviceSnapshot.contact.name || orderContactName),
+            phone: normalizeText(serviceSnapshot.contact.phone || orderContactPhone)
           }
         : {
-            name: normalizeText(row.travelerName),
-            phone: normalizeText(row.travelerPhone)
+            name: orderContactName,
+            phone: orderContactPhone
           },
     travelers:
       Array.isArray(serviceSnapshot.travelers) && serviceSnapshot.travelers.length
-        ? serviceSnapshot.travelers.map(normalizeTravelerSnapshot)
+        ? serviceSnapshot.travelers
+          .map(normalizeTravelerSnapshot)
+          .map((traveler) => {
+            const matchedDoc = matchTravelerProfileDoc(traveler, travelerLookup, row.userOpenid);
+            return Object.assign({}, traveler, {
+              matchedTravelerRecordId: normalizeText(matchedDoc && matchedDoc._id) || normalizeText(traveler.travelerRecordId),
+              matchedProfileId: normalizeText(matchedDoc && (matchedDoc.profileId || matchedDoc.travelerId)) || normalizeText(traveler.profileId),
+              isLinkedToTravelerProfile: Boolean(
+                normalizeText(matchedDoc && matchedDoc._id)
+                || normalizeText(traveler.travelerRecordId)
+                || normalizeText(traveler.profileId)
+              )
+            });
+          })
         : travelers
   };
 
@@ -4505,8 +8831,23 @@ async function getOrderDetail(payload) {
     amount: normalizeNumber(row.amountDec || row.amount),
     discount: normalizeNumber(row.discountDec || row.discount),
     payable: normalizeNumber(row.payableDec || row.payable),
-    travelerName: normalizeText(row.travelerName),
-    travelerPhone: normalizeText(row.travelerPhone),
+    orderContactName,
+    orderContactPhone,
+    travelerName: normalizeText(row.travelerName || orderContactName),
+    travelerPhone: normalizeText(row.travelerPhone || orderContactPhone),
+    emergencyContactName,
+    emergencyContactPhone,
+    roomingMode:
+      normalizeText(row.roomingMode)
+      || (normalizeBoolean(snapshotSingleRoom.requested) ? "singleRoomRequest" : "random"),
+    roommateName: normalizeText(row.roommateName),
+    roomType: normalizeText(row.roomType),
+    singleRoomPrice: Math.max(0, normalizeNumber(row.singleRoomPriceDec || row.singleRoomPrice || snapshotSingleRoom.price, 0)),
+    singleRoomStatus: normalizeText(row.singleRoomStatus || snapshotSingleRoom.status),
+    singleRoomNotice: normalizeText(row.singleRoomNotice || snapshotSingleRoom.notice),
+    allergyNotes: normalizeText(row.allergyNotes),
+    couponId: normalizeText(row.couponId),
+    couponSnapshot: parseJsonText(row.couponSnapshotJson, {}) || {},
     travelers,
     serviceSnapshot: normalizedServiceSnapshot,
     creatorSnapshot: parseJsonText(row.creatorSnapshotJson, {}) || {},
@@ -4518,25 +8859,1778 @@ async function getOrderDetail(payload) {
   };
 }
 
+function mapTravelerProfileForAdmin(doc) {
+  const documents = normalizeArray(doc && doc.documents)
+    .map((item) => ({
+      documentType: normalizeText(item && item.documentType),
+      documentNumberMasked: maskIdNumber(item && item.documentNumber)
+    }))
+    .filter((item) => item.documentType || item.documentNumberMasked);
+  const primaryDocument = documents[0] || null;
+  const allDocumentTypes = documents.map((item) => normalizeText(item && item.documentType)).filter(Boolean);
+  const allDocumentNumbers = documents.map((item) => normalizeText(item && item.documentNumberMasked)).filter(Boolean);
+  const idType = allDocumentTypes.length
+    ? allDocumentTypes.join(" / ")
+    : (normalizeText(doc && doc.idType) || normalizeText(primaryDocument && primaryDocument.documentType));
+  const idNumberMasked = allDocumentNumbers.length
+    ? allDocumentNumbers.join(" / ")
+    : (normalizeText(doc && doc.idNumberMasked)
+      || normalizeText(primaryDocument && primaryDocument.documentNumberMasked)
+      || maskIdNumber(doc && doc.idNumber));
+  return {
+    travelerRecordId: normalizeText(doc && doc._id),
+    travelerId: normalizeText(doc && (doc.travelerId || doc.profileId)),
+    profileId: normalizeText(doc && (doc.profileId || doc.travelerId)),
+    name: normalizeText(doc && doc.name),
+    phoneMasked: normalizeText(doc && doc.phoneMasked) || maskPhone(doc && doc.phone),
+    wechat: normalizeText(doc && doc.wechat),
+    email: normalizeText(doc && doc.email),
+    idType,
+    idNumberMasked,
+    gender: normalizeText(doc && doc.gender),
+    birthday: normalizeText(doc && doc.birthday),
+    status: normalizeText(doc && doc.status) || "active",
+    source: normalizeText(doc && doc.source),
+    version: normalizeNumber(doc && doc.version, 1),
+    updatedAt: normalizeNumber(doc && doc.updatedAt),
+    lastUsedAt: normalizeNumber(doc && doc.lastUsedAt),
+    documents
+  };
+}
+
+function mapTravelerProfileDetailForAdmin(doc, userSummary, relation) {
+  const source = doc && typeof doc === "object" ? doc : {};
+  const documents = normalizeArray(source.documents)
+    .map((item) => ({
+      documentType: normalizeText(item && item.documentType),
+      documentNumber: normalizeText(item && item.documentNumber)
+    }))
+    .filter((item) => item.documentType || item.documentNumber);
+  const relationSummary = relation && typeof relation === "object" ? relation : {};
+
+  return {
+    travelerRecordId: normalizeText(source && source._id),
+    travelerId: normalizeText(source && (source.travelerId || source.profileId)),
+    profileId: normalizeText(source && (source.profileId || source.travelerId)),
+    userId: normalizeText(source && source.userId) || normalizeText(userSummary && userSummary.userId),
+    userOpenid: normalizeText(source && source.userOpenid),
+    userNickname: normalizeText(userSummary && userSummary.userNickname) || "旅人",
+    name: normalizeText(source && source.name),
+    gender: normalizeText(source && source.gender),
+    birthday: normalizeText(source && source.birthday),
+    phone: normalizeText(source && source.phone),
+    phoneMasked: normalizeText(source && source.phoneMasked) || maskPhone(source && source.phone),
+    wechat: normalizeText(source && source.wechat),
+    email: normalizeText(source && source.email),
+    note: normalizeText(source && source.note),
+    documents,
+    idType: normalizeText(source && source.idType),
+    idNumber: normalizeText(source && source.idNumber),
+    idNumberMasked: normalizeText(source && source.idNumberMasked) || maskIdNumber(source && source.idNumber),
+    status: normalizeText(source && source.status) || "active",
+    source: normalizeText(source && source.source) || "traveler_profile",
+    version: normalizeNumber(source && source.version, 1),
+    createdAt: normalizeNumber(source && source.createdAt),
+    updatedAt: normalizeNumber(source && source.updatedAt),
+    lastUsedAt: normalizeNumber(source && source.lastUsedAt),
+    relatedOrderCount: normalizeNumber(relationSummary.relatedOrderCount ?? source.relatedOrderCount),
+    lastRelatedOrderNo: normalizeText(relationSummary.lastRelatedOrderNo || source.lastRelatedOrderNo),
+    lastRelatedOrderStatus: normalizeText(relationSummary.lastRelatedOrderStatus || source.lastRelatedOrderStatus),
+    lastRelatedOrderAt: normalizeNumber(relationSummary.lastRelatedOrderAt ?? source.lastRelatedOrderAt),
+    lastRelatedServiceName: normalizeText(relationSummary.lastRelatedServiceName || source.lastRelatedServiceName),
+    relatedOrders: normalizeArray(relationSummary.relatedOrders)
+  };
+}
+
+function buildTravelerProfileScopedKey(userOpenid, profileId) {
+  const normalizedOpenid = normalizeText(userOpenid);
+  const normalizedProfileId = normalizeText(profileId);
+  return normalizedOpenid && normalizedProfileId ? `${normalizedOpenid}::${normalizedProfileId}` : "";
+}
+
+function buildTravelerProfileLookup(records) {
+  return normalizeArray(records).reduce((result, doc) => {
+    const recordId = normalizeText(doc && doc._id);
+    const profileId = normalizeText(doc && (doc.profileId || doc.travelerId));
+    const scopedProfileKey = buildTravelerProfileScopedKey(doc && doc.userOpenid, profileId);
+
+    if (recordId) {
+      result.byRecordId[recordId] = doc;
+    }
+
+    if (profileId) {
+      const previousByProfileId = result.byProfileId[profileId];
+      if (
+        !previousByProfileId
+        || normalizeNumber(doc && doc.updatedAt) > normalizeNumber(previousByProfileId && previousByProfileId.updatedAt)
+      ) {
+        result.byProfileId[profileId] = doc;
+      }
+    }
+
+    if (scopedProfileKey) {
+      const previousByScopedKey = result.byScopedProfileKey[scopedProfileKey];
+      if (
+        !previousByScopedKey
+        || normalizeNumber(doc && doc.updatedAt) > normalizeNumber(previousByScopedKey && previousByScopedKey.updatedAt)
+      ) {
+        result.byScopedProfileKey[scopedProfileKey] = doc;
+      }
+    }
+
+    return result;
+  }, {
+    byRecordId: {},
+    byProfileId: {},
+    byScopedProfileKey: {}
+  });
+}
+
+function matchTravelerProfileDoc(snapshot, lookup, userOpenid) {
+  const source = snapshot && typeof snapshot === "object" ? snapshot : {};
+  const resolvedLookup = lookup && typeof lookup === "object" ? lookup : {
+    byRecordId: {},
+    byProfileId: {},
+    byScopedProfileKey: {}
+  };
+  const recordId = normalizeText(source.travelerRecordId || source.rid);
+  if (recordId && resolvedLookup.byRecordId[recordId]) {
+    return resolvedLookup.byRecordId[recordId];
+  }
+
+  const profileId = normalizeText(source.profileId || source.pid || source.travelerId);
+  if (!profileId) {
+    return null;
+  }
+
+  const scopedProfileKey = buildTravelerProfileScopedKey(userOpenid, profileId);
+  return resolvedLookup.byScopedProfileKey[scopedProfileKey] || resolvedLookup.byProfileId[profileId] || null;
+}
+
+function buildTravelerRelatedOrderItem(row) {
+  const updatedAtTs = normalizeNumber(row && (row.updatedAt || row.createdAtTs));
+  return {
+    orderNo: normalizeText(row && row.orderNo),
+    serviceSlug: normalizeText(row && row.serviceSlug),
+    serviceName: normalizeText(row && row.serviceName),
+    servicePeriodCode: normalizeText(row && row.servicePeriodCode),
+    versionName: normalizeText(row && row.versionName),
+    status: normalizeText(row && row.status),
+    travelDateStart: normalizeText(row && row.travelDateStart),
+    travelDateEnd: normalizeText(row && row.travelDateEnd),
+    updatedAtTs
+  };
+}
+
+function buildTravelerRelationMaps(orderRows, travelerDocs) {
+  const lookup = buildTravelerProfileLookup(travelerDocs);
+  const travelerStateByUser = buildTravelerBackfillStateByUser(travelerDocs);
+  const statsByRecordId = {};
+  const ordersByRecordId = {};
+
+  normalizeArray(orderRows).forEach((row) => {
+    const userOpenid = normalizeText(row && row.userOpenid);
+    const userState = travelerStateByUser[userOpenid];
+    const relatedOrder = buildTravelerRelatedOrderItem(row);
+    const relatedOrderTs = normalizeNumber(relatedOrder.updatedAtTs);
+    const matchedRecordIds = new Set();
+
+    normalizeArray(parseJsonText(row && row.travelersJson, []))
+      .forEach((item) => {
+        const traveler = normalizeTravelerSnapshot(item);
+        const matchedDoc = matchTravelerProfileDoc(traveler, lookup, userOpenid)
+          || (resolveTravelerProfileBackfillMatch(item, traveler, userOpenid, userState).doc || null);
+        const recordId = normalizeText(matchedDoc && matchedDoc._id);
+        if (!recordId || matchedRecordIds.has(recordId)) {
+          return;
+        }
+
+        matchedRecordIds.add(recordId);
+        if (!ordersByRecordId[recordId]) {
+          ordersByRecordId[recordId] = [];
+        }
+        ordersByRecordId[recordId].push(relatedOrder);
+
+        if (!statsByRecordId[recordId]) {
+          statsByRecordId[recordId] = {
+            relatedOrderCount: 0,
+            lastRelatedOrderNo: "",
+            lastRelatedOrderStatus: "",
+            lastRelatedOrderAt: 0,
+            lastRelatedServiceName: ""
+          };
+        }
+
+        statsByRecordId[recordId].relatedOrderCount += 1;
+        if (relatedOrderTs >= normalizeNumber(statsByRecordId[recordId].lastRelatedOrderAt)) {
+          statsByRecordId[recordId] = {
+            relatedOrderCount: statsByRecordId[recordId].relatedOrderCount,
+            lastRelatedOrderNo: relatedOrder.orderNo,
+            lastRelatedOrderStatus: relatedOrder.status,
+            lastRelatedOrderAt: relatedOrderTs,
+            lastRelatedServiceName: relatedOrder.serviceName
+          };
+        }
+      });
+  });
+
+  Object.keys(ordersByRecordId).forEach((recordId) => {
+    ordersByRecordId[recordId] = normalizeArray(ordersByRecordId[recordId]).sort(
+      (left, right) => normalizeNumber(right && right.updatedAtTs) - normalizeNumber(left && left.updatedAtTs)
+    );
+  });
+
+  return {
+    statsByRecordId,
+    ordersByRecordId
+  };
+}
+
+function resolveTravelerRelationSummary(doc, relationMaps, options) {
+  const usePersistedFallback = !isPlainObject(options) || options.usePersistedFallback !== false;
+  const recordId = normalizeText(doc && doc._id);
+  const relationStats = relationMaps && relationMaps.statsByRecordId
+    ? relationMaps.statsByRecordId[recordId]
+    : null;
+  const relatedOrders = relationMaps && relationMaps.ordersByRecordId
+    ? normalizeArray(relationMaps.ordersByRecordId[recordId])
+    : [];
+
+  return {
+    relatedOrderCount: usePersistedFallback
+      ? normalizeNumber(relationStats && relationStats.relatedOrderCount, normalizeNumber(doc && doc.relatedOrderCount))
+      : normalizeNumber(relationStats && relationStats.relatedOrderCount, 0),
+    lastRelatedOrderNo: usePersistedFallback
+      ? normalizeText(relationStats && relationStats.lastRelatedOrderNo || doc && doc.lastRelatedOrderNo)
+      : normalizeText(relationStats && relationStats.lastRelatedOrderNo),
+    lastRelatedOrderStatus: usePersistedFallback
+      ? normalizeText(relationStats && relationStats.lastRelatedOrderStatus || doc && doc.lastRelatedOrderStatus)
+      : normalizeText(relationStats && relationStats.lastRelatedOrderStatus),
+    lastRelatedOrderAt: usePersistedFallback
+      ? normalizeNumber(relationStats && relationStats.lastRelatedOrderAt, normalizeNumber(doc && doc.lastRelatedOrderAt))
+      : normalizeNumber(relationStats && relationStats.lastRelatedOrderAt, 0),
+    lastRelatedServiceName: usePersistedFallback
+      ? normalizeText(relationStats && relationStats.lastRelatedServiceName || doc && doc.lastRelatedServiceName)
+      : normalizeText(relationStats && relationStats.lastRelatedServiceName),
+    relatedOrders
+  };
+}
+
+function mapEffectiveOrderItem(row) {
+  const rawTravelers = normalizeArray(parseJsonText(row && row.travelersJson, []))
+    .map((item) => normalizeTravelerSnapshot(item));
+  const travelers = rawTravelers
+    .map((item) => ({
+      name: item.name,
+      phoneMasked: maskPhone(item.phone),
+      documentType: item.documentType,
+      documentNumberMasked: maskIdNumber(item.documentNumber),
+      gender: item.gender,
+      birthday: item.birthday
+    }));
+  const updatedAtTs = normalizeNumber(row && (row.updatedAt || row.createdAtTs));
+  const orderContactName = normalizeText(row && (row.orderContactName || row.travelerName));
+  const orderContactPhone = normalizeText(row && (row.orderContactPhone || row.travelerPhone));
+  return {
+    orderNo: normalizeText(row && row.orderNo),
+    serviceSlug: normalizeText(row && row.serviceSlug),
+    serviceName: normalizeText(row && row.serviceName),
+    servicePeriodCode: normalizeText(row && row.servicePeriodCode),
+    status: normalizeText(row && row.status),
+    peopleCount: normalizeNumber(row && (row.peopleCountInt || row.peopleCount)),
+    amount: normalizeNumber(row && (row.amountDec || row.amount)),
+    travelDateStart: normalizeText(row && row.travelDateStart),
+    travelDateEnd: normalizeText(row && row.travelDateEnd),
+    orderContactName,
+    orderContactPhoneMasked: maskPhone(orderContactPhone),
+    travelerName: orderContactName,
+    travelerPhoneMasked: maskPhone(orderContactPhone),
+    updatedAtTs,
+    createdAtTs: normalizeNumber(row && row.createdAtTs),
+    travelers,
+    rawTravelers
+  };
+}
+
+function buildRouteHistory(effectiveOrders) {
+  const map = {};
+  normalizeArray(effectiveOrders).forEach((item) => {
+    const serviceSlug = normalizeText(item && item.serviceSlug);
+    if (!serviceSlug) {
+      return;
+    }
+
+    if (!map[serviceSlug]) {
+      map[serviceSlug] = {
+        serviceSlug,
+        serviceName: normalizeText(item && item.serviceName),
+        orderCount: 0,
+        lastOrderAt: 0
+      };
+    }
+
+    map[serviceSlug].orderCount += 1;
+    map[serviceSlug].lastOrderAt = Math.max(
+      map[serviceSlug].lastOrderAt,
+      normalizeNumber(item && (item.updatedAtTs || item.createdAtTs))
+    );
+    if (!map[serviceSlug].serviceName) {
+      map[serviceSlug].serviceName = normalizeText(item && item.serviceName);
+    }
+  });
+
+  return Object.values(map).sort((left, right) => right.lastOrderAt - left.lastOrderAt);
+}
+
+function buildTravelerFingerprint(userOpenid, traveler) {
+  const documentNumber = normalizeText(traveler && (traveler.documentNumber || traveler.idCard)).replace(/\s+/g, "");
+  const phone = normalizeText(traveler && traveler.phone).replace(/\s+/g, "");
+  const name = normalizeText(traveler && traveler.name);
+  const base = `${normalizeText(userOpenid)}|${documentNumber || phone}|${name}`;
+  let hash = 0;
+  for (let index = 0; index < base.length; index += 1) {
+    hash = ((hash << 5) - hash) + base.charCodeAt(index);
+    hash |= 0;
+  }
+  return `hist_${Math.abs(hash).toString(36)}`;
+}
+
+function normalizeBooleanFlag(value) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  const normalized = normalizeText(value).toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes";
+}
+
+function appendBackfillSample(samples, item, maxSize = 20) {
+  if (Array.isArray(samples) && samples.length < maxSize) {
+    samples.push(item);
+  }
+}
+
+function buildTravelOrderBackfillWhere(payload) {
+  const clauses = [];
+  const params = {};
+  const orderNo = normalizeText(payload && payload.orderNo);
+  const userOpenid = normalizeText(payload && payload.userOpenid);
+
+  if (orderNo) {
+    clauses.push("`orderNo` = {{orderNo}}");
+    params.orderNo = orderNo;
+  }
+
+  if (userOpenid) {
+    clauses.push("`userOpenid` = {{userOpenid}}");
+    params.userOpenid = userOpenid;
+  }
+
+  return {
+    whereSql: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "",
+    params
+  };
+}
+
+function resolveBackfillPageOptions(payload, defaultLimit = 500, maxLimit = 2000) {
+  return {
+    limit: Math.max(1, Math.min(maxLimit, normalizePositiveInteger(payload && payload.limit, defaultLimit) || defaultLimit)),
+    offset: Math.max(0, normalizePositiveInteger(payload && payload.offset, 0)),
+    dryRun: normalizeBooleanFlag(payload && payload.dryRun)
+  };
+}
+
+async function listTravelOrderRowsInBatches(selectColumns, payload, options = {}) {
+  const batchSize = Math.max(1, Math.min(500, normalizePositiveInteger(options.batchSize, 200) || 200));
+  const startOffset = Math.max(0, normalizePositiveInteger(options.offset, 0));
+  const maxRows = Math.max(0, normalizePositiveInteger(options.limit, 0));
+  const { whereSql, params } = buildTravelOrderBackfillWhere(payload);
+  const rows = [];
+  let offset = startOffset;
+
+  while (true) {
+    const size = maxRows ? Math.min(batchSize, maxRows - rows.length) : batchSize;
+    if (!size) {
+      break;
+    }
+
+    const batch = await queryRows(
+      `SELECT ${selectColumns} FROM \`TravelOrder\` ${whereSql} ORDER BY COALESCE(\`updatedAt\`, \`createdAtTs\`) DESC LIMIT {{limit}} OFFSET {{offset}}`,
+      Object.assign({}, params, {
+        limit: size,
+        offset
+      })
+    );
+    rows.push(...normalizeArray(batch));
+
+    if (batch.length < size) {
+      break;
+    }
+
+    offset += batch.length;
+  }
+
+  return rows;
+}
+
+function normalizeTravelerMatchPhone(value) {
+  return normalizeText(value).replace(/\s+/g, "");
+}
+
+function normalizeTravelerMatchDocumentNumber(value) {
+  return normalizeText(value).replace(/\s+/g, "").toUpperCase();
+}
+
+function uniqueNormalizedValues(values, normalizeValue) {
+  const normalizer = typeof normalizeValue === "function" ? normalizeValue : normalizeText;
+  return Array.from(new Set(normalizeArray(values).map((item) => normalizer(item)).filter(Boolean)));
+}
+
+function getAdminGatewayMaintenanceToken() {
+  return normalizeText(process.env[ADMIN_GATEWAY_MAINTENANCE_TOKEN_ENV_KEY]);
+}
+
+function assertMaintenanceAccess(payload) {
+  const expectedToken = getAdminGatewayMaintenanceToken();
+  const accessToken = normalizeText(payload && (payload.accessToken || payload.maintenanceToken || payload.token));
+
+  assertCondition(expectedToken, "maintenance access is not configured");
+  assertCondition(accessToken && accessToken === expectedToken, "maintenance access denied");
+}
+
+function resolveServiceMaintenanceOptions(payload) {
+  const limit = Math.max(0, Math.min(2000, normalizePositiveInteger(payload && payload.limit, 0)));
+  const slugs = uniqueNormalizedValues(
+    [payload && payload.slug].concat(normalizeArray(payload && payload.slugs)),
+    normalizeText
+  );
+
+  return {
+    dryRun: normalizeBooleanFlag(payload && payload.dryRun),
+    limit,
+    overwrite: normalizeBooleanFlag(payload && payload.overwrite),
+    slugs
+  };
+}
+
+function buildServiceCreatorMessageBackfillPlan(services, options = {}) {
+  const slugFilter = new Set(uniqueNormalizedValues(options.slugs, normalizeText));
+  const overwrite = Boolean(options.overwrite);
+  const limit = Math.max(0, normalizePositiveInteger(options.limit, 0));
+  const filteredServices = normalizeArray(services)
+    .filter((service) => {
+      const slug = normalizeText(service && service.slug);
+      return !slugFilter.size || slugFilter.has(slug);
+    })
+    .slice(0, limit || undefined);
+
+  return filteredServices.map((service) => {
+    const previousMessage = normalizeText(service && service.creatorMessage);
+    const nextMessage = deriveServiceCreatorMessageForBackfill(service);
+    const recordId = normalizeText(service && service._id);
+    const slug = normalizeText(service && service.slug);
+    const shouldUpdate = Boolean(recordId)
+      && Boolean(slug)
+      && previousMessage !== nextMessage
+      && (overwrite || !previousMessage);
+
+    return {
+      _id: recordId,
+      name: normalizeText(service && service.name),
+      nextMessage,
+      previousMessage,
+      shouldUpdate,
+      slug
+    };
+  });
+}
+
+function sanitizeServiceRestorePayload(service) {
+  if (!isPlainObject(service)) {
+    return null;
+  }
+
+  const nextDoc = Object.assign({}, service);
+  const recordId = normalizeText(nextDoc._id);
+  const slug = normalizeText(nextDoc.slug);
+  const logicalId = normalizeText(nextDoc.id);
+  delete nextDoc._id;
+
+  return recordId || slug || logicalId
+    ? {
+        _id: recordId,
+        id: logicalId,
+        slug,
+        data: nextDoc
+      }
+    : null;
+}
+
+function getTravelerSnapshotDocumentNumbers(traveler) {
+  const source = traveler && typeof traveler === "object" ? traveler : {};
+  const values = [
+    source.documentNumber,
+    source.idCard,
+    source.idNo,
+    ...normalizeArray(source.documents).map((item) => item && (item.documentNumber || item.idCard || item.idNo))
+  ];
+
+  return uniqueNormalizedValues(values, normalizeTravelerMatchDocumentNumber);
+}
+
+function getTravelerDocDocumentNumbers(doc) {
+  const source = doc && typeof doc === "object" ? doc : {};
+  const values = [
+    source.idNumber,
+    ...normalizeArray(source.documents).map((item) => item && item.documentNumber)
+  ];
+
+  return uniqueNormalizedValues(values, normalizeTravelerMatchDocumentNumber);
+}
+
+function buildTravelerBackfillCandidate(doc) {
+  return {
+    doc,
+    recordId: normalizeText(doc && doc._id),
+    profileId: normalizeText(doc && (doc.profileId || doc.travelerId)),
+    userOpenid: normalizeText(doc && doc.userOpenid),
+    name: normalizeText(doc && doc.name),
+    phone: normalizeTravelerMatchPhone(doc && doc.phone),
+    documentNumbers: getTravelerDocDocumentNumbers(doc)
+  };
+}
+
+function buildTravelerBackfillStateByUser(travelerDocs) {
+  const state = {};
+
+  normalizeArray(travelerDocs).forEach((doc) => {
+    const source = normalizeText(doc && doc.source);
+    const status = normalizeText(doc && doc.status);
+    if ((source && source !== "traveler_profile") || status === "inactive") {
+      return;
+    }
+
+    const userOpenid = normalizeText(doc && doc.userOpenid);
+    if (!userOpenid) {
+      return;
+    }
+
+    if (!state[userOpenid]) {
+      state[userOpenid] = {
+        docs: []
+      };
+    }
+
+    state[userOpenid].docs.push(doc);
+  });
+
+  Object.keys(state).forEach((userOpenid) => {
+    state[userOpenid].lookup = buildTravelerProfileLookup(state[userOpenid].docs);
+    state[userOpenid].candidates = state[userOpenid].docs.map((doc) => buildTravelerBackfillCandidate(doc));
+  });
+
+  return state;
+}
+
+function classifyTravelerBackfillMatches(candidates) {
+  const deduped = [];
+  const seenRecordIds = new Set();
+
+  normalizeArray(candidates).forEach((candidate) => {
+    const recordId = normalizeText(candidate && candidate.recordId);
+    if (!recordId || seenRecordIds.has(recordId)) {
+      return;
+    }
+
+    seenRecordIds.add(recordId);
+    deduped.push(candidate);
+  });
+
+  if (deduped.length === 1) {
+    return {
+      status: "matched",
+      doc: deduped[0].doc,
+      candidates: deduped
+    };
+  }
+
+  if (deduped.length > 1) {
+    return {
+      status: "multiple",
+      doc: null,
+      candidates: deduped
+    };
+  }
+
+  return {
+    status: "unmatched",
+    doc: null,
+    candidates: []
+  };
+}
+
+function resolveTravelerProfileBackfillMatch(rawTraveler, normalizedTraveler, userOpenid, userState) {
+  const resolvedState = userState && typeof userState === "object"
+    ? userState
+    : {
+        docs: [],
+        lookup: {
+          byRecordId: {},
+          byProfileId: {},
+          byScopedProfileKey: {}
+        },
+        candidates: []
+      };
+  const directDoc = matchTravelerProfileDoc(normalizedTraveler, resolvedState.lookup, userOpenid);
+  if (directDoc) {
+    return {
+      status: "matched",
+      reason: "existing_link",
+      doc: directDoc,
+      candidates: [buildTravelerBackfillCandidate(directDoc)]
+    };
+  }
+
+  const travelerName = normalizeText(normalizedTraveler && normalizedTraveler.name);
+  if (!travelerName) {
+    return {
+      status: "unmatched",
+      reason: "missing_name",
+      doc: null,
+      candidates: []
+    };
+  }
+
+  const documentNumbers = getTravelerSnapshotDocumentNumbers(normalizedTraveler);
+  if (documentNumbers.length) {
+    const byDocument = classifyTravelerBackfillMatches(
+      resolvedState.candidates.filter(
+        (candidate) => candidate.name === travelerName
+          && candidate.documentNumbers.some((item) => documentNumbers.includes(item))
+      )
+    );
+    if (byDocument.status !== "unmatched") {
+      return Object.assign(byDocument, { reason: "document_name" });
+    }
+  }
+
+  const phone = normalizeTravelerMatchPhone(normalizedTraveler && normalizedTraveler.phone);
+  if (phone) {
+    const byPhone = classifyTravelerBackfillMatches(
+      resolvedState.candidates.filter(
+        (candidate) => candidate.name === travelerName && candidate.phone === phone
+      )
+    );
+    if (byPhone.status !== "unmatched") {
+      return Object.assign(byPhone, { reason: "phone_name" });
+    }
+  }
+
+  return {
+    status: "unmatched",
+    reason: "missing_document_or_phone_match",
+    doc: null,
+    candidates: []
+  };
+}
+
+function buildTravelerBackfilledSnapshot(rawTraveler, matchedDoc) {
+  const nextTraveler = isPlainObject(rawTraveler) ? cloneJson(rawTraveler, {}) : {};
+  const profileId = normalizeText(matchedDoc && (matchedDoc.profileId || matchedDoc.travelerId));
+  const travelerRecordId = normalizeText(matchedDoc && matchedDoc._id);
+  const source = normalizeText(nextTraveler && (nextTraveler.src || nextTraveler.source))
+    || normalizeText(matchedDoc && matchedDoc.source)
+    || "traveler_profile";
+
+  if (profileId) {
+    nextTraveler.pid = profileId;
+  }
+  if (travelerRecordId) {
+    nextTraveler.rid = travelerRecordId;
+  }
+  if (source) {
+    nextTraveler.src = source;
+  }
+
+  return nextTraveler;
+}
+
+function isTravelerSnapshotLinkMatched(rawTraveler, matchedDoc) {
+  const normalizedTraveler = normalizeTravelerSnapshot(rawTraveler);
+  const profileId = normalizeText(matchedDoc && (matchedDoc.profileId || matchedDoc.travelerId));
+  const travelerRecordId = normalizeText(matchedDoc && matchedDoc._id);
+  const source = normalizeText(rawTraveler && (rawTraveler.src || rawTraveler.source))
+    || normalizeText(matchedDoc && matchedDoc.source)
+    || "traveler_profile";
+
+  return (
+    normalizedTraveler.profileId === profileId
+    && normalizedTraveler.travelerRecordId === travelerRecordId
+    && normalizedTraveler.source === source
+  );
+}
+
+async function findUserForDetail(payload) {
+  const userId = normalizeText(payload && (payload.userId || payload._id));
+  const openidHint = normalizeText(payload && (payload.openid || payload.userOpenid));
+  if (userId) {
+    try {
+      const byDocId = await db.collection(COLLECTIONS.users).doc(userId).get();
+      if (byDocId && byDocId.data) {
+        return byDocId.data;
+      }
+    } catch (error) {
+      // Ignore and continue lookup by openid.
+    }
+  }
+
+  const openidCandidates = uniqueCaseSensitiveIdentifiers([openidHint, userId]);
+  for (const openid of openidCandidates) {
+    const rows = await db.collection(COLLECTIONS.users)
+      .where(
+        _.or([
+          {
+            openid
+          },
+          {
+            _openid: openid
+          }
+        ])
+      )
+      .limit(1)
+      .get();
+    if (rows && rows.data && rows.data.length) {
+      return rows.data[0];
+    }
+  }
+
+  return null;
+}
+
+async function listUserTravelerProfilesByUser(userDoc, openids) {
+  const records = [];
+  const userId = normalizeText(userDoc && userDoc._id);
+  if (userId) {
+    const byUserId = await db.collection(COLLECTIONS.userTravelers)
+      .where({
+        userId,
+        status: "active",
+        source: "traveler_profile"
+      })
+      .limit(MAX_LIMIT)
+      .get();
+    records.push(...normalizeArray(byUserId && byUserId.data));
+  }
+  for (const openid of uniqueCaseSensitiveIdentifiers(openids)) {
+    const result = await db.collection(COLLECTIONS.userTravelers)
+      .where({
+        userOpenid: openid,
+        status: "active",
+        source: "traveler_profile"
+      })
+      .limit(MAX_LIMIT)
+      .get();
+    records.push(...normalizeArray(result && result.data));
+  }
+  const dedupedMap = {};
+  records.forEach((item) => {
+    const key = normalizeText(item && (item.profileId || item.travelerId || item._id));
+    if (!key) {
+      return;
+    }
+    const previous = dedupedMap[key];
+    if (!previous || normalizeNumber(item && item.updatedAt) > normalizeNumber(previous && previous.updatedAt)) {
+      dedupedMap[key] = item;
+    }
+  });
+  return Object.values(dedupedMap)
+    .map(mapTravelerProfileForAdmin)
+    .sort((left, right) => normalizeNumber(right.updatedAt) - normalizeNumber(left.updatedAt));
+}
+
+async function listTravelerRelationOrderRows(limit = TRAVELER_RELATION_ORDER_LIMIT) {
+  return queryRows(
+    "SELECT `orderNo`, `userOpenid`, `serviceSlug`, `serviceName`, `servicePeriodCode`, `versionName`, `status`, `travelDateStart`, `travelDateEnd`, `travelersJson`, `createdAtTs`, `updatedAt`, `creatorSnapshotJson`, `serviceSnapshotJson` FROM `TravelOrder` ORDER BY COALESCE(`updatedAt`, `createdAtTs`) DESC LIMIT {{limit}}",
+    { limit: Math.max(1, Math.min(TRAVELER_RELATION_ORDER_LIMIT, normalizePositiveInteger(limit, TRAVELER_RELATION_ORDER_LIMIT))) }
+  );
+}
+
+async function listUserEffectiveOrderRows(openids) {
+  const rows = [];
+  for (const openid of uniqueCaseSensitiveIdentifiers(openids)) {
+    const partialRows = await queryRows(
+      "SELECT * FROM `TravelOrder` WHERE `userOpenid` = {{openid}} ORDER BY COALESCE(`updatedAt`, `createdAtTs`) DESC LIMIT 500",
+      { openid }
+    );
+    rows.push(...partialRows);
+  }
+  const dedupedMap = {};
+  rows.forEach((row) => {
+    const orderNo = normalizeText(row && row.orderNo);
+    if (!orderNo) {
+      return;
+    }
+    const status = normalizeText(row && row.status);
+    if (!EFFECTIVE_ORDER_STATUSES.has(status)) {
+      return;
+    }
+    if (!dedupedMap[orderNo]) {
+      dedupedMap[orderNo] = row;
+    }
+  });
+  return Object.values(dedupedMap)
+    .map(mapEffectiveOrderItem)
+    .sort((left, right) => normalizeNumber(right.updatedAtTs) - normalizeNumber(left.updatedAtTs));
+}
+
+async function getUserDetail(payload) {
+  const userDoc = await findUserForDetail(payload);
+  assertCondition(userDoc, "未找到对应用户");
+
+  const openids = resolveUserOrderOpenids(userDoc);
+  const userId = normalizeText(userDoc._id);
+  const [persistedTravelers, effectiveOrders, couponDocs, rewardDocs, users] = await Promise.all([
+    listUserTravelerProfilesByUser(userDoc, openids),
+    listUserEffectiveOrderRows(openids),
+    listOptionalCollection(COLLECTIONS.userCouponAssets),
+    listOptionalCollection(COLLECTIONS.referralRewardLedgers),
+    listCollection(COLLECTIONS.users)
+  ]);
+  const travelers = persistedTravelers;
+  const routeHistory = buildRouteHistory(effectiveOrders);
+  const userMap = buildUserIdSummaryMap(users);
+  const couponAssets = normalizeArray(couponDocs)
+    .filter((doc) => {
+      const docUserId = normalizeText(doc && doc.userId);
+      const docOpenid = normalizeText(doc && doc.userOpenid);
+      return (userId && docUserId === userId) || (docOpenid && openids.includes(docOpenid));
+    })
+    .map((doc) => ({
+      couponAssetId: normalizeText(doc && doc._id),
+      campaignKey: normalizeText(doc && doc.campaignKey),
+      couponType: normalizeText(doc && doc.couponType),
+      title: normalizeText(doc && doc.title) || "野哉分享家活动券",
+      amount: normalizeNumber(doc && doc.amount, 0),
+      threshold: normalizeNumber(doc && doc.threshold, 0),
+      status: normalizeText(doc && doc.status) || "active",
+      stackGroup: normalizeText(doc && doc.stackGroup),
+      grantedAt: normalizeNumber(doc && doc.grantedAt, 0),
+      expiresAt: normalizeNumber(doc && doc.expiresAt, 0),
+      usedOrderNo: normalizeText(doc && doc.usedOrderNo),
+      usedAt: normalizeNumber(doc && doc.usedAt, 0),
+      updatedAt: normalizeNumber(doc && doc.updatedAt, 0)
+    }))
+    .sort((left, right) => normalizeNumber(right.grantedAt, 0) - normalizeNumber(left.grantedAt, 0));
+  const cashRewardLedgers = normalizeArray(rewardDocs)
+    .filter((doc) => userId && normalizeText(doc && doc.inviterUserId) === userId)
+    .map((doc) => {
+      const inviteeSummary = resolveUserSummaryByUserId(userMap, doc && doc.inviteeUserId);
+      return {
+        ledgerId: normalizeText(doc && doc._id),
+        campaignKey: normalizeText(doc && doc.campaignKey),
+        campaignName: normalizeText(doc && doc.campaignName),
+        inviterUserId: userId,
+        inviteeUserId: inviteeSummary.userId || normalizeText(doc && doc.inviteeUserId),
+        inviteeNickname: inviteeSummary.userNickname,
+        relationId: normalizeText(doc && doc.relationId),
+        sourceOrderNo: normalizeText(doc && doc.sourceOrderNo),
+        sourceServiceSlug: normalizeText(doc && doc.sourceServiceSlug),
+        serviceName: normalizeText(doc && doc.serviceName),
+        travelDateStart: normalizeText(doc && doc.travelDateStart),
+        travelDateEnd: normalizeText(doc && doc.travelDateEnd),
+        rewardAmount: normalizeNumber(doc && doc.rewardAmount, 0),
+        grossAmount: normalizeNumber(doc && doc.grossAmount, 0),
+        netAmount: normalizeNumber(doc && doc.netAmount, 0),
+        status: normalizeText(doc && doc.status) || "awaiting_account",
+        settlementMonth: normalizeText(doc && doc.settlementMonth),
+        settlementPlannedDay: normalizeNumber(doc && doc.settlementPlannedDay, 0),
+        earnedAt: normalizeNumber(doc && doc.earnedAt, 0),
+        updatedAt: normalizeNumber(doc && doc.updatedAt, 0)
+      };
+    })
+    .sort((left, right) => normalizeNumber(right.earnedAt, 0) - normalizeNumber(left.earnedAt, 0));
+  const stats = {
+    travelerCount: travelers.length,
+    effectiveOrderCount: effectiveOrders.length,
+    effectiveRouteCount: routeHistory.length,
+    lastTravelAt: normalizeNumber(effectiveOrders[0] && effectiveOrders[0].updatedAtTs)
+  };
+
+  if (normalizeText(userDoc._id)) {
+    await db.collection(COLLECTIONS.users).doc(userDoc._id).update({
+      data: {
+        travelerCount: stats.travelerCount,
+        effectiveOrderCount: stats.effectiveOrderCount,
+        effectiveRouteCount: stats.effectiveRouteCount,
+        lastTravelAt: stats.lastTravelAt,
+        updatedAt: Date.now()
+      }
+    });
+  }
+
+  return {
+    user: {
+      id: normalizeText(userDoc._id),
+      openid: normalizeText(userDoc.openid || userDoc._openid),
+      nickname: normalizeText(userDoc.nickname) || "旅人",
+      avatarUrl: normalizeText(userDoc.avatarUrl || userDoc.avatar),
+      role: normalizeText(userDoc.role) || "user",
+      memberLabel: normalizeText(userDoc.memberLabel) || "野哉会员",
+      profileConfigured: Boolean(userDoc.profileConfigured),
+      createdAt: normalizeNumber(userDoc.createdAt),
+      updatedAt: normalizeNumber(userDoc.updatedAt),
+      ...stats
+    },
+    travelers,
+    couponAssets,
+    cashRewardLedgers,
+    routeHistory,
+    effectiveOrders
+  };
+}
+
+async function findTravelerDocForDetail(payload) {
+  const travelerRecordId = normalizeText(payload && (payload.travelerId || payload.travelerRecordId || payload._id));
+  const profileId = normalizeText(payload && payload.profileId);
+
+  if (travelerRecordId) {
+    try {
+      const byDocId = await db.collection(COLLECTIONS.userTravelers).doc(travelerRecordId).get();
+      if (byDocId && byDocId.data) {
+        return byDocId.data;
+      }
+    } catch (error) {
+      // Ignore and fall back to collection scan below.
+    }
+  }
+
+  const travelerDocs = await listCollection(COLLECTIONS.userTravelers);
+  const exactByRecordId = normalizeArray(travelerDocs).find((doc) => normalizeText(doc && doc._id) === travelerRecordId);
+  if (exactByRecordId) {
+    return exactByRecordId;
+  }
+
+  return normalizeArray(travelerDocs).find((doc) => {
+    const docProfileId = normalizeText(doc && (doc.profileId || doc.travelerId));
+    return docProfileId && docProfileId === profileId;
+  }) || null;
+}
+
+async function listTravelers(payload, adminUser) {
+  const keyword = normalizeText(payload && payload.keyword).toLowerCase();
+  const status = normalizeText(payload && payload.status).toLowerCase();
+  const hasOrders = normalizeText(payload && payload.hasOrders).toLowerCase();
+  const limit = clampLimit(payload && payload.limit, 100);
+
+  const [travelerDocs, users, relationOrderRows, services, creators] = await Promise.all([
+    listCollection(COLLECTIONS.userTravelers),
+    listCollection(COLLECTIONS.users),
+    listTravelerRelationOrderRows(),
+    listCollection(COLLECTIONS.services),
+    listCollection(COLLECTIONS.creators)
+  ]);
+
+  const userMap = buildOrderUserMap(users);
+  const creatorRefSet = buildAdminCreatorRefSet(adminUser, creators);
+  const serviceMap = buildServiceMap(services);
+  const visibleRelationOrderRows = filterOrderRowsForAdmin(relationOrderRows, adminUser, creatorRefSet, serviceMap);
+  const relationOrderMaps = buildTravelerRelationMaps(visibleRelationOrderRows, travelerDocs);
+
+  const items = normalizeArray(travelerDocs)
+    .filter((doc) => {
+      const source = normalizeText(doc && doc.source);
+      return !source || source === "traveler_profile";
+    })
+    .map((doc) => {
+      const summary = mapTravelerProfileForAdmin(doc);
+      const userSummary = resolveOrderUserSummary(userMap, doc && doc.userOpenid);
+      const relationSummary = resolveTravelerRelationSummary(doc, relationOrderMaps, {
+        usePersistedFallback: !isCreatorPortalUser(adminUser)
+      });
+      const searchableDocumentNumbers = normalizeArray(doc && doc.documents)
+        .map((item) => normalizeText(item && item.documentNumber))
+        .filter(Boolean);
+
+      return Object.assign({}, summary, {
+        relatedOrderCount: relationSummary.relatedOrderCount,
+        lastRelatedOrderNo: relationSummary.lastRelatedOrderNo,
+        lastRelatedOrderStatus: relationSummary.lastRelatedOrderStatus,
+        lastRelatedOrderAt: relationSummary.lastRelatedOrderAt,
+        lastRelatedServiceName: relationSummary.lastRelatedServiceName,
+        userId: normalizeText(doc && doc.userId) || userSummary.userId,
+        userOpenid: normalizeText(doc && doc.userOpenid),
+        userNickname: userSummary.userNickname,
+        _keywordValues: [
+          summary.name,
+          normalizeText(doc && doc.phone),
+          normalizeText(doc && doc.idNumber),
+          summary.profileId,
+          normalizeText(doc && doc.travelerId),
+          userSummary.userNickname,
+          normalizeText(doc && doc.userId),
+          ...searchableDocumentNumbers
+        ]
+      });
+    })
+    .filter((item) => {
+      if (isCreatorPortalUser(adminUser) && normalizeNumber(item && item.relatedOrderCount) <= 0) {
+        return false;
+      }
+      if (status && status !== "all" && status !== normalizeText(item && item.status).toLowerCase()) {
+        return false;
+      }
+      if (hasOrders === "yes" && normalizeNumber(item && item.relatedOrderCount) <= 0) {
+        return false;
+      }
+      if (hasOrders === "no" && normalizeNumber(item && item.relatedOrderCount) > 0) {
+        return false;
+      }
+
+      return matchesKeyword(item && item._keywordValues, keyword);
+    })
+    .map((item) => {
+      const nextItem = Object.assign({}, item);
+      delete nextItem._keywordValues;
+      return nextItem;
+    });
+
+  if (shouldReturnPagedResult(payload)) {
+    return buildPagedResult(items, payload, {
+      defaultPageSize: 10,
+      defaultSortBy: "updatedAt",
+      defaultSortDirection: "desc",
+      getSortValue: (item, sortBy) => {
+        switch (sortBy) {
+          case "name":
+            return item.name;
+          case "userNickname":
+            return item.userNickname;
+          case "relatedOrderCount":
+            return item.relatedOrderCount;
+          case "lastRelatedOrderAt":
+            return item.lastRelatedOrderAt;
+          case "lastUsedAt":
+            return item.lastUsedAt;
+          case "status":
+            return item.status;
+          case "updatedAt":
+          default:
+            return item.updatedAt;
+        }
+      },
+      getItemKey: (item) => item.travelerRecordId || item.profileId
+    });
+  }
+
+  return items.slice(0, limit);
+}
+
+async function getTravelerDetail(payload, adminUser) {
+  const travelerDoc = await findTravelerDocForDetail(payload);
+  assertCondition(travelerDoc, "未找到对应出行人");
+
+  const [users, relationOrderRows, services, creators] = await Promise.all([
+    listCollection(COLLECTIONS.users),
+    listTravelerRelationOrderRows(),
+    listCollection(COLLECTIONS.services),
+    listCollection(COLLECTIONS.creators)
+  ]);
+
+  const userSummary = resolveOrderUserSummary(buildOrderUserMap(users), travelerDoc && travelerDoc.userOpenid);
+  const creatorRefSet = buildAdminCreatorRefSet(adminUser, creators);
+  const serviceMap = buildServiceMap(services);
+  const visibleRelationOrderRows = filterOrderRowsForAdmin(relationOrderRows, adminUser, creatorRefSet, serviceMap);
+  const relationMaps = buildTravelerRelationMaps(visibleRelationOrderRows, [travelerDoc]);
+  const relationSummary = resolveTravelerRelationSummary(travelerDoc, relationMaps, {
+    usePersistedFallback: !isCreatorPortalUser(adminUser)
+  });
+  assertCondition(!isCreatorPortalUser(adminUser) || normalizeNumber(relationSummary && relationSummary.relatedOrderCount, 0) > 0, "未找到对应出行人");
+
+  return mapTravelerProfileDetailForAdmin(travelerDoc, userSummary, relationSummary);
+}
+
+async function deleteTraveler(payload) {
+  const travelerDoc = await findTravelerDocForDetail(payload);
+  assertCondition(travelerDoc, "未找到对应出行人");
+
+  const relationOrderRows = await listTravelerRelationOrderRows();
+  const relationMaps = buildTravelerRelationMaps(relationOrderRows, [travelerDoc]);
+  const relationSummary = resolveTravelerRelationSummary(travelerDoc, relationMaps);
+  assertCondition(normalizeNumber(relationSummary && relationSummary.relatedOrderCount, 0) === 0, "该出行人仍有关联行程，不能直接删除");
+
+  const travelerRecordId = normalizeText(travelerDoc && travelerDoc._id);
+  assertCondition(travelerRecordId, "缺少出行人记录 ID");
+
+  await db.collection(COLLECTIONS.userTravelers).doc(travelerRecordId).remove();
+  return {
+    _id: travelerRecordId,
+    removed: true
+  };
+}
+
+async function backfillOrderContactFields(payload) {
+  const { limit, offset, dryRun } = resolveBackfillPageOptions(payload, 500, 2000);
+  const { whereSql, params } = buildTravelOrderBackfillWhere(payload);
+  const orderRows = await queryRows(
+    `SELECT \`orderNo\`, \`orderContactName\`, \`orderContactPhone\`, \`travelerName\`, \`travelerPhone\` FROM \`TravelOrder\` ${whereSql} ORDER BY COALESCE(\`updatedAt\`, \`createdAtTs\`) DESC LIMIT {{limit}} OFFSET {{offset}}`,
+    Object.assign({}, params, {
+      limit,
+      offset
+    })
+  );
+  const updatedSamples = [];
+  const skippedSamples = [];
+  const errorSamples = [];
+  let updatedOrders = 0;
+  let skippedOrders = 0;
+  let errorCount = 0;
+
+  for (const row of normalizeArray(orderRows)) {
+    const orderNo = normalizeText(row && row.orderNo);
+    const legacyName = normalizeText(row && row.travelerName);
+    const legacyPhone = normalizeText(row && row.travelerPhone);
+    const currentName = normalizeText(row && row.orderContactName);
+    const currentPhone = normalizeText(row && row.orderContactPhone);
+    const nextName = currentName || legacyName;
+    const nextPhone = currentPhone || legacyPhone;
+
+    if (nextName === currentName && nextPhone === currentPhone) {
+      skippedOrders += 1;
+      appendBackfillSample(skippedSamples, {
+        orderNo,
+        reason: currentName || currentPhone ? "already_filled" : "missing_legacy_contact"
+      });
+      continue;
+    }
+
+    try {
+      if (!dryRun) {
+        await executeSQL(
+          "UPDATE `TravelOrder` SET `orderContactName` = {{orderContactName}}, `orderContactPhone` = {{orderContactPhone}} WHERE `orderNo` = {{orderNo}} LIMIT 1",
+          {
+            orderNo,
+            orderContactName: nextName,
+            orderContactPhone: nextPhone
+          }
+        );
+      }
+
+      updatedOrders += 1;
+      appendBackfillSample(updatedSamples, {
+        orderNo,
+        orderContactName: nextName,
+        orderContactPhone: nextPhone
+      });
+    } catch (error) {
+      errorCount += 1;
+      appendBackfillSample(errorSamples, {
+        orderNo,
+        message: error && error.message ? error.message : "order contact backfill failed"
+      });
+    }
+  }
+
+  return {
+    dryRun,
+    limit,
+    offset,
+    scannedOrders: orderRows.length,
+    updatedOrders,
+    skippedOrders,
+    errorCount,
+    updatedSamples,
+    skippedSamples,
+    errorSamples
+  };
+}
+
+async function backfillOrderTravelerProfileRefs(payload) {
+  const { limit, offset, dryRun } = resolveBackfillPageOptions(payload, 500, 2000);
+  const { whereSql, params } = buildTravelOrderBackfillWhere(payload);
+  const [orderRows, travelerDocs] = await Promise.all([
+    queryRows(
+      `SELECT \`orderNo\`, \`userOpenid\`, \`travelersJson\` FROM \`TravelOrder\` ${whereSql} ORDER BY COALESCE(\`updatedAt\`, \`createdAtTs\`) DESC LIMIT {{limit}} OFFSET {{offset}}`,
+      Object.assign({}, params, {
+        limit,
+        offset
+      })
+    ),
+    listCollection(COLLECTIONS.userTravelers)
+  ]);
+  const travelerStateByUser = buildTravelerBackfillStateByUser(travelerDocs);
+  const updatedSamples = [];
+  const unmatchedSamples = [];
+  const multiMatchedSamples = [];
+  const errorSamples = [];
+  let scannedTravelers = 0;
+  let updatedOrders = 0;
+  let updatedTravelerRefs = 0;
+  let alreadyLinkedTravelers = 0;
+  let unmatchedTravelers = 0;
+  let multiMatchedTravelers = 0;
+  let errorCount = 0;
+
+  for (const row of normalizeArray(orderRows)) {
+    const orderNo = normalizeText(row && row.orderNo);
+    const userOpenid = normalizeText(row && row.userOpenid);
+    const rawTravelers = normalizeArray(parseJsonText(row && row.travelersJson, []));
+    if (!rawTravelers.length) {
+      continue;
+    }
+
+    const userState = travelerStateByUser[userOpenid];
+    let orderChanged = false;
+    const nextTravelers = rawTravelers.map((rawTraveler, travelerIndex) => {
+      const normalizedTraveler = normalizeTravelerSnapshot(rawTraveler);
+      scannedTravelers += 1;
+
+      const matchResult = resolveTravelerProfileBackfillMatch(
+        rawTraveler,
+        normalizedTraveler,
+        userOpenid,
+        userState
+      );
+
+      if (matchResult.status === "matched" && matchResult.doc) {
+        if (isTravelerSnapshotLinkMatched(rawTraveler, matchResult.doc)) {
+          alreadyLinkedTravelers += 1;
+          return rawTraveler;
+        }
+
+        orderChanged = true;
+        updatedTravelerRefs += 1;
+        appendBackfillSample(updatedSamples, {
+          orderNo,
+          travelerIndex,
+          name: normalizedTraveler.name,
+          profileId: normalizeText(matchResult.doc && (matchResult.doc.profileId || matchResult.doc.travelerId)),
+          travelerRecordId: normalizeText(matchResult.doc && matchResult.doc._id),
+          reason: matchResult.reason
+        });
+        return buildTravelerBackfilledSnapshot(rawTraveler, matchResult.doc);
+      }
+
+      if (matchResult.status === "multiple") {
+        multiMatchedTravelers += 1;
+        appendBackfillSample(multiMatchedSamples, {
+          orderNo,
+          travelerIndex,
+          name: normalizedTraveler.name,
+          reason: matchResult.reason,
+          candidateRecordIds: normalizeArray(matchResult.candidates).map((item) => normalizeText(item && item.recordId)).filter(Boolean)
+        });
+        return rawTraveler;
+      }
+
+      unmatchedTravelers += 1;
+      appendBackfillSample(unmatchedSamples, {
+        orderNo,
+        travelerIndex,
+        name: normalizedTraveler.name,
+        phone: normalizedTraveler.phone,
+        documentNumber: normalizedTraveler.documentNumber,
+        reason: matchResult.reason
+      });
+      return rawTraveler;
+    });
+
+    if (!orderChanged) {
+      continue;
+    }
+
+    try {
+      if (!dryRun) {
+        await executeSQL(
+          "UPDATE `TravelOrder` SET `travelersJson` = {{travelersJson}} WHERE `orderNo` = {{orderNo}} LIMIT 1",
+          {
+            orderNo,
+            travelersJson: JSON.stringify(nextTravelers)
+          }
+        );
+      }
+
+      updatedOrders += 1;
+    } catch (error) {
+      errorCount += 1;
+      appendBackfillSample(errorSamples, {
+        orderNo,
+        message: error && error.message ? error.message : "traveler refs backfill failed"
+      });
+    }
+  }
+
+  return {
+    dryRun,
+    limit,
+    offset,
+    scannedOrders: orderRows.length,
+    scannedTravelers,
+    updatedOrders,
+    updatedTravelerRefs,
+    alreadyLinkedTravelers,
+    unmatchedTravelers,
+    multiMatchedTravelers,
+    errorCount,
+    updatedSamples,
+    unmatchedSamples,
+    multiMatchedSamples,
+    errorSamples
+  };
+}
+
+async function backfillTravelerOrderStats(payload) {
+  const dryRun = normalizeBooleanFlag(payload && payload.dryRun);
+  const userOpenidFilter = normalizeText(payload && payload.userOpenid);
+  const travelerRecordIdFilter = normalizeText(payload && (payload.travelerId || payload.travelerRecordId || payload._id));
+  const profileIdFilter = normalizeText(payload && payload.profileId);
+  const orderLimit = Math.max(0, normalizePositiveInteger(payload && payload.orderLimit, 0));
+  const [travelerDocs, users] = await Promise.all([
+    listCollection(COLLECTIONS.userTravelers),
+    listCollection(COLLECTIONS.users)
+  ]);
+  const filteredTravelerDocs = normalizeArray(travelerDocs).filter((doc) => {
+    const userOpenid = normalizeText(doc && doc.userOpenid);
+    const travelerRecordId = normalizeText(doc && doc._id);
+    const profileId = normalizeText(doc && (doc.profileId || doc.travelerId));
+
+    if (userOpenidFilter && userOpenid !== userOpenidFilter) {
+      return false;
+    }
+    if (travelerRecordIdFilter && travelerRecordId !== travelerRecordIdFilter) {
+      return false;
+    }
+    if (profileIdFilter && profileId !== profileIdFilter) {
+      return false;
+    }
+
+    return true;
+  });
+  const userOpenids = uniqueNormalizedValues(
+    filteredTravelerDocs.map((doc) => doc && doc.userOpenid),
+    normalizeText
+  );
+  const relationOrderRows = await listTravelOrderRowsInBatches(
+    "`orderNo`, `userOpenid`, `serviceSlug`, `serviceName`, `servicePeriodCode`, `status`, `travelDateStart`, `travelDateEnd`, `travelersJson`, `createdAtTs`, `updatedAt`",
+    {
+      userOpenid: userOpenids.length === 1 ? userOpenids[0] : ""
+    },
+    {
+      limit: orderLimit,
+      batchSize: 200
+    }
+  );
+  const relationMaps = buildTravelerRelationMaps(relationOrderRows, filteredTravelerDocs);
+  const userMap = buildOrderUserMap(users);
+  const updatedSamples = [];
+  const skippedSamples = [];
+  const errorSamples = [];
+  let updatedTravelers = 0;
+  let skippedTravelers = 0;
+  let errorCount = 0;
+
+  for (const doc of filteredTravelerDocs) {
+    const travelerRecordId = normalizeText(doc && doc._id);
+    const profileId = normalizeText(doc && (doc.profileId || doc.travelerId));
+    const relationSummary = resolveTravelerRelationSummary(doc, relationMaps);
+    const resolvedUser = userMap[normalizeText(doc && doc.userOpenid)] || {};
+    const nextData = {};
+    const desiredTravelerId = profileId || normalizeText(doc && doc.travelerId);
+    const desiredProfileId = profileId || normalizeText(doc && doc.travelerId);
+    const desiredUserId = normalizeText(doc && doc.userId) || normalizeText(resolvedUser && resolvedUser.userId);
+    const desiredLastUsedAt = normalizeNumber(relationSummary.lastRelatedOrderAt, 0)
+      || normalizeNumber(doc && doc.lastUsedAt, 0);
+
+    if (desiredTravelerId && normalizeText(doc && doc.travelerId) !== desiredTravelerId) {
+      nextData.travelerId = desiredTravelerId;
+    }
+    if (desiredProfileId && normalizeText(doc && doc.profileId) !== desiredProfileId) {
+      nextData.profileId = desiredProfileId;
+    }
+    if (desiredUserId && normalizeText(doc && doc.userId) !== desiredUserId) {
+      nextData.userId = desiredUserId;
+    }
+    if (normalizeNumber(doc && doc.relatedOrderCount, 0) !== normalizeNumber(relationSummary.relatedOrderCount, 0)) {
+      nextData.relatedOrderCount = normalizeNumber(relationSummary.relatedOrderCount, 0);
+    }
+    if (normalizeText(doc && doc.lastRelatedOrderNo) !== normalizeText(relationSummary.lastRelatedOrderNo)) {
+      nextData.lastRelatedOrderNo = normalizeText(relationSummary.lastRelatedOrderNo);
+    }
+    if (normalizeText(doc && doc.lastRelatedOrderStatus) !== normalizeText(relationSummary.lastRelatedOrderStatus)) {
+      nextData.lastRelatedOrderStatus = normalizeText(relationSummary.lastRelatedOrderStatus);
+    }
+    if (normalizeNumber(doc && doc.lastRelatedOrderAt, 0) !== normalizeNumber(relationSummary.lastRelatedOrderAt, 0)) {
+      nextData.lastRelatedOrderAt = normalizeNumber(relationSummary.lastRelatedOrderAt, 0);
+    }
+    if (normalizeText(doc && doc.lastRelatedServiceName) !== normalizeText(relationSummary.lastRelatedServiceName)) {
+      nextData.lastRelatedServiceName = normalizeText(relationSummary.lastRelatedServiceName);
+    }
+    if (desiredLastUsedAt > 0 && normalizeNumber(doc && doc.lastUsedAt, 0) !== desiredLastUsedAt) {
+      nextData.lastUsedAt = desiredLastUsedAt;
+    }
+
+    if (!Object.keys(nextData).length) {
+      skippedTravelers += 1;
+      appendBackfillSample(skippedSamples, {
+        travelerRecordId,
+        profileId,
+        reason: "already_synced"
+      });
+      continue;
+    }
+
+    try {
+      if (!dryRun) {
+        await db.collection(COLLECTIONS.userTravelers).doc(travelerRecordId).update({
+          data: nextData
+        });
+      }
+
+      updatedTravelers += 1;
+      appendBackfillSample(updatedSamples, Object.assign({
+        travelerRecordId,
+        profileId
+      }, nextData));
+    } catch (error) {
+      errorCount += 1;
+      appendBackfillSample(errorSamples, {
+        travelerRecordId,
+        profileId,
+        message: error && error.message ? error.message : "traveler stats backfill failed"
+      });
+    }
+  }
+
+  return {
+    dryRun,
+    scannedTravelers: filteredTravelerDocs.length,
+    scannedOrders: relationOrderRows.length,
+    updatedTravelers,
+    skippedTravelers,
+    errorCount,
+    updatedSamples,
+    skippedSamples,
+    errorSamples
+  };
+}
+
+async function maintenanceBackfillServiceCreatorMessages(payload) {
+  assertMaintenanceAccess(payload);
+
+  const options = resolveServiceMaintenanceOptions(payload);
+  const plan = buildServiceCreatorMessageBackfillPlan(
+    await listCollection(COLLECTIONS.services),
+    options
+  );
+  const updatedSamples = [];
+  const skippedSamples = [];
+  const errorSamples = [];
+  let updatedServices = 0;
+  let skippedServices = 0;
+  let errorCount = 0;
+
+  for (const item of plan) {
+    if (!item.shouldUpdate) {
+      skippedServices += 1;
+      appendBackfillSample(skippedSamples, {
+        _id: item._id,
+        slug: item.slug,
+        previousMessage: item.previousMessage,
+        reason: item.previousMessage ? "already_filled" : "no_change"
+      });
+      continue;
+    }
+
+    try {
+      if (!options.dryRun) {
+        await db.collection(COLLECTIONS.services).doc(item._id).update({
+          data: {
+            creatorMessage: item.nextMessage,
+            updatedAt: Date.now(),
+            updatedBy: SERVICE_CREATOR_MESSAGE_BACKFILL_UPDATED_BY
+          }
+        });
+      }
+
+      updatedServices += 1;
+      appendBackfillSample(updatedSamples, {
+        _id: item._id,
+        slug: item.slug,
+        nextMessage: item.nextMessage,
+        previousMessage: item.previousMessage
+      });
+    } catch (error) {
+      errorCount += 1;
+      appendBackfillSample(errorSamples, {
+        _id: item._id,
+        slug: item.slug,
+        message: error && error.message ? error.message : "service creatorMessage backfill failed"
+      });
+    }
+  }
+
+  if (!options.dryRun && updatedServices > 0) {
+    await invalidateContentGatewayCache("maintenanceBackfillServiceCreatorMessages");
+  }
+
+  return {
+    dryRun: options.dryRun,
+    overwrite: options.overwrite,
+    scannedServices: plan.length,
+    updatedServices,
+    skippedServices,
+    errorCount,
+    updatedSamples,
+    skippedSamples,
+    errorSamples
+  };
+}
+
+async function maintenanceRestoreServices(payload) {
+  assertMaintenanceAccess(payload);
+
+  const restoreRequests = normalizeArray(payload && payload.services)
+    .map((service) => sanitizeServiceRestorePayload(service))
+    .filter(Boolean);
+  const dryRun = normalizeBooleanFlag(payload && payload.dryRun);
+  const updatedSamples = [];
+  const errorSamples = [];
+  let updatedServices = 0;
+  let errorCount = 0;
+
+  assertCondition(restoreRequests.length > 0, "至少提供一条待恢复的路线");
+
+  for (const request of restoreRequests) {
+    try {
+      const existing = await findServiceDoc(request);
+      assertCondition(existing, `未找到待恢复路线：${request.slug || request.id || request._id}`);
+
+      const recordId = normalizeText(existing && existing._id) || request._id;
+      assertCondition(recordId, "缺少待恢复路线记录 ID");
+
+      const nextData = Object.assign({}, existing, request.data, {
+        updatedAt: Date.now(),
+        updatedBy: SERVICE_RESTORE_UPDATED_BY
+      });
+      delete nextData._id;
+
+      if (!dryRun) {
+        await db.collection(COLLECTIONS.services).doc(recordId).update({
+          data: nextData
+        });
+      }
+
+      updatedServices += 1;
+      appendBackfillSample(updatedSamples, {
+        _id: recordId,
+        slug: normalizeText(nextData.slug),
+        name: normalizeText(nextData.name)
+      });
+    } catch (error) {
+      errorCount += 1;
+      appendBackfillSample(errorSamples, {
+        _id: request._id,
+        slug: request.slug,
+        message: error && error.message ? error.message : "service restore failed"
+      });
+    }
+  }
+
+  if (!dryRun && updatedServices > 0) {
+    await invalidateContentGatewayCache("maintenanceRestoreServices");
+  }
+
+  return {
+    dryRun,
+    scannedServices: restoreRequests.length,
+    updatedServices,
+    errorCount,
+    updatedSamples,
+    errorSamples
+  };
+}
+
+async function backfillUserTravelersFromOrders(payload) {
+  const limit = Math.max(1, Math.min(2000, normalizePositiveInteger(payload && payload.limit, 500)));
+  const orderRows = await queryRows(
+    "SELECT `orderNo`, `userOpenid`, `travelersJson`, `travelerName`, `travelerPhone`, `createdAtTs`, `updatedAt` FROM `TravelOrder` ORDER BY COALESCE(`updatedAt`, `createdAtTs`) DESC LIMIT {{limit}}",
+    { limit }
+  );
+  const openidFilter = normalizeText(payload && payload.userOpenid);
+  const affectedUsers = {};
+  let inserted = 0;
+  let updated = 0;
+
+  for (const row of orderRows) {
+    const userOpenid = normalizeText(row && row.userOpenid);
+    if (!userOpenid) {
+      continue;
+    }
+    if (openidFilter && userOpenid !== openidFilter) {
+      continue;
+    }
+    affectedUsers[userOpenid] = true;
+    let travelers = normalizeArray(parseJsonText(row && row.travelersJson, []))
+      .map((item) => normalizeTravelerSnapshot(item))
+      .filter((item) => normalizeText(item.name) || normalizeText(item.phone));
+    if (!travelers.length && (normalizeText(row && row.travelerName) || normalizeText(row && row.travelerPhone))) {
+      travelers = [{
+        name: normalizeText(row && row.travelerName),
+        phone: normalizeText(row && row.travelerPhone),
+        documentType: "",
+        documentNumber: ""
+      }];
+    }
+
+    for (const traveler of travelers) {
+      const profileId = buildTravelerFingerprint(userOpenid, traveler);
+      const result = await db.collection(COLLECTIONS.userTravelers)
+        .where({
+          userOpenid,
+          profileId
+        })
+        .limit(1)
+        .get();
+      const existing = result && result.data && result.data.length ? result.data[0] : null;
+      const nowTs = normalizeNumber(row && (row.updatedAt || row.createdAtTs), Date.now());
+      const nextData = {
+        travelerId: profileId,
+        profileId,
+        userOpenid,
+        userId: normalizeText(existing && existing.userId),
+        name: normalizeText(traveler && traveler.name),
+        phone: normalizeText(traveler && traveler.phone),
+        phoneMasked: maskPhone(traveler && traveler.phone),
+        idType: normalizeText(traveler && traveler.documentType),
+        idNumber: normalizeText(traveler && traveler.documentNumber),
+        idNumberMasked: maskIdNumber(traveler && traveler.documentNumber),
+        gender: normalizeText(traveler && traveler.gender),
+        birthday: normalizeText(traveler && traveler.birthday),
+        wechat: normalizeText(traveler && traveler.wechat),
+        email: normalizeText(traveler && traveler.email),
+        note: normalizeText(traveler && traveler.note),
+        documents: normalizeArray(traveler && traveler.documents).map((item) => ({
+          documentType: normalizeText(item && item.documentType),
+          documentNumber: normalizeText(item && item.documentNumber)
+        })).filter((item) => item.documentType && item.documentNumber),
+        status: "active",
+        source: "profile_migration",
+        version: normalizeNumber(existing && existing.version, 0) + 1,
+        lastUsedAt: nowTs,
+        createdAt: normalizeNumber(existing && existing.createdAt, nowTs),
+        updatedAt: nowTs,
+        createdByOpenid: normalizeText(existing && existing.createdByOpenid) || userOpenid,
+        updatedByOpenid: userOpenid
+      };
+      if (existing && existing._id) {
+        await db.collection(COLLECTIONS.userTravelers).doc(existing._id).update({
+          data: nextData
+        });
+        updated += 1;
+      } else {
+        await db.collection(COLLECTIONS.userTravelers).add({
+          data: nextData
+        });
+        inserted += 1;
+      }
+    }
+  }
+
+  for (const userOpenid of Object.keys(affectedUsers)) {
+    const userRows = await db.collection(COLLECTIONS.users)
+      .where(
+        _.or([
+          { openid: userOpenid },
+          { _openid: userOpenid }
+        ])
+      )
+      .limit(1)
+      .get();
+    const user = userRows && userRows.data && userRows.data.length ? userRows.data[0] : null;
+    if (!user || !user._id) {
+      continue;
+    }
+    const travelerRows = await db.collection(COLLECTIONS.userTravelers)
+      .where({
+        userOpenid,
+        status: "active"
+      })
+      .limit(MAX_LIMIT)
+      .get();
+    await db.collection(COLLECTIONS.users).doc(user._id).update({
+      data: {
+        travelerCount: normalizeArray(travelerRows && travelerRows.data).length,
+        updatedAt: Date.now()
+      }
+    });
+  }
+
+  return {
+    scannedOrders: orderRows.length,
+    affectedUsers: Object.keys(affectedUsers).length,
+    inserted,
+    updated
+  };
+}
+
 async function listUsers(payload) {
   const keyword = normalizeText(payload && payload.keyword).toLowerCase();
   const limit = clampLimit(payload && payload.limit);
   const users = await listCollection(COLLECTIONS.users);
 
-  return users
-    .filter((user) =>
-      matchesKeyword([user.nickname, user.memberLabel, user.openid, user.role], keyword)
-    )
-    .slice(0, limit)
+  const items = users
     .map((user) => ({
       id: normalizeText(user._id),
       nickname: normalizeText(user.nickname) || "旅人",
       role: normalizeText(user.role) || "user",
       memberLabel: normalizeText(user.memberLabel) || "野哉会员",
       profileConfigured: Boolean(user.profileConfigured),
+      travelerCount: normalizeNumber(user.travelerCount),
+      effectiveOrderCount: normalizeNumber(user.effectiveOrderCount),
+      effectiveRouteCount: normalizeNumber(user.effectiveRouteCount),
+      lastTravelAt: normalizeNumber(user.lastTravelAt),
       createdAt: normalizeNumber(user.createdAt),
       updatedAt: normalizeNumber(user.updatedAt)
-    }));
+    }))
+    .filter((user) =>
+      matchesKeyword([user.nickname, user.memberLabel, user.id, user.role], keyword)
+    );
+
+  if (shouldReturnPagedResult(payload)) {
+    return buildPagedResult(items, payload, {
+      defaultPageSize: 10,
+      defaultSortBy: "updatedAt",
+      defaultSortDirection: "desc",
+      getSortValue: (item, sortBy) => {
+        switch (sortBy) {
+          case "nickname":
+            return item.nickname;
+          case "role":
+            return item.role;
+          case "memberLabel":
+            return item.memberLabel;
+          case "profileConfigured":
+            return item.profileConfigured;
+          case "createdAt":
+            return item.createdAt;
+          case "travelerCount":
+            return item.travelerCount;
+          case "effectiveOrderCount":
+            return item.effectiveOrderCount;
+          case "effectiveRouteCount":
+            return item.effectiveRouteCount;
+          case "lastTravelAt":
+            return item.lastTravelAt;
+          case "updatedAt":
+            return item.updatedAt;
+          default:
+            return item.updatedAt;
+        }
+      },
+      getItemKey: (item) => item.id
+    });
+  }
+
+  return items.slice(0, limit);
 }
 
 function shouldRestoreSeatsForDeletedOrder(status) {
@@ -4613,7 +10707,7 @@ async function deleteOrder(payload) {
 }
 
 function resolveUserOrderOpenids(userDoc) {
-  return uniqueIdentifiers([
+  return uniqueCaseSensitiveIdentifiers([
     userDoc && userDoc.openid,
     userDoc && userDoc._openid
   ]);
@@ -4649,6 +10743,19 @@ async function deleteUser(payload) {
   const orderCount = await countUserOrders(existing);
   assertCondition(orderCount === 0, "该用户仍有关联订单，不能直接删除");
 
+  const openids = resolveUserOrderOpenids(existing);
+  for (const openid of openids) {
+    const travelerRows = await db.collection(COLLECTIONS.userTravelers)
+      .where({ userOpenid: openid })
+      .limit(MAX_LIMIT)
+      .get();
+    for (const traveler of normalizeArray(travelerRows && travelerRows.data)) {
+      if (normalizeText(traveler && traveler._id)) {
+        await db.collection(COLLECTIONS.userTravelers).doc(traveler._id).remove();
+      }
+    }
+  }
+
   await db.collection(COLLECTIONS.users).doc(userId).remove();
   return {
     _id: userId,
@@ -4664,17 +10771,23 @@ const handlers = {
       permissions: normalizeArray(user.permissions)
     };
   },
+  getSystemHealth: async () => {
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
+    return getSystemHealth();
+  },
   getDashboardSummary: async () => {
-    await requireAdmin();
-    return getDashboardSummary();
+    const adminUser = await requireAdmin();
+    assertAnyAdminPermission(adminUser, ["dashboard:read", "dashboard:read:owned"]);
+    return getDashboardSummary(adminUser);
   },
   listServices: async (payload) => {
-    await requireAdmin();
-    return listServices(payload);
+    const adminUser = await requireAdmin();
+    return listServices(payload, adminUser);
   },
   getServiceDetail: async (payload) => {
-    await requireAdmin();
-    return getServiceDetail(payload);
+    const adminUser = await requireAdmin();
+    return getServiceDetail(payload, adminUser);
   },
   saveService: async (payload) => {
     const adminUser = await requireAdmin();
@@ -4685,28 +10798,65 @@ const handlers = {
     return deleteService(payload, adminUser);
   },
   listServicePeriods: async (payload) => {
-    await requireAdmin();
-    return listServicePeriods(payload);
+    const adminUser = await requireAdmin();
+    return listServicePeriods(payload, adminUser);
   },
   getServicePeriodDetail: async (payload) => {
-    await requireAdmin();
-    return getServicePeriodDetail(payload);
+    const adminUser = await requireAdmin();
+    return getServicePeriodDetail(payload, adminUser);
   },
   saveServicePeriod: async (payload) => {
     const adminUser = await requireAdmin();
     return saveServicePeriod(payload, adminUser);
   },
   deleteServicePeriod: async (payload) => {
-    await requireAdmin();
-    return deleteServicePeriod(payload);
+    const adminUser = await requireAdmin();
+    return deleteServicePeriod(payload, adminUser);
   },
   listCreators: async (payload) => {
-    await requireAdmin();
-    return listCreators(payload);
+    const adminUser = await requireAdmin();
+    return listCreators(payload, adminUser);
+  },
+  listCreatorProfiles: async (payload) => {
+    const adminUser = await requireAdmin();
+    return listCreatorProfiles(payload, adminUser);
+  },
+  listCreatorRegistrations: async (payload) => {
+    const adminUser = await requireAdmin();
+    return listCreatorRegistrations(payload, adminUser);
+  },
+  getCreatorRegistrationDetail: async (payload) => {
+    const adminUser = await requireAdmin();
+    return getCreatorRegistrationDetail(payload, adminUser);
+  },
+  reviewCreatorRegistration: async (payload) => {
+    const adminUser = await requireAdmin();
+    return reviewCreatorRegistration(payload, adminUser);
+  },
+  resendCreatorRegistrationApprovalEmail: async (payload) => {
+    const adminUser = await requireAdmin();
+    return resendCreatorRegistrationApprovalEmail(payload, adminUser);
+  },
+  resendCreatorRegistrationActivationEmail: async (payload) => {
+    const adminUser = await requireAdmin();
+    return resendCreatorRegistrationActivationEmail(payload, adminUser);
+  },
+  retryCreatorRegistrationAccessProvision: async (payload) => {
+    const adminUser = await requireAdmin();
+    return retryCreatorRegistrationAccessProvision(payload, adminUser);
+  },
+  getCreatorRelationSummaries: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "creators:read");
+    return getCreatorRelationSummaries(payload);
   },
   getCreatorDetail: async (payload) => {
-    await requireAdmin();
-    return getCreatorDetail(payload);
+    const adminUser = await requireAdmin();
+    return getCreatorDetail(payload, adminUser);
+  },
+  getCreatorProfileDetail: async (payload) => {
+    const adminUser = await requireAdmin();
+    return getCreatorProfileDetail(payload, adminUser);
   },
   saveCreator: async (payload) => {
     const adminUser = await requireAdmin();
@@ -4717,12 +10867,12 @@ const handlers = {
     return deleteCreator(payload, adminUser);
   },
   listDestinations: async (payload) => {
-    await requireAdmin();
-    return listDestinations(payload);
+    const adminUser = await requireAdmin();
+    return listDestinations(payload, adminUser);
   },
   getDestinationDetail: async (payload) => {
-    await requireAdmin();
-    return getDestinationDetail(payload);
+    const adminUser = await requireAdmin();
+    return getDestinationDetail(payload, adminUser);
   },
   saveDestination: async (payload) => {
     const adminUser = await requireAdmin();
@@ -4733,12 +10883,12 @@ const handlers = {
     return deleteDestination(payload, adminUser);
   },
   listIdeas: async (payload) => {
-    await requireAdmin();
-    return listIdeas(payload);
+    const adminUser = await requireAdmin();
+    return listIdeas(payload, adminUser);
   },
   getIdeaDetail: async (payload) => {
-    await requireAdmin();
-    return getIdeaDetail(payload);
+    const adminUser = await requireAdmin();
+    return getIdeaDetail(payload, adminUser);
   },
   saveIdea: async (payload) => {
     const adminUser = await requireAdmin();
@@ -4749,11 +10899,13 @@ const handlers = {
     return deleteIdea(payload, adminUser);
   },
   getConfigOverview: async () => {
-    await requireAdmin();
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "config:read");
     return getConfigOverview();
   },
   getConfigDetail: async (payload) => {
-    await requireAdmin();
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "config:read");
     return getConfigDetail(payload);
   },
   saveConfigDetail: async (payload) => {
@@ -4761,12 +10913,17 @@ const handlers = {
     return saveConfigDetail(payload, adminUser);
   },
   listAdminAccounts: async () => {
-    await requireAdmin();
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "admins:read");
     return listAdminAccounts();
   },
   saveAdminAccount: async (payload) => {
     const adminUser = await requireAdmin();
     return saveAdminAccount(payload, adminUser);
+  },
+  saveCurrentAdminAccountProfile: async (payload) => {
+    const adminUser = await requireAdmin();
+    return saveCurrentAdminAccountProfile(payload, adminUser);
   },
   deactivateAdminAccount: async (payload) => {
     const adminUser = await requireAdmin();
@@ -4777,55 +10934,201 @@ const handlers = {
     return deleteAdminAccount(payload, adminUser);
   },
   listOrders: async (payload) => {
-    await requireAdmin();
-    return listOrders(payload);
+    const adminUser = await requireAdmin();
+    assertAnyAdminPermission(adminUser, ["ops:read", "orders:read:owned"]);
+    return listOrders(payload, adminUser);
+  },
+  listReferralRelations: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
+    return listReferralRelations(payload);
+  },
+  listReferralRewardLedgers: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
+    return listReferralRewardLedgers(payload);
+  },
+  listReferralPayoutAccounts: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
+    return listReferralPayoutAccounts(payload);
+  },
+  updateReferralRewardLedgerPayoutStatus: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
+    return updateReferralRewardLedgerPayoutStatus(payload, adminUser);
+  },
+  getOrderDebugToolDetail: async (payload) => {
+    const adminUser = await requireAdmin();
+    return getOrderDebugToolDetail(payload, adminUser);
+  },
+  listOrderDebugTestOrders: async (payload) => {
+    const adminUser = await requireAdmin();
+    return listOrderDebugTestOrders(payload, adminUser);
+  },
+  runOrderDebugToolAction: async (payload) => {
+    const adminUser = await requireAdmin();
+    return handleOrderDebugToolAction(payload, adminUser);
   },
   getOrderDetail: async (payload) => {
-    await requireAdmin();
-    return getOrderDetail(payload);
+    const adminUser = await requireAdmin();
+    assertAnyAdminPermission(adminUser, ["ops:read", "orders:detail:owned"]);
+    return getOrderDetail(payload, adminUser);
   },
   deleteOrder: async (payload) => {
-    await requireAdmin();
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
     return deleteOrder(payload);
   },
   listUsers: async (payload) => {
-    await requireAdmin();
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
     return listUsers(payload);
   },
+  getUserDetail: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
+    return getUserDetail(payload);
+  },
+  listTravelers: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAnyAdminPermission(adminUser, ["ops:read", "travelers:read:owned"]);
+    return listTravelers(payload, adminUser);
+  },
+  getTravelerDetail: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAnyAdminPermission(adminUser, ["ops:read", "travelers:detail:owned"]);
+    return getTravelerDetail(payload, adminUser);
+  },
+  deleteTraveler: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
+    return deleteTraveler(payload);
+  },
   deleteUser: async (payload) => {
-    await requireAdmin();
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
     return deleteUser(payload);
   },
+  backfillOrderContactFields: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
+    return backfillOrderContactFields(payload);
+  },
+  backfillOrderTravelerProfileRefs: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
+    return backfillOrderTravelerProfileRefs(payload);
+  },
+  backfillTravelerOrderStats: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
+    return backfillTravelerOrderStats(payload);
+  },
+  backfillUserTravelersFromOrders: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAdminPermission(adminUser, "ops:read");
+    return backfillUserTravelersFromOrders(payload);
+  },
+  maintenanceBackfillServiceCreatorMessages: async (payload) => {
+    return maintenanceBackfillServiceCreatorMessages(payload);
+  },
+  maintenanceRestoreServices: async (payload) => {
+    return maintenanceRestoreServices(payload);
+  },
   uploadImageFromUrl: async (payload) => {
-    await requireAdmin();
+    const adminUser = await requireAdmin();
+    assertCondition(
+      hasAdminPermission(adminUser, "services:write")
+      || hasAdminPermission(adminUser, "services:write:owned")
+      || hasAdminPermission(adminUser, "destinations:write")
+      || hasAdminPermission(adminUser, "destinations:write:owned")
+      || hasAdminPermission(adminUser, "ideas:write")
+      || hasAdminPermission(adminUser, "ideas:write:owned")
+      || hasAdminPermission(adminUser, "creators:write")
+      || hasAdminPermission(adminUser, "creators:write:self"),
+      "当前账号没有上传图片的权限"
+    );
     return uploadImageFromUrl(payload);
   },
   uploadImageFile: async (payload) => {
-    await requireAdmin();
+    const adminUser = await requireAdmin();
+    assertCondition(
+      hasAdminPermission(adminUser, "services:write")
+      || hasAdminPermission(adminUser, "services:write:owned")
+      || hasAdminPermission(adminUser, "destinations:write")
+      || hasAdminPermission(adminUser, "destinations:write:owned")
+      || hasAdminPermission(adminUser, "ideas:write")
+      || hasAdminPermission(adminUser, "ideas:write:owned")
+      || hasAdminPermission(adminUser, "creators:write")
+      || hasAdminPermission(adminUser, "creators:write:self"),
+      "当前账号没有上传图片的权限"
+    );
     return uploadImageFile(payload);
   }
 };
 
 exports.__test__ = {
+  buildAdminPermissions,
+  findAdminAccountForUser,
   buildCreatorSlugBase,
   buildDestinationSlugBase,
   buildIdeaSlugBase,
   buildServiceSlugBase,
+  createCreatorFromRegistration,
+  deliverCreatorRegistrationApprovalEmail,
+  getCreatorRegistrationDetail,
+  listCreatorRegistrations,
+  provisionCreatorRegistrationAccess,
+  reviewCreatorRegistration,
+  retryCreatorRegistrationAccessProvision,
+  resendCreatorRegistrationApprovalEmail,
+  resendCreatorRegistrationActivationEmail,
+  sendCreatorRegistrationApprovalEmail,
+  sendCreatorRegistrationActivationEmail,
   buildServicePeriodCreateRecord,
   buildSyntheticOrderStatusLogs,
+  backfillOrderContactFields,
+  backfillOrderTravelerProfileRefs,
+  backfillTravelerOrderStats,
+  buildServiceCreatorMessageBackfillPlan,
   countUserOrders,
   createSqlRecordId,
   deleteUser,
+  deriveServiceCreatorMessageForBackfill,
+  getDashboardSummary,
   generateCreatorSlug,
   generateDestinationSlug,
   generateIdeaSlug,
   generateServicePeriodCode,
   generateServiceSlug,
+  getCreatorRelationSummaries,
+  getOrderDetail,
+  getTravelerDetail,
+  deleteTraveler,
+  getUserDetail,
+  getSystemHealth,
   getNextSlugSequence,
+  listCreators,
+  listDestinations,
   listOrders,
+  listReferralPayoutAccounts,
+  listReferralRelations,
+  listReferralRewardLedgers,
+  listServices,
+  listTravelers,
+  getOrderDebugToolDetail,
+  listOrderDebugTestOrders,
+  handleOrderDebugToolAction,
+  isOrderDebugToolEnabled,
+  normalizeTravelerSnapshot,
+  updateReferralRewardLedgerPayoutStatus,
   resolvePeriodStatusByRemainingSeats,
   resolveServicePeriodStatus,
   resolveUserOrderOpenids,
+  maintenanceBackfillServiceCreatorMessages,
+  maintenanceRestoreServices,
+  saveService,
   saveIdea
 };
 

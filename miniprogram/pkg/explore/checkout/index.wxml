@@ -1,3 +1,4 @@
+<wxs module="checkoutSel" src="./checkout-selection.wxs" />
 <view wx:if="{{service}}" class="checkout-screen">
   <bottom-action-bar
     placement="sticky-top"
@@ -12,125 +13,273 @@
   ></bottom-action-bar>
 
   <view class="page-shell checkout-page">
-  <!-- 订单摘要模块 -->
-  <view class="checkout-summary paper-block">
-    <text class="section-title">{{summaryTitleText}}</text>
-    <view class="checkout-summary__row">
-      <text class="checkout-summary__label">行程名称</text>
-      <text class="checkout-summary__value">{{service.name}}</text>
-    </view>
-    <view class="checkout-summary__row">
-      <text class="checkout-summary__label">版本名称</text>
-      <text class="checkout-summary__value">{{selectedVersion}}</text>
-    </view>
-    <view class="checkout-summary__row">
-      <text class="checkout-summary__label">出发日期</text>
-      <text class="checkout-summary__value">{{selectedDateText}}</text>
-    </view>
-    <view class="checkout-summary__row">
-      <text class="checkout-summary__label">单价</text>
-      <text class="checkout-summary__value">¥{{summaryPrice}}</text>
-    </view>
-    <view class="checkout-summary__row">
-      <text class="checkout-summary__label">出行人数</text>
-      <text class="checkout-summary__value">{{summaryCount}} 人</text>
-    </view>
-    <text class="checkout-summary__helper">{{peopleCountLimitText}}</text>
-  </view>
-
-  <!-- 出行人信息（动态数量） -->
-  <view class="section-block paper-block checkout-travelers-block">
-    <text class="section-title">出行人信息</text>
-    <view class="checkout-travelers">
-      <view wx:for="{{travelPersons}}" wx:for-index="idx" wx:key="index" class="checkout-traveler">
-        <view class="checkout-traveler__header">
-          <text class="checkout-traveler__title">出行人 {{item.index}}</text>
+    <view class="checkout-summary paper-block">
+      <text class="section-title">{{summaryTitleText}}</text>
+      <view class="checkout-summary__row">
+        <text class="checkout-summary__label">行程名称</text>
+        <text class="checkout-summary__value">{{service.name}}</text>
+      </view>
+      <view class="checkout-summary__row">
+        <text class="checkout-summary__label">版本名称</text>
+        <text class="checkout-summary__value">{{selectedVersion}}</text>
+      </view>
+      <view class="checkout-summary__row">
+        <text class="checkout-summary__label">出发日期</text>
+        <text class="checkout-summary__value">{{selectedDateText}}</text>
+      </view>
+      <view class="checkout-summary__row">
+        <text class="checkout-summary__label">单价</text>
+        <text class="checkout-summary__value">¥{{summaryPrice}}</text>
+      </view>
+      <view class="checkout-summary__row">
+        <text class="checkout-summary__label">出行人数</text>
+        <text class="checkout-summary__value">{{summaryCount}} 人</text>
+      </view>
+      <view class="checkout-summary__row checkout-summary__row--interactive" bindtap="openCouponSheet">
+        <text class="checkout-summary__label">优惠券</text>
+        <view class="checkout-summary__coupon">
+          <text class="checkout-summary__value checkout-summary__value--accent">{{selectedCouponText}}</text>
+          <text class="checkout-summary__coupon-hint">去选择</text>
+          <text class="checkout-summary__arrow">></text>
         </view>
+      </view>
+      <view wx:if="{{summarySingleRoomPrice !== '0'}}" class="checkout-summary__row">
+        <text class="checkout-summary__label">单房差</text>
+        <text class="checkout-summary__value">¥{{summarySingleRoomPrice}}</text>
+      </view>
+      <view class="checkout-summary__row">
+        <text class="checkout-summary__label">优惠</text>
+        <text class="checkout-summary__value">-¥{{summaryDiscount}}</text>
+      </view>
+      <view class="checkout-summary__row">
+        <text class="checkout-summary__label">应付</text>
+        <text class="checkout-summary__value">¥{{summaryPayable}}</text>
+      </view>
+    </view>
 
-        <view class="checkout-field-group">
-          <text class="checkout-field-label">姓名</text>
-          <input class="search-input checkout-field {{travelPersonErrors[idx].name ? 'checkout-field--error' : ''}}" placeholder="真实姓名" data-index="{{item.index}}" data-field="name" value="{{item.name}}" bindinput="onTravelPersonInput" bindblur="onTravelPersonBlur" />
-          <text wx:if="{{travelPersonErrors[idx].name}}" class="checkout-field-error">{{travelPersonErrors[idx].name}}</text>
-        </view>
-
-        <view class="checkout-field-group">
-          <text class="checkout-field-label">证件信息</text>
-          <view class="checkout-document-row">
-            <view class="checkout-document-col checkout-document-col--type">
-              <picker class="filter-picker-trigger checkout-document-trigger" mode="selector" range="{{documentTypeOptions}}" value="{{item.documentTypeIndex}}" data-index="{{item.index}}" bindchange="onTravelPersonDocumentTypeChange">
-                <view class="filter-picker checkout-picker-value {{travelPersonErrors[idx].documentType ? 'checkout-field--error' : ''}} {{item.documentType ? '' : 'checkout-picker-value--placeholder'}}">{{item.documentType ? documentTypeOptions[item.documentTypeIndex] : "证件类型"}}</view>
-              </picker>
-              <text wx:if="{{travelPersonErrors[idx].documentType}}" class="checkout-field-error checkout-field-error--compact">{{travelPersonErrors[idx].documentType}}</text>
+    <view class="section-block paper-block checkout-travelers-block">
+      <view class="checkout-block-head">
+        <text class="section-title">出行人信息</text>
+      </view>
+      <view class="checkout-travelers">
+        <view wx:for="{{travelPersons}}" wx:for-index="idx" wx:key="index" class="checkout-traveler checkout-traveler-card">
+          <view class="checkout-traveler-card__head">
+            <text class="checkout-traveler-card__badge">出行人 {{item.index}}</text>
+          </view>
+          <block wx:if="{{item.profileId}}">
+            <view class="checkout-traveler-card__body">
+              <view class="checkout-traveler-card__row">
+                <text class="checkout-traveler-card__name">{{item.name}}</text>
+                <text class="checkout-traveler-card__phone">{{item.phone}}</text>
+                <view class="checkout-traveler-card__actions">
+                  <text class="checkout-traveler-card__action" bindtap="openTravelerSheet" data-target-index="{{idx}}">更换</text>
+                  <text class="checkout-traveler-card__action checkout-traveler-card__action--primary" catchtap="openTravelerEditForm" data-profile-id="{{item.profileId}}">编辑</text>
+                </view>
+              </view>
             </view>
-            <view class="checkout-document-col checkout-document-col--number">
-              <input class="search-input checkout-document-input {{travelPersonErrors[idx].documentNumber ? 'checkout-field--error' : ''}}" placeholder="{{item.documentType === 'passport' ? '护照号' : (item.documentType === 'idCard' ? '身份证号' : '证件号')}}" maxlength="18" data-index="{{item.index}}" data-field="documentNumber" value="{{item.documentNumber}}" bindinput="onTravelPersonInput" bindblur="onTravelPersonBlur" />
-              <text wx:if="{{travelPersonErrors[idx].documentNumber}}" class="checkout-field-error checkout-field-error--compact">{{travelPersonErrors[idx].documentNumber}}</text>
+          </block>
+          <view wx:else class="checkout-traveler-card__empty" bindtap="openTravelerSheet" data-target-index="{{idx}}">
+            <text class="checkout-traveler-card__empty-title">选择出行人</text>
+            <text class="checkout-traveler-card__empty-hint">从已保存档案选取，或新增后保存</text>
+          </view>
+          <text wx:if="{{travelPersonErrors[idx].hasValidationIssue}}" class="checkout-field-error checkout-field-error--compact">请在选择出行人中完善本出行人资料</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{showRoomingSection}}" class="section-block paper-block checkout-rooming-section">
+      <view class="checkout-block-head">
+        <text class="section-title">房间安排</text>
+      </view>
+      <view class="checkout-rooming-panel">
+        <view class="checkout-rooming-block">
+          <text class="checkout-rooming-block__label">拼房方式</text>
+          <view class="checkout-rooming-matrix">
+            <view class="checkout-rooming-matrix__pair checkout-rooming-matrix__pair--full">
+              <radio-group class="checkout-rooming-rg" bindchange="onRoomingModeChange">
+                <label class="checkout-rooming-choice">
+                  <radio value="random" checked="{{roomingMode === 'random'}}" color="#6b5344" />
+                  <text class="checkout-rooming-choice__text">随机同性拼房</text>
+                </label>
+                <label class="checkout-rooming-choice">
+                  <radio value="withRoommate" checked="{{roomingMode === 'withRoommate'}}" color="#6b5344" />
+                  <text class="checkout-rooming-choice__text">{{selectedCount >= 2 ? '互为睡友' : '我有睡友'}}</text>
+                </label>
+                <label wx:if="{{singleRoomEnabled}}" class="checkout-rooming-choice">
+                  <radio value="singleRoomRequest" checked="{{roomingMode === 'singleRoomRequest'}}" color="#6b5344" />
+                  <text class="checkout-rooming-choice__text">申请单房</text>
+                </label>
+              </radio-group>
             </view>
           </view>
+          <view wx:if="{{singleRoomEnabled && roomingMode === 'singleRoomRequest'}}" class="checkout-rooming-note">
+            <text class="checkout-rooming-note__title">单房申请说明</text>
+            <text wx:if="{{singleRoomNotice}}" class="checkout-rooming-note__text">{{singleRoomNotice}}</text>
+            <text wx:if="{{singleRoomPrice > 0}}" class="checkout-rooming-note__text">该团期单房差价格：¥{{singleRoomPrice}}</text>
+          </view>
         </view>
+        <view wx:if="{{roomingMode === 'withRoommate'}}" class="checkout-rooming-block checkout-rooming-block--divider">
+          <text class="checkout-rooming-block__label">房型偏好</text>
+          <view class="checkout-rooming-matrix">
+            <view class="checkout-rooming-matrix__pair checkout-rooming-matrix__pair--full">
+              <radio-group class="checkout-rooming-rg" bindchange="onRoomTypeChange">
+                <label class="checkout-rooming-choice">
+                  <radio value="king" checked="{{roomType === 'king'}}" color="#6b5344" />
+                  <text class="checkout-rooming-choice__text">大床房</text>
+                </label>
+                <label class="checkout-rooming-choice">
+                  <radio value="twin" checked="{{roomType === 'twin'}}" color="#6b5344" />
+                  <text class="checkout-rooming-choice__text">双床房</text>
+                </label>
+              </radio-group>
+            </view>
+          </view>
+          <view class="checkout-rooming-note">
+            <text class="checkout-rooming-note__text">会根据实际情况尽量满足，但可能无法保证</text>
+          </view>
+          <view wx:if="{{selectedCount < 2}}" class="checkout-rooming-name-field">
+            <text class="checkout-rooming-block__label">睡友姓名</text>
+            <input
+              class="checkout-rooming-input checkout-rooming-input--block {{roomingErrors.roommateName ? 'checkout-rooming-input--error' : ''}}"
+              placeholder="请填写同行睡友的真实姓名"
+              value="{{roommateName}}"
+              bindinput="onRoommateNameInput"
+              bindblur="onRoommateNameBlur"
+            />
+          </view>
+        </view>
+      </view>
+    </view>
 
+    <view class="section-block paper-block checkout-contact-block">
+      <view class="checkout-block-head">
+        <text class="section-title">紧急联系人</text>
+      </view>
+      <view class="checkout-contact-card">
+        <view class="checkout-field-group">
+          <text class="checkout-field-label">姓名</text>
+          <input class="search-input checkout-field {{contactErrors.emergencyContactName ? 'checkout-field--error' : ''}}" placeholder="请输入紧急联系人姓名" data-field="emergencyContactName" value="{{emergencyContactName}}" bindinput="onContactInput" bindblur="onContactBlur" />
+          <text wx:if="{{contactErrors.emergencyContactName}}" class="checkout-field-error">{{contactErrors.emergencyContactName}}</text>
+        </view>
         <view class="checkout-field-group">
           <text class="checkout-field-label">手机号</text>
-          <input class="search-input checkout-field {{travelPersonErrors[idx].phone ? 'checkout-field--error' : ''}}" placeholder="常用手机号" type="number" maxlength="11" data-index="{{item.index}}" data-field="phone" value="{{item.phone}}" bindinput="onTravelPersonInput" bindblur="onTravelPersonBlur" />
-          <text wx:if="{{travelPersonErrors[idx].phone}}" class="checkout-field-error">{{travelPersonErrors[idx].phone}}</text>
-        </view>
-
-        <view class="checkout-field-group">
-          <text class="checkout-field-label">微信号（选填）</text>
-          <input class="search-input checkout-field" placeholder="微信号" data-index="{{item.index}}" data-field="wechat" value="{{item.wechat}}" bindinput="onTravelPersonInput" />
-        </view>
-
-        <view class="checkout-field-group">
-          <text class="checkout-field-label">备注需求（选填）</text>
-          <textarea class="checkout-note" placeholder="饮食禁忌、过敏源等补充说明" data-index="{{item.index}}" data-field="note" value="{{item.note}}" bindinput="onTravelPersonInput"></textarea>
+          <input class="search-input checkout-field {{contactErrors.emergencyContactPhone ? 'checkout-field--error' : ''}}" placeholder="请输入11位手机号" type="number" maxlength="11" data-field="emergencyContactPhone" value="{{emergencyContactPhone}}" bindinput="onContactInput" bindblur="onContactBlur" />
+          <text wx:if="{{contactErrors.emergencyContactPhone}}" class="checkout-field-error">{{contactErrors.emergencyContactPhone}}</text>
         </view>
       </view>
     </view>
-  </view>
 
-  <!-- 联系人信息 -->
-  <view class="section-block paper-block checkout-contact-block">
-    <text class="section-title">联系人信息</text>
-    <view class="checkout-contact-card">
-      <view class="checkout-field-group">
-        <text class="checkout-field-label">联系人姓名</text>
-        <input class="search-input checkout-field {{contactErrors.contactName ? 'checkout-field--error' : ''}}" placeholder="联系人姓名" data-field="contactName" value="{{contactName}}" bindinput="onContactInput" bindblur="onContactBlur" />
-        <text wx:if="{{contactErrors.contactName}}" class="checkout-field-error">{{contactErrors.contactName}}</text>
+    <view class="section-block paper-block">
+      <view class="checkout-block-head">
+        <text class="section-title">备注</text>
       </view>
-      <view class="checkout-field-group">
-        <text class="checkout-field-label">联系人手机号</text>
-        <input class="search-input checkout-field {{contactErrors.contactPhone ? 'checkout-field--error' : ''}}" placeholder="联系人手机号" type="number" maxlength="11" data-field="contactPhone" value="{{contactPhone}}" bindinput="onContactInput" bindblur="onContactBlur" />
-        <text wx:if="{{contactErrors.contactPhone}}" class="checkout-field-error">{{contactErrors.contactPhone}}</text>
-      </view>
+      <textarea class="checkout-note checkout-note--large" placeholder="如果你有过敏源、忌口或其他需要提醒我们注意的信息，请备注" value="{{allergyNotes}}" bindinput="onAllergyNotesInput"></textarea>
+    </view>
+
+    <view class="section-block paper-block checkout-agreements">
+      <text class="checkout-agreement-intro">我已阅读并同意：</text>
+      <checkbox-group class="checkout-agreement-list" bindchange="onAgreementChange">
+        <label class="checkout-agreement__label">
+          <checkbox value="service" checked="{{agreedService}}" color="#6b5344" />
+          <view class="checkout-agreement__link-wrap" catchtap="onAgreementLinkTap" data-key="service">
+            <text class="checkout-agreement__link">《{{serviceAgreementTitle}}》</text>
+          </view>
+        </label>
+        <label class="checkout-agreement__label">
+          <checkbox value="risk" checked="{{agreedRisk}}" color="#6b5344" />
+          <view class="checkout-agreement__link-wrap" catchtap="onAgreementLinkTap" data-key="risk">
+            <text class="checkout-agreement__link">《{{riskAgreementTitle}}》</text>
+          </view>
+        </label>
+        <label class="checkout-agreement__label">
+          <checkbox value="refund" checked="{{agreedRefund}}" color="#6b5344" />
+          <view class="checkout-agreement__link-wrap" catchtap="onAgreementLinkTap" data-key="refund">
+            <text class="checkout-agreement__link">《{{refundAgreementTitle}}》</text>
+          </view>
+        </label>
+      </checkbox-group>
     </view>
   </view>
+</view>
 
-  <!-- 协议确认 -->
-  <view class="section-block paper-block checkout-agreements">
-    <text class="checkout-agreement-intro">我已阅读并同意：</text>
-    <checkbox-group class="checkout-agreement-list" bindchange="onAgreementChange">
-      <label class="checkout-agreement__label">
-        <checkbox value="service" checked="{{agreedService}}" color="#6b5344" />
-        <view class="checkout-agreement__link-wrap" catchtap="onAgreementLinkTap" data-key="service">
-          <text class="checkout-agreement__link">《{{serviceAgreementTitle}}》</text>
+<view wx:if="{{travelerSheetVisible}}" class="agreement-sheet">
+  <view class="agreement-sheet__backdrop" bindtap="closeTravelerSheet"></view>
+  <view class="agreement-sheet__panel {{travelerSheetAnimating ? 'agreement-sheet__panel--active' : ''}}">
+    <view class="agreement-sheet__handle"></view>
+    <view class="agreement-sheet__header">
+      <text class="agreement-sheet__title">选择出行人</text>
+      <view class="agreement-sheet__close" bindtap="closeTravelerSheet">×</view>
+    </view>
+    <scroll-view class="agreement-sheet__body" scroll-y="true">
+      <view class="checkout-sheet-grid">
+        <view
+          wx:for="{{travelerProfiles}}"
+          wx:key="profileId"
+          class="checkout-sheet-item {{checkoutSel.includes(travelerSelectionIds, item.profileId) ? 'checkout-sheet-item--selected' : ''}}"
+        >
+          <view class="checkout-sheet-item__check-area" bindtap="onTravelerSelectionCheckboxTap" data-profile-id="{{item.profileId}}">
+            <view class="checkout-sheet-check {{checkoutSel.includes(travelerSelectionIds, item.profileId) ? 'checkout-sheet-check--active' : ''}}">
+              <text class="checkout-sheet-check__icon">✓</text>
+            </view>
+          </view>
+          <view class="checkout-sheet-item__selectable" bindtap="onTravelerSelectionCheckboxTap" data-profile-id="{{item.profileId}}">
+            <text class="checkout-sheet-item__name">{{item.name || "未命名出行人"}}</text>
+            <text class="checkout-sheet-item__phone">{{item.phone || "未填手机号"}}</text>
+          </view>
+          <view class="checkout-sheet-item__actions">
+            <text class="checkout-sheet-item__edit" catchtap="openTravelerEditForm" data-profile-id="{{item.profileId}}">编辑</text>
+            <text class="checkout-sheet-item__delete" catchtap="onDeleteTravelerProfile" data-profile-id="{{item.profileId}}">删除</text>
+          </view>
         </view>
-      </label>
-      <label class="checkout-agreement__label">
-        <checkbox value="risk" checked="{{agreedRisk}}" color="#6b5344" />
-        <view class="checkout-agreement__link-wrap" catchtap="onAgreementLinkTap" data-key="risk">
-          <text class="checkout-agreement__link">《{{riskAgreementTitle}}》</text>
-        </view>
-      </label>
-      <label class="checkout-agreement__label">
-        <checkbox value="refund" checked="{{agreedRefund}}" color="#6b5344" />
-        <view class="checkout-agreement__link-wrap" catchtap="onAgreementLinkTap" data-key="refund">
-          <text class="checkout-agreement__link">《{{refundAgreementTitle}}》</text>
-        </view>
-      </label>
-    </checkbox-group>
+        <view wx:if="{{!travelerProfiles.length}}" class="checkout-sheet-empty">暂无已保存的出行人，请先添加。</view>
+        <button class="checkout-sheet-add-button" bindtap="openAddTravelerForm">添加出行人</button>
+      </view>
+    </scroll-view>
+    <view class="checkout-sheet-footer">
+      <button
+        class="checkout-sheet-footer__button {{travelerSelectionIds.length === 1 ? '' : 'checkout-sheet-footer__button--disabled'}}"
+        disabled="{{travelerSelectionIds.length !== 1}}"
+        bindtap="onConfirmTravelerSelection"
+      >
+        确定出行人
+      </button>
+    </view>
   </view>
-  </view>
+</view>
 
+<view wx:if="{{couponSheetVisible}}" class="agreement-sheet">
+  <view class="agreement-sheet__backdrop" bindtap="closeCouponSheet"></view>
+  <view class="agreement-sheet__panel {{couponSheetAnimating ? 'agreement-sheet__panel--active' : ''}}">
+    <view class="agreement-sheet__handle"></view>
+    <view class="agreement-sheet__header">
+      <view class="agreement-sheet__title-row">
+        <text class="agreement-sheet__title">选择优惠</text>
+        <view class="agreement-sheet__asset-link" catchtap="onOpenCouponAssets">查看券包</view>
+      </view>
+      <view class="agreement-sheet__close" bindtap="closeCouponSheet">×</view>
+    </view>
+    <scroll-view class="agreement-sheet__body" scroll-y="true">
+      <view class="checkout-sheet-grid">
+        <view
+          wx:for="{{couponOptions}}"
+          wx:key="id"
+          class="checkout-sheet-item checkout-sheet-item--coupon {{pendingCouponId === item.id ? 'checkout-sheet-item--selected' : ''}} {{item.available === false ? 'checkout-sheet-item--disabled' : ''}}"
+          data-coupon-id="{{item.id}}"
+          bindtap="onSelectCoupon"
+        >
+          <view class="checkout-sheet-item__main">
+            <text class="checkout-sheet-item__name">{{item.title}}</text>
+            <text wx:if="{{item.desc}}" class="checkout-sheet-item__meta">{{item.desc}}</text>
+            <text wx:if="{{item.available === false && item.unavailableReason}}" class="checkout-sheet-item__meta checkout-sheet-item__meta--disabled">{{item.unavailableReason}}</text>
+          </view>
+          <text wx:if="{{pendingCouponId === item.id}}" class="checkout-sheet-item__check">✓</text>
+        </view>
+      </view>
+    </scroll-view>
+    <view class="checkout-sheet-footer">
+      <button class="checkout-sheet-footer__button" bindtap="onConfirmCouponSelection">确认使用</button>
+    </view>
+  </view>
 </view>
 
 <!-- 协议正文弹层 -->
@@ -148,4 +297,85 @@
   </view>
 </view>
 
-<app-tab-bar></app-tab-bar>
+<view wx:if="{{travelerFormVisible}}" class="agreement-sheet agreement-sheet--front">
+  <view class="agreement-sheet__backdrop" bindtap="closeTravelerForm"></view>
+  <view class="agreement-sheet__panel agreement-sheet__panel--tall {{travelerFormAnimating ? 'agreement-sheet__panel--active' : ''}}">
+    <view class="agreement-sheet__handle"></view>
+    <view class="agreement-sheet__header">
+      <text class="agreement-sheet__title">编辑出行人</text>
+      <view class="agreement-sheet__close" bindtap="closeTravelerForm">×</view>
+    </view>
+    <scroll-view class="agreement-sheet__body agreement-sheet__body--form" scroll-y="true">
+      <view class="checkout-form-section">
+        <text class="checkout-form-section-title">基本信息</text>
+        <view class="checkout-field-group">
+          <text class="checkout-field-label">中文姓名</text>
+          <input class="search-input checkout-field {{travelerFormErrors.name ? 'checkout-field--error' : ''}}" placeholder="与证件一致的真实姓名" data-field="name" value="{{travelerFormDraft.name}}" bindinput="onTravelerFormInput" bindblur="onTravelerFormBlur" />
+          <text wx:if="{{travelerFormErrors.name}}" class="checkout-field-error">{{travelerFormErrors.name}}</text>
+        </view>
+        <view class="checkout-field-group">
+          <text class="checkout-field-label">性别</text>
+          <picker class="filter-picker-trigger" mode="selector" range="{{genderOptions}}" value="{{travelerFormDraft.genderIndex}}" bindchange="onTravelerFormGenderChange">
+            <view class="filter-picker checkout-picker-value {{travelerFormErrors.gender ? 'checkout-field--error' : ''}} {{travelerFormDraft.gender ? '' : 'checkout-picker-value--placeholder'}}">{{travelerFormDraft.gender ? genderOptions[travelerFormDraft.genderIndex] : "请选择性别"}}</view>
+          </picker>
+          <text wx:if="{{travelerFormErrors.gender}}" class="checkout-field-error">{{travelerFormErrors.gender}}</text>
+        </view>
+        <view class="checkout-field-group">
+          <text class="checkout-field-label">生日</text>
+          <picker mode="date" value="{{travelerFormDraft.birthday}}" bindchange="onTravelerFormBirthdayChange">
+            <view class="filter-picker checkout-picker-value {{travelerFormErrors.birthday ? 'checkout-field--error' : ''}} {{travelerFormDraft.birthday ? '' : 'checkout-picker-value--placeholder'}}">{{travelerFormDraft.birthday || '请选择生日'}}</view>
+          </picker>
+          <text wx:if="{{travelerFormErrors.birthday}}" class="checkout-field-error">{{travelerFormErrors.birthday}}</text>
+        </view>
+      </view>
+      <view class="checkout-form-section">
+        <text class="checkout-form-section-title">证件信息</text>
+        <block wx:for="{{travelerFormDraft.documents}}" wx:key="rowId" wx:for-index="docIdx">
+          <view class="checkout-doc-row">
+            <view class="checkout-doc-row__head">
+              <text class="checkout-doc-row__label">证件 {{docIdx + 1}}</text>
+              <button wx:if="{{travelerFormDraft.documents.length > 1}}" class="checkout-text-button checkout-text-button--danger" data-row-id="{{item.rowId}}" bindtap="onTravelerFormRemoveDocumentRow">删除</button>
+            </view>
+            <view class="checkout-field-group">
+              <text class="checkout-field-label">证件类型</text>
+              <picker class="filter-picker-trigger checkout-document-trigger" mode="selector" range="{{documentTypeOptions}}" value="{{item.documentTypeIndex}}" data-row-id="{{item.rowId}}" bindchange="onTravelerFormDocTypeChange">
+                <view class="filter-picker checkout-picker-value {{travelerFormErrors.documents[docIdx].documentType ? 'checkout-field--error' : ''}} {{item.documentType ? '' : 'checkout-picker-value--placeholder'}}">{{item.documentType ? documentTypeOptions[item.documentTypeIndex] : "请选择证件类型"}}</view>
+              </picker>
+              <text wx:if="{{travelerFormErrors.documents[docIdx].documentType}}" class="checkout-field-error">{{travelerFormErrors.documents[docIdx].documentType}}</text>
+            </view>
+            <view class="checkout-field-group">
+              <text class="checkout-field-label">证件号码</text>
+              <input class="search-input checkout-field {{travelerFormErrors.documents[docIdx].documentNumber ? 'checkout-field--error' : ''}}" placeholder="{{item.documentType === 'passport' ? '填写护照号码' : (item.documentType === 'hkmtResidencePermit' ? '填写居住证号码' : (item.documentType === 'idCard' ? '填写身份证号' : '请先选择证件类型'))}}" maxlength="{{item.documentType === 'passport' ? 20 : 18}}" data-row-id="{{item.rowId}}" value="{{item.documentNumber}}" bindinput="onTravelerFormDocNumberInput" bindblur="onTravelerFormDocNumberBlur" />
+              <text wx:if="{{travelerFormErrors.documents[docIdx].documentNumber}}" class="checkout-field-error">{{travelerFormErrors.documents[docIdx].documentNumber}}</text>
+            </view>
+          </view>
+        </block>
+        <text wx:if="{{travelerFormErrors.documentBlock}}" class="checkout-field-error checkout-field-error--block">{{travelerFormErrors.documentBlock}}</text>
+        <button class="checkout-sheet-add-button checkout-sheet-add-button--inline" bindtap="onTravelerFormAddDocumentRow">增加证件信息</button>
+      </view>
+      <view class="checkout-form-section">
+        <text class="checkout-form-section-title">联系方式</text>
+        <view class="checkout-field-group">
+          <text class="checkout-field-label">手机号</text>
+          <input class="search-input checkout-field {{travelerFormErrors.phone ? 'checkout-field--error' : ''}}" placeholder="常用手机号（必填）" type="number" maxlength="11" data-field="phone" value="{{travelerFormDraft.phone}}" bindinput="onTravelerFormInput" bindblur="onTravelerFormBlur" />
+          <text wx:if="{{travelerFormErrors.phone}}" class="checkout-field-error">{{travelerFormErrors.phone}}</text>
+        </view>
+        <view class="checkout-field-group">
+          <text class="checkout-field-label">微信号（选填）</text>
+          <input class="search-input checkout-field {{travelerFormErrors.wechat ? 'checkout-field--error' : ''}}" placeholder="微信号" data-field="wechat" value="{{travelerFormDraft.wechat}}" bindinput="onTravelerFormInput" bindblur="onTravelerFormBlur" />
+          <text wx:if="{{travelerFormErrors.wechat}}" class="checkout-field-error">{{travelerFormErrors.wechat}}</text>
+        </view>
+        <view class="checkout-field-group">
+          <text class="checkout-field-label">邮箱（选填）</text>
+          <input class="search-input checkout-field {{travelerFormErrors.email ? 'checkout-field--error' : ''}}" placeholder="邮箱" data-field="email" value="{{travelerFormDraft.email}}" bindinput="onTravelerFormInput" bindblur="onTravelerFormBlur" />
+          <text wx:if="{{travelerFormErrors.email}}" class="checkout-field-error">{{travelerFormErrors.email}}</text>
+        </view>
+      </view>
+    </scroll-view>
+    <view class="checkout-sheet-footer">
+      <button class="checkout-sheet-footer__button {{travelerFormSaving ? 'checkout-sheet-footer__button--disabled' : ''}}" disabled="{{travelerFormSaving}}" bindtap="saveTravelerForm">{{travelerFormSaving ? '保存中...' : '保存'}}</button>
+    </view>
+  </view>
+</view>
+
+<app-tab-bar wx:if="{{!travelerSheetVisible && !couponSheetVisible && !travelerFormVisible}}"></app-tab-bar>

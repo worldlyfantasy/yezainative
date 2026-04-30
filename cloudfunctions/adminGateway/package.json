@@ -4,6 +4,8 @@
   "main": "index.js",
   "dependencies": {
     "@cloudbase/node-sdk": "^3.17.0",
+    "@cloudbase/signature-nodejs": "^2.2.0",
+    "nodemailer": "^6.10.1",
     "pinyin-pro": "^3.28.0",
     "wx-server-sdk": "latest"
   }

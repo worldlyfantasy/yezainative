@@ -5,7 +5,7 @@
       <view class="creator-card__title-row">
         <text class="creator-card__name">{{creator.name}}</text>
         <view class="creator-card__tags">
-          <text wx:for="{{creator.tags}}" wx:key="*this" class="creator-card__tag">{{item}}</text>
+          <text wx:for="{{creator.displayTags}}" wx:key="*this" class="creator-card__tag">{{item}}</text>
         </view>
       </view>
       <text class="creator-card__stance">{{creator.stance}}</text>

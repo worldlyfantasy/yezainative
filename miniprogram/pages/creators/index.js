@@ -1,10 +1,54 @@
 const { getCreatorsPageData } = require("../../repositories/content-repository");
 const {
+  ROUTE_TYPE_ORDER,
+  buildRouteTypeIconUrl,
+  normalizeRouteTypeLabel
+} = require("../../constants/journey");
+const {
+  getDestinationRegionLabel
+} = require("../../constants/destination-region");
+const {
   enablePageShareMenus,
   createAddToFavorites,
   createShareAppMessage,
   createShareTimeline
 } = require("../../utils/share");
+const MAX_CREATOR_TAGS = 3;
+
+function ensureArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeText(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function formatCreatorCountText(count) {
+  const safeCount = Math.max(0, Number(count) || 0);
+  return `${safeCount} 位创作者`;
+}
+
+function splitIntoColumns(list, size) {
+  const source = ensureArray(list);
+  const columnSize = Math.max(1, Number(size) || 1);
+  const columns = [];
+
+  for (let index = 0; index < source.length; index += columnSize) {
+    columns.push(source.slice(index, index + columnSize));
+  }
+
+  return columns;
+}
+
+function decorateCreator(creator) {
+  return Object.assign({}, creator, {
+    displayTags: ensureArray(creator && creator.tags).slice(0, MAX_CREATOR_TAGS)
+  });
+}
+
+function decorateCreators(creators) {
+  return ensureArray(creators).map((creator) => decorateCreator(creator));
+}
 
 Page({
   data: {
@@ -12,11 +56,20 @@ Page({
     errorText: "",
     regionOptions: [{ label: "全部", value: "" }],
     regionLabels: ["全部"],
-    regionIndex: 0,
     styleOptions: [{ label: "全部", value: "" }],
     styleLabels: ["全部"],
-    styleIndex: 0,
-    creators: []
+    creators: [],
+    routeTriggerDots: [1, 2, 3, 4],
+    selectedRegionCode: "",
+    selectedRegionLabel: "",
+    selectedStyle: "",
+    selectedStyleLabel: "",
+    visibleStyleOptions: [],
+    regionSheetColumns: [],
+    isStyleSheetVisible: false,
+    isStyleSheetAnimating: false,
+    isRegionSheetVisible: false,
+    isRegionSheetAnimating: false
   },
 
   async onLoad(options) {
@@ -33,15 +86,12 @@ Page({
         regionCode: options.regionCode || options.region || ""
       };
       const payload = await getCreatorsPageData(initialFilters);
-      const regionIndex = this.findIndexByValue(payload.regionOptions, initialFilters.regionCode);
-      const styleIndex = this.findIndexByValue(payload.styleOptions, initialFilters.style);
 
       this.setData(
-        Object.assign({}, payload, {
+        Object.assign({}, payload, this.buildFilterState(payload, initialFilters), {
           loading: false,
           errorText: "",
-          regionIndex,
-          styleIndex
+          creators: decorateCreators(payload.creators)
         })
       );
     } catch (error) {
@@ -53,39 +103,101 @@ Page({
     }
   },
 
-  findIndexByValue(list, value) {
-    if (!value) {
-      return 0;
+  normalizeSelectedValue(list, value) {
+    const normalizedValue = normalizeText(value);
+    if (!normalizedValue) {
+      return "";
     }
 
-    const index = list.findIndex((item) => item.value === value);
-    return index === -1 ? 0 : index;
+    return ensureArray(list).some((item) => normalizeText(item && item.value) === normalizedValue)
+      ? normalizedValue
+      : "";
   },
 
-  async applyFilters() {
+  buildStyleSheetOptions(styleOptions, selectedStyle) {
+    const availableSet = new Set(
+      ensureArray(styleOptions)
+        .map((item) => normalizeRouteTypeLabel(item && item.value))
+        .filter(Boolean)
+    );
+    const normalizedSelectedStyle = normalizeRouteTypeLabel(selectedStyle);
+    const styleCards = ROUTE_TYPE_ORDER.map((tag) => ({
+      key: tag,
+      value: tag,
+      label: tag,
+      icon: buildRouteTypeIconUrl(tag),
+      available: availableSet.has(tag),
+      selected: tag === normalizedSelectedStyle
+    }));
+
+    return styleCards
+      .filter((item) => item.available)
+      .concat(styleCards.filter((item) => !item.available));
+  },
+
+  buildRegionSheetColumns(regionOptions, selectedRegionCode) {
+    const regionCards = ensureArray(regionOptions)
+      .filter((item) => normalizeText(item && item.value))
+      .map((item) => {
+        const value = normalizeText(item && item.value);
+        const count = Math.max(0, Number(item && item.count) || 0);
+        return {
+          key: value,
+          value,
+          label: normalizeText(item && item.label),
+          image: normalizeText(item && item.image),
+          count,
+          countText: formatCreatorCountText(count),
+          available: count > 0,
+          selected: value === selectedRegionCode
+        };
+      });
+
+    return splitIntoColumns(regionCards, 3);
+  },
+
+  buildFilterState(payload, filters) {
+    const normalizedStyle = this.normalizeSelectedValue(payload && payload.styleOptions, filters && filters.style);
+    const normalizedRegionCode = this.normalizeSelectedValue(payload && payload.regionOptions, filters && filters.regionCode);
+    const selectedStyleLabel = normalizedStyle || "";
+    const selectedRegionLabel = getDestinationRegionLabel(normalizedRegionCode);
+
+    return {
+      selectedStyle: normalizedStyle,
+      selectedStyleLabel,
+      selectedRegionCode: normalizedRegionCode,
+      selectedRegionLabel,
+      visibleStyleOptions: this.buildStyleSheetOptions(payload && payload.styleOptions, normalizedStyle),
+      regionSheetColumns: this.buildRegionSheetColumns(payload && payload.regionOptions, normalizedRegionCode)
+    };
+  },
+
+  resolveFilters(patch) {
+    const nextPatch = patch || {};
+    return {
+      style: Object.prototype.hasOwnProperty.call(nextPatch, "style")
+        ? normalizeRouteTypeLabel(nextPatch.style)
+        : this.data.selectedStyle,
+      regionCode: Object.prototype.hasOwnProperty.call(nextPatch, "regionCode")
+        ? normalizeText(nextPatch.regionCode)
+        : this.data.selectedRegionCode
+    };
+  },
+
+  async applyFilters(patch) {
     this.setData({
       loading: true,
       errorText: ""
     });
 
-    const regionCode = this.data.regionOptions[this.data.regionIndex] ? this.data.regionOptions[this.data.regionIndex].value : "";
-    const style = this.data.styleOptions[this.data.styleIndex] ? this.data.styleOptions[this.data.styleIndex].value : "";
+    const filters = this.resolveFilters(patch);
     try {
-      const payload = await getCreatorsPageData({
-        regionCode,
-        style
-      });
-      this.setData({
+      const payload = await getCreatorsPageData(filters);
+      this.setData(Object.assign({}, payload, this.buildFilterState(payload, filters), {
         loading: false,
         errorText: "",
-        regionOptions: payload.regionOptions,
-        regionLabels: payload.regionLabels,
-        regionIndex: this.findIndexByValue(payload.regionOptions, regionCode),
-        styleOptions: payload.styleOptions,
-        styleLabels: payload.styleLabels,
-        styleIndex: this.findIndexByValue(payload.styleOptions, style),
-        creators: payload.creators
-      });
+        creators: decorateCreators(payload.creators)
+      }));
     } catch (error) {
       console.error("Failed to filter creators", error);
       this.setData({
@@ -122,22 +234,159 @@ Page({
     });
   },
 
-  onStyleChange(event) {
+  openStyleSheet() {
+    if (this.data.isStyleSheetVisible) {
+      return;
+    }
+
+    if (this.data.loading) {
+      wx.showToast({
+        title: "人物加载中，请稍候",
+        icon: "none"
+      });
+      return;
+    }
+
+    if (this.data.errorText) {
+      wx.showToast({
+        title: "请先重新加载人物",
+        icon: "none"
+      });
+      return;
+    }
+
     this.setData(
       {
-        styleIndex: Number(event.detail.value)
+        isRegionSheetVisible: false,
+        isRegionSheetAnimating: false,
+        isStyleSheetVisible: true,
+        isStyleSheetAnimating: false
       },
-      () => this.applyFilters()
+      () => {
+        setTimeout(() => {
+          this.setData({
+            isStyleSheetAnimating: true
+          });
+        }, 20);
+      }
     );
   },
 
-  onRegionChange(event) {
+  closeStyleSheet() {
+    if (!this.data.isStyleSheetVisible) {
+      return;
+    }
+
+    this.setData({
+      isStyleSheetAnimating: false
+    });
+    setTimeout(() => {
+      this.setData({
+        isStyleSheetVisible: false
+      });
+    }, 240);
+  },
+
+  openRegionSheet() {
+    if (this.data.isRegionSheetVisible) {
+      return;
+    }
+
+    if (this.data.loading) {
+      wx.showToast({
+        title: "人物加载中，请稍候",
+        icon: "none"
+      });
+      return;
+    }
+
+    if (this.data.errorText) {
+      wx.showToast({
+        title: "请先重新加载人物",
+        icon: "none"
+      });
+      return;
+    }
+
     this.setData(
       {
-        regionIndex: Number(event.detail.value)
+        isStyleSheetVisible: false,
+        isStyleSheetAnimating: false,
+        isRegionSheetVisible: true,
+        isRegionSheetAnimating: false
       },
-      () => this.applyFilters()
+      () => {
+        setTimeout(() => {
+          this.setData({
+            isRegionSheetAnimating: true
+          });
+        }, 20);
+      }
     );
+  },
+
+  closeRegionSheet() {
+    if (!this.data.isRegionSheetVisible) {
+      return;
+    }
+
+    this.setData({
+      isRegionSheetAnimating: false
+    });
+    setTimeout(() => {
+      this.setData({
+        isRegionSheetVisible: false
+      });
+    }, 240);
+  },
+
+  async onStyleTap(event) {
+    const style = normalizeRouteTypeLabel(event.currentTarget.dataset.value);
+    const styleOption = (this.data.visibleStyleOptions || []).find((item) => item && item.value === style);
+    if (!style || !styleOption || !styleOption.available) {
+      return;
+    }
+
+    await this.applyFilters({
+      style: style === this.data.selectedStyle ? "" : style
+    });
+    this.closeStyleSheet();
+  },
+
+  async onRegionTap(event) {
+    const regionCode = normalizeText(event.currentTarget.dataset.region);
+    const regionOptions = ensureArray(this.data.regionSheetColumns)
+      .reduce((result, column) => result.concat(ensureArray(column)), []);
+    const regionOption = regionOptions
+      .find((item) => item && item.value === regionCode);
+    if (!regionCode || !regionOption || (!regionOption.available && !regionOption.selected)) {
+      return;
+    }
+
+    await this.applyFilters({
+      regionCode: regionCode === this.data.selectedRegionCode ? "" : regionCode
+    });
+    this.closeRegionSheet();
+  },
+
+  async clearSelectedStyle() {
+    if (!this.data.selectedStyle) {
+      return;
+    }
+
+    await this.applyFilters({
+      style: ""
+    });
+  },
+
+  async clearSelectedRegion() {
+    if (!this.data.selectedRegionCode) {
+      return;
+    }
+
+    await this.applyFilters({
+      regionCode: ""
+    });
   },
 
   onCreatorTap(event) {

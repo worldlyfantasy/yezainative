@@ -1,42 +1,67 @@
 <view wx:if="{{order}}" class="page-shell order-detail-page">
   <view class="paper-block">
-    <text class="page-eyebrow">{{statusTitleText}}</text>
+    <text class="page-eyebrow order-detail__eyebrow">{{statusTitleText}}</text>
     <view class="order-detail__status-row">
       <text class="page-title order-detail__status">{{order.statusText}}</text>
-      <button
+      <text
         wx:if="{{order.displayStatusKey === 'pending' || order.displayStatusKey === 'paid'}}"
-        class="order-detail__consult-button"
+        class="section-link order-detail__consult-link"
         bindtap="openConsultSheet"
-      >
-        咨询入口 ›
-      </button>
+      >咨询入口 ›</text>
     </view>
-    <text class="page-subtitle">{{orderIdLabelText}}：#{{order.displayOrderNo}} · 创建时间：{{order.createdAt}}</text>
+    <view class="order-detail__meta-list">
+      <view class="order-detail__meta-row">
+        <text class="order-detail__meta-label">{{orderIdLabelText}}</text>
+        <text class="order-detail__meta-value">#{{order.displayOrderNo}}</text>
+      </view>
+      <view class="order-detail__meta-row">
+        <text class="order-detail__meta-label">创建时间</text>
+        <text class="order-detail__meta-value">{{order.createdAt}}</text>
+      </view>
+    </view>
   </view>
 
   <view class="section-block paper-block">
     <text class="section-title">旅程信息</text>
     <view class="order-product">
-      <image class="order-product__cover" src="{{order.cover}}" mode="aspectFill"></image>
+      <image wx:if="{{order.cover}}" class="order-product__cover" src="{{order.cover}}" mode="aspectFill"></image>
+      <view wx:else class="order-product__cover order-product__cover--placeholder"></view>
       <view class="order-product__body">
         <text class="order-product__name">{{order.serviceName}}</text>
-        <text class="order-product__meta">日期 {{order.travelDateText}} · {{order.peopleCount}} 人 · {{order.serviceType}}</text>
+        <text class="order-product__meta">{{order.peopleCountText || '1人'}}</text>
+        <text class="order-product__meta">{{order.travelDateText}}</text>
+        <text class="order-product__meta">{{order.serviceType}}</text>
       </view>
     </view>
   </view>
 
   <view class="section-block paper-block">
     <text class="section-title">{{priceTitleText}}</text>
-    <view class="price-row"><text>价格</text><text>{{order.amountText}}</text></view>
-    <view class="price-row"><text>优惠</text><text>¥{{order.discount}}</text></view>
-    <view class="price-row price-row--strong"><text>{{payableLabelText}}</text><text>{{order.payableText}}</text></view>
+    <view class="price-row"><text>单价</text><text class="price-row__value">{{order.unitPriceText || order.amountText || '¥0'}}</text></view>
+    <view class="price-row"><text>人数</text><text class="price-row__value">{{order.peopleCountText || '1人'}}</text></view>
+    <view class="price-row"><text>优惠</text><text class="price-row__value">{{order.discountText || '¥0'}}</text></view>
+    <view class="price-row price-row--strong"><text>总价</text><text class="price-row__value">{{order.totalPriceText || order.payableText || '¥0'}}</text></view>
   </view>
 
   <view class="section-block paper-block">
-    <text class="section-title">联系人信息</text>
+    <text class="section-title">紧急联系人信息</text>
     <view class="detail-list">
-      <text class="detail-list-item">姓名：{{order.contact.name || "未填写"}}</text>
-      <text class="detail-list-item">手机：{{order.contact.phone || "未填写"}}</text>
+      <text class="detail-list-item">紧急联系人：{{order.emergencyContactName || order.contact.name || "未填写"}}</text>
+      <text class="detail-list-item">联系方式：{{order.emergencyContactPhone || order.contact.phone || "未填写"}}</text>
+    </view>
+  </view>
+
+  <view class="section-block paper-block">
+    <text class="section-title">出行偏好</text>
+    <view class="detail-list">
+      <text wx:if="{{order.showRoomingPreference && order.roomingMode === 'singleRoomRequest'}}" class="detail-list-item">睡友：申请单房</text>
+      <text wx:elif="{{order.showRoomingPreference && order.peopleCount >= 2}}" class="detail-list-item">睡友：{{order.roomingMode === "withRoommate" ? "互为睡友" : "随机同性拼房"}}</text>
+      <text wx:elif="{{order.showRoomingPreference}}" class="detail-list-item">睡友：{{order.roomingMode === "withRoommate" ? ("我有睡友（" + (order.roommateName || "未填写") + "）") : "随机同性拼房"}}</text>
+      <text wx:if="{{order.showRoomingPreference}}" class="detail-list-item">房型：{{order.roomType === "king" ? "大床房" : "双床房"}}</text>
+      <text wx:if="{{order.showRoomingPreference && order.roomingMode === 'singleRoomRequest'}}" class="detail-list-item">单房申请状态：{{order.singleRoomStatus === 'pending' || !order.singleRoomStatus ? '待人工确认' : order.singleRoomStatus}}</text>
+      <text wx:if="{{order.showRoomingPreference && order.roomingMode === 'singleRoomRequest' && order.singleRoomPrice > 0}}" class="detail-list-item">单房差参考价：¥{{order.singleRoomPrice}}</text>
+      <text wx:if="{{order.showRoomingPreference && order.roomingMode === 'singleRoomRequest' && order.singleRoomNotice}}" class="detail-list-item">单房说明：{{order.singleRoomNotice}}</text>
+      <text class="detail-list-item">备注：{{order.allergyNotes || "未填写"}}</text>
     </view>
   </view>
 
@@ -48,8 +73,11 @@
         <view class="detail-list">
           <text class="detail-list-item">姓名：{{item.name || "未填写"}}</text>
           <text class="detail-list-item">证件：{{item.documentDisplayText || item.documentNumber || item.idCard || "未填写"}}</text>
+          <text wx:if="{{item.gender}}" class="detail-list-item">性别：{{item.gender === "male" ? "男" : (item.gender === "female" ? "女" : item.gender)}}</text>
+          <text wx:if="{{item.birthday}}" class="detail-list-item">生日：{{item.birthday}}</text>
           <text class="detail-list-item">手机：{{item.phone || "未填写"}}</text>
           <text wx:if="{{item.wechat}}" class="detail-list-item">微信：{{item.wechat}}</text>
+          <text wx:if="{{item.email}}" class="detail-list-item">邮箱：{{item.email}}</text>
           <text wx:if="{{item.note}}" class="detail-list-item">备注：{{item.note}}</text>
         </view>
       </view>
@@ -59,22 +87,7 @@
     </view>
   </view>
 
-  <view class="section-block paper-block">
-    <text class="section-title">联系与服务</text>
-    <view class="detail-list">
-      <text class="detail-list-item">{{creatorContactText}}</text>
-      <text class="detail-list-item">{{serviceContactText}}</text>
-    </view>
-  </view>
-
-  <view class="order-actions" wx:if="{{order.status === 'pending' || order.status === 'completed'}}">
-    <button
-      wx:if="{{order.status === 'pending'}}"
-      class="outline-button order-actions__button"
-      bindtap="handleSecondary"
-    >
-      {{pendingSecondaryText}}
-    </button>
+  <view class="order-actions" wx:if="{{order.status === 'completed'}}">
     <button
       wx:if="{{order.status === 'completed'}}"
       class="primary-button order-actions__button"
@@ -94,17 +107,12 @@
       <view class="sheet-close consult-sheet__close" bindtap="closeConsultSheet">⌄</view>
     </view>
     <view class="consult-sheet__cards">
-      <view wx:if="{{consultWeChatQr}}" class="consult-card">
-        <image class="consult-card__qr" src="{{consultWeChatQr}}" mode="aspectFit"></image>
+      <view wx:if="{{consultWeChatQr}}" class="consult-card consult-card--tappable" bindtap="onConsultQrTap">
+        <image class="consult-card__qr" src="{{consultWeChatQr}}" mode="aspectFit" show-menu-by-longpress="{{true}}"></image>
         <text class="consult-card__label">路线专属客服</text>
         <text wx:if="{{consultCardLabel}}" class="consult-card__desc">{{consultCardLabel}}</text>
         <text class="consult-card__desc">{{consultCardDesc}}</text>
         <text class="consult-card__desc">{{consultFollowupNote}}</text>
-      </view>
-      <view wx:if="{{consultGroupQr}}" class="consult-card">
-        <image class="consult-card__qr" src="{{consultGroupQr}}" mode="aspectFit"></image>
-        <text class="consult-card__label">咨询群</text>
-        <text class="consult-card__desc">也可扫码加入统一咨询群，获取答疑与报名支持</text>
       </view>
     </view>
   </view>

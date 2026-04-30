@@ -43,21 +43,22 @@
 <view wx:elif="{{service}}" class="page-shell">
   <text class="back-link" bindtap="goBack">← 返回旅程</text>
 
-  <view wx:if="{{heroCover}}" class="section-block service-gallery">
+  <view wx:if="{{galleryHero || heroCover}}" class="section-block service-gallery {{galleryLayoutClass}}">
     <view class="service-gallery__hero-wrapper" bindtap="openMediaSheet">
       <image
         class="service-gallery__hero"
-        src="{{heroCover}}"
-        mode="aspectFill"
+        src="{{galleryHero || heroCover}}"
+        mode="{{galleryHeroMode || 'aspectFill'}}"
+        lazy-load="{{true}}"
       ></image>
-      <view wx:if="{{photoTotal}}" class="service-gallery__counter">
-        <text class="service-gallery__counter-text">1/{{photoTotal}}</text>
+      <view wx:if="{{galleryCounterText}}" class="service-gallery__counter">
+        <text class="service-gallery__counter-text">{{galleryCounterText}}</text>
       </view>
     </view>
-    <scroll-view wx:if="{{photoGallery.length}}" class="service-gallery__strip" scroll-x="true" enable-flex="true">
-      <view class="service-gallery__row">
+    <view wx:if="{{galleryThumbs.length}}" class="service-gallery__strip">
+      <view class="service-gallery__row service-gallery__row--count-{{galleryThumbs.length}}">
         <image
-          wx:for="{{photoGallery}}"
+          wx:for="{{galleryThumbs}}"
           wx:key="*this"
           class="service-gallery__thumb"
           src="{{item}}"
@@ -66,7 +67,22 @@
           bindtap="openMediaSheet"
         ></image>
       </view>
-    </scroll-view>
+    </view>
+    <view wx:if="{{galleryTabs.length > 1}}" class="service-gallery__topics">
+      <scroll-view class="service-gallery__topic-scroll" scroll-x="true" enable-flex="true" show-scrollbar="{{false}}">
+        <view class="service-gallery__topic-row">
+          <view
+            wx:for="{{galleryTabs}}"
+            wx:key="key"
+            class="service-gallery__topic-chip {{index === activeGalleryTabIndex ? 'service-gallery__topic-chip--active' : ''}}"
+            data-index="{{index}}"
+            catchtap="onGalleryTabTap"
+          >
+            <text class="service-gallery__topic-name">{{item.label}}</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
   </view>
 
   <view class="section-block paper-block">
@@ -117,26 +133,29 @@
       </view>
     </view>
 
-    <view wx:if="{{serviceMetaCards && serviceMetaCards.length > 0}}" class="service-tags">
+    <view wx:if="{{serviceMetaCards && serviceMetaCards.length > 0}}" class="service-info-strip">
       <view
         wx:for="{{serviceMetaCards}}"
         wx:key="key"
-        class="service-tag {{item.clickable ? 'service-tag--clickable' : ''}}"
+        class="service-info-item {{item.clickable ? 'service-info-item--clickable' : ''}}"
         data-key="{{item.key}}"
         bindtap="{{item.clickable ? 'onTagTap' : ''}}"
       >
-        <view class="service-tag__inner">
-          <text class="service-tag__label">{{item.label}}</text>
-          <text class="service-tag__value">{{item.value}}</text>
+        <view class="service-info-item__inner">
+          <text class="service-info-item__label">{{item.label}}</text>
+          <text class="service-info-item__value">{{item.value}}</text>
         </view>
-        <text wx:if="{{item.clickable}}" class="service-tag__arrow">></text>
+        <text wx:if="{{item.clickable}}" class="service-info-item__arrow">></text>
       </view>
     </view>
 
     <view wx:if="{{groupPeriods && groupPeriods.length > 0}}" class="service-periods">
       <view class="service-periods__head">
         <text class="section-title service-periods__title">选择团期</text>
-        <view class="service-periods__cta" bindtap="onViewMorePeriods">立即报名</view>
+        <view class="service-periods__actions">
+          <view class="service-periods__cta cta-pill-button" bindtap="onViewMorePeriods">立即报名</view>
+          <view class="service-periods__consult" bindtap="openConsultSheet">路线咨询</view>
+        </view>
       </view>
       <scroll-view class="service-periods__strip" scroll-x="true" enable-flex="true" show-scrollbar="{{false}}">
         <view class="service-periods__row">
@@ -183,6 +202,7 @@
             src="{{travelDetail.overview.coverImage}}"
             mode="aspectFill"
             bindload="onTravelDetailMediaLoad"
+            bindtap="onOverviewImageTap"
           ></image>
           <text wx:if="{{travelDetail.overview && travelDetail.overview.whyJoinText}}" class="travel-overview__body">
             {{travelDetail.overview.whyJoinText}}
@@ -205,6 +225,7 @@
             wx:for="{{travelDetail.highlights}}"
             wx:key="id"
             wx:for-item="highlight"
+            wx:for-index="highlightIndex"
             class="travel-highlight-card"
           >
             <text class="travel-highlight-card__title">{{highlight.title}}</text>
@@ -221,11 +242,15 @@
                   wx:for="{{highlight.images}}"
                   wx:key="*this"
                   wx:for-item="imageUrl"
+                  wx:for-index="imageIndex"
                   class="travel-highlight-card__image"
                   src="{{imageUrl}}"
                   mode="aspectFill"
                   lazy-load="{{true}}"
                   bindload="onTravelDetailMediaLoad"
+                  data-card-index="{{highlightIndex}}"
+                  data-image-index="{{imageIndex}}"
+                  bindtap="onHighlightImageTap"
                 ></image>
               </view>
             </scroll-view>
@@ -364,7 +389,7 @@
             <text class="stepper__value">{{periodSheetPeople}}</text>
             <button class="stepper__button" bindtap="increaseSheetPeople">+</button>
           </view>
-          <text class="period-sheet__helper">{{periodSheetPeopleLimitText}}</text>
+          <text wx:if="{{periodSheetPeopleLimitText}}" class="period-sheet__helper">{{periodSheetPeopleLimitText}}</text>
         </view>
       </scroll-view>
       <view class="period-sheet__footer">
@@ -400,15 +425,25 @@
         <view class="sheet-close media-sheet__close" bindtap="closeMediaSheet">⌄</view>
       </view>
       <scroll-view class="media-sheet__body" scroll-y="true">
-        <view class="media-sheet__images">
+        <view wx:if="{{galleryLoading && !mediaTabs.length}}" class="media-sheet__loading">
+          <text class="media-sheet__loading-text">正在加载全部图集...</text>
+        </view>
+        <view wx:elif="{{mediaTabs.length && mediaTabs[activeMediaTabIndex]}}" class="media-sheet__images">
           <image
             wx:for="{{mediaTabs[activeMediaTabIndex].images}}"
             wx:key="*this"
+            wx:for-index="index"
             class="media-sheet__image"
             src="{{item}}"
-            mode="aspectFill"
+            mode="widthFix"
             lazy-load="{{true}}"
+            data-tab-index="{{activeMediaTabIndex}}"
+            data-image-index="{{index}}"
+            bindtap="onMediaImageTap"
           ></image>
+        </view>
+        <view wx:else class="media-sheet__loading">
+          <text class="media-sheet__loading-text">暂时没有可查看的图集</text>
         </view>
       </scroll-view>
     </view>
@@ -423,8 +458,8 @@
         <view class="sheet-close consult-sheet__close" bindtap="closeConsultSheet">⌄</view>
       </view>
       <view class="consult-sheet__cards">
-        <view wx:if="{{consultWeChatQr}}" class="consult-card">
-          <image class="consult-card__qr" src="{{consultWeChatQr}}" mode="aspectFit"></image>
+        <view wx:if="{{consultWeChatQr}}" class="consult-card consult-card--tappable" bindtap="onConsultQrTap">
+          <image class="consult-card__qr" src="{{consultWeChatQr}}" mode="aspectFit" show-menu-by-longpress="{{true}}"></image>
           <text class="consult-card__label">路线专属客服</text>
           <text wx:if="{{consultCardLabel}}" class="consult-card__desc">{{consultCardLabel}}</text>
           <text class="consult-card__desc">{{consultCardDesc}}</text>

@@ -19,7 +19,7 @@ const defaultConfigs = {
   },
   checkoutPage: {
     summaryTitleText: "报名摘要",
-    refundAgreementTitle: "变更说明",
+    refundAgreementTitle: "变更与取消规则",
     amountLabelText: "参考金额",
     submitButtonText: "提交报名信息",
     agreements: {
@@ -34,7 +34,7 @@ const defaultConfigs = {
           "一、户外与旅行风险\n\n您所参与的行程可能涉及徒步、露营、高海拔、野外环境或长途交通等，存在一定人身与财产风险。请根据自身健康状况、体能及经验谨慎选择，并遵守带领者与当地的安全指引。\n\n二、健康与保险\n\n部分行程对年龄、体质或既往病史有要求，请如实告知并自行评估是否适宜参加。平台建议您自行购买与行程相匹配的意外及医疗等保险，以降低不可预见风险带来的损失。\n\n三、免责说明\n\n在您充分知晓并自愿承担上述风险的前提下报名，即视为接受行程固有风险。因不可抗力、第三方原因或您自身原因导致的人身伤害、财产损失或行程变更，平台将依服务协议与退订规则尽力协助，但除法律明确规定外不承担额外赔偿责任。"
       },
       refund: {
-        title: "变更说明",
+        title: "变更与取消规则",
         content:
           "一、报名变更与取消\n\n报名信息提交后，如您因个人原因需要取消或调整，请尽快联系平台确认当次行程的可调整空间与处理方式。\n\n二、不可抗力与行程变更\n\n因天气、政策、目的地临时关闭等不可抗力导致行程无法成行或重大变更的，平台将与您协商改期、替换线路或其他合理处理方式。\n\n三、名额转让\n\n在符合服务方要求的前提下，您可将名额转让给他人，转让事宜需提前联系客服确认并配合完成信息变更。具体以当次行程说明为准。"
       }
@@ -42,7 +42,6 @@ const defaultConfigs = {
   },
   serviceDetailPage: {
     consultWeChatQr: "https://7965-yezai-3gr73wd48057512e-10f17b581-1407224025.tcb.qcloud.la/content/config/qrcode/consult-wechat.jpg",
-    consultGroupQr: "https://7965-yezai-3gr73wd48057512e-10f17b581-1407224025.tcb.qcloud.la/content/config/qrcode/consult-group.jpg",
     consultSheetTitle: "路线客服",
     consultCardLabel: "",
     consultCardDesc: "扫码添加，咨询更多行程信息",
@@ -59,15 +58,16 @@ const defaultConfigs = {
     listButtonText: "返回报名列表"
   },
   orderDetailPage: {
-    creatorContactText: "行前沟通：报名确认后同步创作者或带领者信息",
-    serviceContactText: "咨询入口：平台统一跟进，服务时间为工作日 10:00-18:00",
     statusTitleText: "报名状态",
     orderIdLabelText: "报名编号",
     priceTitleText: "费用说明",
     payableLabelText: "参考金额",
     pendingPrimaryText: "确认报名",
-    pendingSecondaryText: "取消报名",
     completedPrimaryText: "再次报名"
+  },
+  profilePage: {
+    emptyTripStateImage:
+      "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/野哉-新媒体尺寸-小红书.jpg"
   },
   favoritesPage: {
     loginHint: "登录后可查看和管理你收藏的人物、行程与故事。"
@@ -79,6 +79,39 @@ const defaultConfigs = {
     bridgeFallbackTitle: "如真机无法直接打开，请配置业务域名下的文章中转页地址。",
     bridgeActionText: "打开原文",
     bridgeHintText: "请先在微信公众平台把当前小程序与目标公众号完成关联，再使用公众号文章链接。"
+  },
+  shareReferralCampaign: {
+    campaignKey: "yezai_share_referral",
+    campaignName: "野哉分享家",
+    phase: "phase1",
+    status: "active",
+    couponThreshold: 1000,
+    couponExpireDays: 365,
+    cashRewardAmount: 100,
+    monthlySettlementDay: 20,
+    testingRollout: {
+      allowExistingUsersAsNew: true
+    },
+    phase1: {
+      welcomeAmount: 150
+    },
+    phase2: {
+      directWelcomeAmount: 100,
+      scanBonusAmount: 50
+    },
+    copywriting: {
+      invalidSelf: "不能扫描自己的分享码",
+      duplicateJoin: "你已参与过本次活动",
+      duplicateJoinDesc: "你已参与过本次活动过，本次扫码没有新增优惠券",
+      duplicateMax: "你已经拿到最高新人优惠券金额了～",
+      invalidOldUser: "本活动仅限新用户领取",
+      invalidCode: "这个分享码暂时不可用，请换一个试试",
+      awarded: "新人券已存入券包",
+      firstAwardIntro: "恭喜获得150元优惠券，可以在价格超过1000元的路线上叠加使用！",
+      phase2DirectAwardIntro: "恭喜获得100元优惠券，可以在价格超过1000元的路线上使用！",
+      bonusUpgradeIntro: "恭喜获得额外50元的优惠券，可以在价格超过1000元的路线上使用！",
+      idle: "欢迎来到野哉分享家"
+    }
   }
 };
 

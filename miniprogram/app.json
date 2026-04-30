@@ -1,7 +1,7 @@
 {
   "pages": [
-    "pages/home/home",
     "pages/splash/splash",
+    "pages/home/home",
     "pages/creators/index",
     "pages/destinations/index",
     "pages/profile/index",
@@ -28,10 +28,19 @@
     {
       "root": "pkg/account",
       "pages": [
+        "assets/index",
         "favorites/index",
         "orders/index",
+        "payout-account/index",
+        "travelers/index",
         "order-detail/index",
         "payment-result/index"
+      ]
+    },
+    {
+      "root": "pkg/activity",
+      "pages": [
+        "share-referral/index"
       ]
     }
   ],

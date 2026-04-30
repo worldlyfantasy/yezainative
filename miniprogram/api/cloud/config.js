@@ -1,6 +1,27 @@
+const CLOUD_ENV_ID = "yezai-3gr73wd48057512e-10f17b581";
+let cloudInitialized = false;
+
+function ensureCloudReady() {
+  if (!wx.cloud || typeof wx.cloud.callFunction !== "function") {
+    return false;
+  }
+  if (!cloudInitialized) {
+    try {
+      wx.cloud.init({
+        env: CLOUD_ENV_ID,
+        traceUser: true
+      });
+    } catch (error) {
+      // ignore duplicated init in page-level fallback
+    }
+    cloudInitialized = true;
+  }
+  return true;
+}
+
 function callConfigGateway(action) {
   return new Promise((resolve, reject) => {
-    if (!wx.cloud || typeof wx.cloud.callFunction !== "function") {
+    if (!ensureCloudReady()) {
       reject(new Error("wx.cloud.callFunction is unavailable"));
       return;
     }
@@ -44,6 +65,10 @@ function getOrderDetailPageConfig() {
   return callConfigGateway("getOrderDetailPageConfig");
 }
 
+function getProfilePageConfig() {
+  return callConfigGateway("getProfilePageConfig");
+}
+
 function getFavoritesPageConfig() {
   return callConfigGateway("getFavoritesPageConfig");
 }
@@ -58,6 +83,7 @@ module.exports = {
   getServiceDetailPageConfig,
   getPaymentResultPageConfig,
   getOrderDetailPageConfig,
+  getProfilePageConfig,
   getFavoritesPageConfig,
   getArticleBridgePageConfig
 };

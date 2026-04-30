@@ -14,6 +14,10 @@
       "hexicorridor",
       "lancang-source"
     ],
+    "regionCodes": [
+      "cn_tibetan",
+      "cn_great_northwest"
+    ],
     "about": [
       "十年在川西与青海拍摄影像资料，酒馆与牧房一样是我的工作场。我喜欢和当地向导一起勘线，再把适合旅人体验的路段整理出来。",
       "‘野哉’对我来说是保持在场感——行程中留足可变空间，可能因为某位老人分享了一段故事，我们就多留一天。",
@@ -45,6 +49,12 @@
       "qiongbay-salt",
       "wuyi-ancient"
     ],
+    "regionCodes": [
+      "cn_yun_gui_chuan",
+      "cn_central_landscape",
+      "cn_south_islands",
+      "cn_jiang_zhe_hu"
+    ],
     "about": [
       "我在黔东南支教时和多位织娘与银饰匠人成为朋友，如今协助他们记录手艺，也带少量旅行者进入日常。",
       "我不提供舞台式的‘表演’，而是提前沟通访客人数、拍摄方式，确保互相尊重。",
@@ -75,6 +85,11 @@
       "songhua-river",
       "qiongbay-salt",
       "minbei-creek"
+    ],
+    "regionCodes": [
+      "cn_south_islands",
+      "cn_northeast_region",
+      "cn_jiang_zhe_hu"
     ],
     "about": [
       "我在东北港口城市做过城市更新顾问，擅长把看似普通的街区串成一个完整的故事。",
@@ -108,6 +123,11 @@
       "aba-highlands",
       "minbei-creek"
     ],
+    "regionCodes": [
+      "cn_yun_gui_chuan",
+      "cn_jiang_zhe_hu",
+      "cn_tibetan"
+    ],
     "about": [
       "我十年前迁到滇西南，学习植物学，也协助当地茶农记录树龄。",
       "行程以清晨森林观测为主，下午会整理观察日志，并与村里的长者确认我们记录的植物名。",
@@ -138,6 +158,11 @@
       "nanjiang-dune",
       "qinghai-lake",
       "hexicorridor"
+    ],
+    "regionCodes": [
+      "cn_xinjiang",
+      "cn_tibetan",
+      "cn_great_northwest"
     ],
     "about": [
       "我跑新疆线很多年，认识不少牧民朋友，车上常备手冲工具与野外收音器。",
@@ -170,6 +195,11 @@
       "qiandong-valley",
       "aba-highlands"
     ],
+    "regionCodes": [
+      "cn_central_landscape",
+      "cn_yun_gui_chuan",
+      "cn_tibetan"
+    ],
     "about": [
       "作为纪实摄影师，我在鄂西和黔东南记录乡村母亲群像，与她们共度大量日常。",
       "旅行者加入时，我会先让大家写下边界与期待，确保拜访不打扰生活。",
@@ -201,6 +231,11 @@
       "songhua-river",
       "qinghai-lake"
     ],
+    "regionCodes": [
+      "cn_tibetan",
+      "cn_great_northwest",
+      "cn_northeast_region"
+    ],
     "about": [
       "我是水利工程背景，常驻澜沧江源区，与牧民一起观察冰川变化。",
       "行程安排以徒步与水样采集结合，让大家理解一条河的呼吸。",
@@ -231,6 +266,10 @@
       "wuyi-ancient",
       "yunnan-rainforest",
       "qiandong-valley"
+    ],
+    "regionCodes": [
+      "cn_jiang_zhe_hu",
+      "cn_yun_gui_chuan"
     ],
     "about": [
       "我出生于武夷山脚，小时候跟着父亲上茶山，如今在山腰改造了一处旧仓当作驻地。",

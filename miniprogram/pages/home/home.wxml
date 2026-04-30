@@ -39,7 +39,7 @@
 
   <view class="page-shell">
     <view class="home-note">
-      <text class="home-note__text">看见那些沉淀着在地经验、有温度的路线\n为每一位奔赴山海的旅行者\n照亮一条通往真实旅途的路径</text>
+      <text class="home-note__text">看见那些有在地温度、沉淀真实体验的路线\n为每一位奔赴山野的旅人\n铺就一条通往真实旅途的路</text>
     </view>
 
     <view wx:if="{{errorText}}" class="section-block paper-block page-feedback">

@@ -10,6 +10,10 @@ Component({
     activeKey: {
       type: String,
       value: ""
+    },
+    compact: {
+      type: Boolean,
+      value: false
     }
   },
   methods: {

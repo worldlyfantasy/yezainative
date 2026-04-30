@@ -1,5 +1,24 @@
+const { normalizeImageRef } = require("../services/image-ref");
+
 function ensureObject(value) {
   return value && typeof value === "object" ? value : {};
+}
+
+function readImageValue(input) {
+  if (typeof input === "string") {
+    return input;
+  }
+
+  const source = ensureObject(input);
+  return source.original
+    || source.detail
+    || source.card
+    || source.fileID
+    || source.cloudFileID
+    || source.url
+    || source.src
+    || source.image
+    || "";
 }
 
 function mapHowItWorksPageConfig(payload) {
@@ -28,7 +47,6 @@ function mapServiceDetailPageConfig(payload) {
   const source = ensureObject(payload);
   return {
     consultWeChatQr: source.consultWeChatQr || "",
-    consultGroupQr: source.consultGroupQr || "",
     consultSheetTitle: source.consultSheetTitle || "",
     consultCardLabel: source.consultCardLabel || "",
     consultCardDesc: source.consultCardDesc || "",
@@ -54,15 +72,22 @@ function mapPaymentResultPageConfig(payload) {
 function mapOrderDetailPageConfig(payload) {
   const source = ensureObject(payload);
   return {
-    creatorContactText: source.creatorContactText || "",
-    serviceContactText: source.serviceContactText || "",
     statusTitleText: source.statusTitleText || "",
     orderIdLabelText: source.orderIdLabelText || "",
     priceTitleText: source.priceTitleText || "",
     payableLabelText: source.payableLabelText || "",
     pendingPrimaryText: source.pendingPrimaryText || "",
-    pendingSecondaryText: source.pendingSecondaryText || "",
     completedPrimaryText: source.completedPrimaryText || ""
+  };
+}
+
+function mapProfilePageConfig(payload) {
+  const source = ensureObject(payload);
+  return {
+    emptyTripStateImage: normalizeImageRef(
+      source.emptyTripStateImage || source.emptyStateImage || "",
+      "detail"
+    )
   };
 }
 
@@ -91,6 +116,7 @@ module.exports = {
   mapServiceDetailPageConfig,
   mapPaymentResultPageConfig,
   mapOrderDetailPageConfig,
+  mapProfilePageConfig,
   mapFavoritesPageConfig,
   mapArticleBridgePageConfig
 };

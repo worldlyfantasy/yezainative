@@ -46,12 +46,12 @@ test("period seat helper blocks when requested travelers exceed remaining seats"
 });
 
 test("period seat helper exposes and enforces the single-order people limit", () => {
-  assert.equal(MAX_ORDER_PEOPLE_COUNT, 3);
+  assert.equal(MAX_ORDER_PEOPLE_COUNT, 2);
   assert.equal(normalizeOrderPeopleCount(1, 1), 1);
-  assert.equal(normalizeOrderPeopleCount(5, 1), 3);
-  assert.equal(getExceededOrderPeopleLimitMessage(3), "");
+  assert.equal(normalizeOrderPeopleCount(5, 1), 2);
+  assert.equal(getExceededOrderPeopleLimitMessage(2), "");
   assert.equal(
-    getExceededOrderPeopleLimitMessage(4),
+    getExceededOrderPeopleLimitMessage(3),
     getOrderPeopleLimitMessage()
   );
 });

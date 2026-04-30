@@ -1,4 +1,4 @@
-const MAX_ORDER_PEOPLE_COUNT = 3;
+const MAX_ORDER_PEOPLE_COUNT = 2;
 
 function normalizeNonNegativeInteger(value, fallback) {
   const parsed = Number(value);

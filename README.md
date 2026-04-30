@@ -6,6 +6,7 @@
 
 - CloudBase 环境：`yezai-3gr73wd48057512e-10f17b581`
 - 环境别名：`yezai-3gr73wd48057512e`
+- 部署、脚本、SQL 查询一律使用完整环境 ID，不要使用环境别名；别名只保留给人工识别，误用后很容易连到旧环境或空环境
 - 地域：`ap-shanghai`
 - 小程序根目录：`miniprogram`
 - 云函数根目录：`cloudfunctions`
@@ -63,6 +64,9 @@
 文档库已补充的关键索引：
 
 - `users(openid)` 唯一索引
+- `user_travelers(userOpenid, profileId)` 唯一索引
+- `user_travelers(userOpenid, updatedAt)` 普通索引
+- `user_travelers(userOpenid, status)` 普通索引
 - `favorites(openid, targetType, targetSlug)` 唯一索引
 - `favorites(openid, createdAt)` 普通索引
 
@@ -109,6 +113,10 @@
 - 新增标准字段并完成回填：
   - `TravelOrder`: `amountDec/discountDec/payableDec/peopleCountInt/travelDateStartDate/travelDateEndDate`
   - `ServicePeriod`: `priceDec/minGroupInt/totalSeatsInt/remainingSeatsInt/dateStartDate/dateEndDate`
+- 2026-04-10 起，`TravelOrder` 联系人语义统一切到 `orderContactName/orderContactPhone`；
+  `travelerName/travelerPhone` 仅保留兼容双写与旧数据 fallback
+- 对应历史数据回填维护动作已经接入 `adminGateway`：
+  `backfillOrderContactFields`、`backfillOrderTravelerProfileRefs`、`backfillTravelerOrderStats`
 - 清理废弃字段：
   - `TravelOrder.contactName-drop-1774251802`
   - `TravelOrder.contactPhone-drop-1774251802`
@@ -173,6 +181,33 @@ TCB_SECRET_ID=xxx TCB_SECRET_KEY=xxx node scripts/backfill-image-assets.js
 
 - `services / creators / destinations / ideas / app_configs(homePage.heroSlides)` 都支持回填
 - 脚本可重复执行，已有完整 `{ original, card, detail }` 的图片会直接跳过
+
+## 路线创作者的话回填
+
+历史 `services` 文档现在可以通过脚本补齐 `creatorMessage`：
+
+```bash
+TCB_SECRET_ID=xxx TCB_SECRET_KEY=xxx node scripts/backfill-service-creator-message.js
+```
+
+默认只做预演，不会写库。正式写回请加 `--write`：
+
+```bash
+TCB_SECRET_ID=xxx TCB_SECRET_KEY=xxx node scripts/backfill-service-creator-message.js --write
+```
+
+生成规则：
+
+- 已有 `creatorMessage` 时默认跳过
+- 否则优先取 `travelDetail.overview.whyJoinText` 的第一段
+- 再退回 `summary`
+- 都为空时使用默认兜底文案
+
+常用参数：
+
+- `--overwrite`：连已有 `creatorMessage` 的路线也重新生成
+- `--limit 10`：先抽样处理少量文档
+- `--slugs ridge-journal,wuyi-ink-trail`：只处理指定路线
 
 ## 公众号全文打开页
 

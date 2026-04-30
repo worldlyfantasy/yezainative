@@ -20,8 +20,13 @@ App({
     };
 
     // 预加载入场页 Logo，与文字同时显示
-    wx.getImageInfo({
-      src: SPLASH_LOGO_CLOUD_ID
-    }).catch(() => {});
+    const imageInfoRequest = wx.getImageInfo({
+      src: SPLASH_LOGO_CLOUD_ID,
+      fail: () => {}
+    });
+
+    if (imageInfoRequest && typeof imageInfoRequest.catch === "function") {
+      imageInfoRequest.catch(() => {});
+    }
   }
 });

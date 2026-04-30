@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "",
+  "usingComponents": {
+    "app-tab-bar": "/custom-tab-bar/index",
+    "section-tabs": "/components/yezai/section-tabs/index"
+  }
+}

@@ -15,35 +15,90 @@
   border-radius: 24rpx;
 }
 
+.service-gallery--single .service-gallery__hero {
+  height: 708rpx;
+}
+
+.service-gallery--two .service-gallery__hero {
+  height: 344rpx;
+}
+
 .service-gallery__counter {
   position: absolute;
   right: 24rpx;
   bottom: 24rpx;
   padding: 8rpx 20rpx;
   border-radius: 999rpx;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(43, 36, 29, 0.56);
 }
 
 .service-gallery__counter-text {
   font-size: 24rpx;
-  color: #ffffff;
+  color: #fff9f2;
 }
 
-.service-gallery__strip {
+.service-gallery__topics {
+  margin-top: -2rpx;
+}
+
+.service-gallery__topic-scroll {
   width: 100%;
   white-space: nowrap;
 }
 
+.service-gallery__topic-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14rpx;
+  min-width: 100%;
+}
+
+.service-gallery__topic-chip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  min-height: 60rpx;
+  padding: 0 22rpx;
+  border: 1rpx solid rgba(153, 57, 33, 0.12);
+  border-radius: 999rpx;
+  background: rgba(255, 249, 242, 0.58);
+  color: #6a5a4b;
+}
+
+.service-gallery__topic-chip--active {
+  border-color: rgba(153, 57, 33, 0.36);
+  background: rgba(255, 249, 242, 0.92);
+  color: #993921;
+}
+
+.service-gallery__topic-name {
+  font-size: 24rpx;
+  font-weight: 500;
+}
+
+.service-gallery__strip {
+  width: 100%;
+}
+
 .service-gallery__row {
-  display: inline-flex;
+  display: flex;
   gap: 16rpx;
 }
 
 .service-gallery__thumb {
-  flex: 0 0 auto;
-  width: 220rpx;
+  flex: 1 1 0;
+  width: 0;
   height: 168rpx;
   border-radius: 24rpx;
+}
+
+.service-gallery__row--count-1 .service-gallery__thumb {
+  height: 220rpx;
+}
+
+.service-gallery--two .service-gallery__row--count-1 .service-gallery__thumb {
+  height: 344rpx;
 }
 
 .service-hero {
@@ -191,51 +246,69 @@
   margin-top: 24rpx;
 }
 
-/* 自定义标签网格（后台可配置） */
+/* 轻量路线信息条 */
 .service-tags {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20rpx;
-  margin-top: 32rpx;
+  margin-top: 30rpx;
 }
 
-.service-tag {
+.service-info-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx 18rpx;
+  margin-top: 30rpx;
+  padding: 18rpx 20rpx;
+  border: 1rpx solid rgba(153, 57, 33, 0.08);
+  border-radius: 22rpx;
+  background: rgba(255, 249, 242, 0.54);
+}
+
+.service-info-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 24rpx;
-  background: rgba(0, 0, 0, 0.04);
-  border-radius: 16rpx;
+  flex: 1 1 260rpx;
+  min-width: 0;
 }
 
-.service-tag--clickable {
-  padding-right: 32rpx;
+.service-info-item--clickable {
+  padding-right: 4rpx;
 }
 
-.service-tag__inner {
+.service-info-item__inner {
   display: flex;
-  flex-direction: column;
-  gap: 8rpx;
+  align-items: center;
+  min-width: 0;
+  gap: 12rpx;
 }
 
-.service-tag__label {
-  font-size: 24rpx;
-  color: #6a5a4b;
+.service-info-item__label {
+  flex: 0 0 auto;
+  padding: 6rpx 14rpx;
+  border-radius: 999rpx;
+  background: rgba(153, 57, 33, 0.07);
+  font-size: 22rpx;
+  line-height: 1.35;
+  color: #8a5a38;
 }
 
-.service-tag__value {
-  font-size: 28rpx;
-  font-weight: 500;
-  color: #2b241d;
-}
-
-.service-tag__arrow {
+.service-info-item__value {
+  min-width: 0;
   font-size: 26rpx;
-  color: #999;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #2b241d;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.service-tag[data-key="consultation"] {
-  cursor: pointer;
+.service-info-item__arrow {
+  flex: 0 0 auto;
+  margin-left: 8rpx;
+  font-size: 24rpx;
+  color: rgba(153, 57, 33, 0.62);
 }
 
 /* 选择团期（横向滑动条） */
@@ -257,26 +330,34 @@
 }
 
 .service-periods__cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 168rpx;
-  width: 168rpx;
+  flex: 0 0 auto;
   margin: 0;
-  padding: 0;
-  min-height: 60rpx;
-  border-radius: 999rpx;
-  font-size: 24rpx;
-  font-weight: 600;
-  line-height: 60rpx;
-  color: #ffffff;
-  background: #993921;
-  box-shadow: 0 10rpx 24rpx rgba(153, 57, 33, 0.18);
-  white-space: nowrap;
 }
 
-.service-periods__cta:active {
-  opacity: 0.9;
+.service-periods__actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 14rpx;
+}
+
+.service-periods__consult {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60rpx;
+  padding: 0 24rpx;
+  border: 1rpx solid rgba(153, 57, 33, 0.24);
+  border-radius: 999rpx;
+  box-sizing: border-box;
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #993921;
+  background: rgba(255, 249, 242, 0.72);
+}
+
+.service-periods__consult:active {
+  opacity: 0.82;
 }
 
 .service-periods__strip {
@@ -296,17 +377,19 @@
   width: 320rpx;
   min-width: 320rpx;
   padding: 28rpx 24rpx;
-  background: rgba(0, 0, 0, 0.04);
-  border: 2rpx solid rgba(0, 0, 0, 0.06);
-  border-radius: 16rpx;
+  background:
+    linear-gradient(180deg, rgba(255, 249, 242, 0.72), rgba(249, 244, 236, 0.48));
+  border: 2rpx solid rgba(153, 57, 33, 0.1);
+  border-radius: 22rpx;
   transition: border-color 0.2s, background 0.2s;
   box-sizing: border-box;
   overflow: visible;
 }
 
 .period-card--selected {
-  border-color: #993921;
-  background: rgba(153, 57, 33, 0.08);
+  border-color: rgba(209, 94, 20, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 249, 242, 0.9), rgba(209, 94, 20, 0.08));
 }
 
 .period-card__check {
@@ -315,7 +398,7 @@
   right: 20rpx;
   font-size: 28rpx;
   font-weight: 600;
-  color: #993921;
+  color: #D15E14;
 }
 
 .period-card__date {
@@ -331,7 +414,7 @@
 }
 
 .period-card--selected .period-card__date {
-  color: #993921;
+  color: #2b241d;
 }
 
 .period-card__meta-row {
@@ -359,7 +442,7 @@
 }
 
 .period-card__price--active {
-  color: #993921;
+  color: #D15E14;
 }
 
 .period-card__status {
@@ -377,7 +460,7 @@
 .period-sheet__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(43, 36, 29, 0.34);
 }
 
 .period-sheet__panel {
@@ -386,9 +469,10 @@
   right: 0;
   bottom: 0;
   max-height: 85vh;
-  background: #f9f4ec;
+  background:
+    linear-gradient(180deg, #FFF9F2 0%, #F9F4EC 64%, #F2E6C9 100%);
   border-radius: 32rpx 32rpx 0 0;
-  box-shadow: 0 -12rpx 40rpx rgba(0, 0, 0, 0.18);
+  box-shadow: 0 -18rpx 46rpx rgba(84, 57, 31, 0.14);
   display: flex;
   flex-direction: column;
   transform: translateY(100%);
@@ -403,7 +487,7 @@
   width: 96rpx;
   height: 10rpx;
   border-radius: 999rpx;
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(153, 57, 33, 0.18);
   margin: 20rpx auto 12rpx;
 }
 
@@ -445,13 +529,13 @@
   padding: 12rpx 24rpx;
   font-size: 26rpx;
   color: #6a5a4b;
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(255, 249, 242, 0.66);
   border-radius: 999rpx;
 }
 
 .period-version--active {
-  background: rgba(153, 57, 33, 0.12);
-  color: #993921;
+  background: rgba(209, 94, 20, 0.1);
+  color: #D15E14;
   font-weight: 500;
 }
 
@@ -473,13 +557,13 @@
   padding: 12rpx 24rpx;
   font-size: 26rpx;
   color: #6a5a4b;
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(255, 249, 242, 0.66);
   border-radius: 999rpx;
 }
 
 .period-month--active {
-  background: rgba(153, 57, 33, 0.12);
-  color: #993921;
+  background: rgba(209, 94, 20, 0.1);
+  color: #D15E14;
   font-weight: 500;
 }
 
@@ -502,14 +586,16 @@
   padding: 24rpx;
   padding-right: 44rpx;
   box-sizing: border-box;
-  background: rgba(0, 0, 0, 0.04);
-  border: 2rpx solid rgba(0, 0, 0, 0.08);
-  border-radius: 16rpx;
+  background:
+    linear-gradient(180deg, rgba(255, 249, 242, 0.74), rgba(249, 244, 236, 0.48));
+  border: 2rpx solid rgba(153, 57, 33, 0.1);
+  border-radius: 22rpx;
 }
 
 .period-date--selected {
-  border-color: #993921;
-  background: rgba(153, 57, 33, 0.06);
+  border-color: rgba(209, 94, 20, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 249, 242, 0.9), rgba(209, 94, 20, 0.08));
 }
 
 .period-date__start,
@@ -555,7 +641,7 @@
 .period-date__price {
   font-size: 28rpx;
   font-weight: 600;
-  color: #993921;
+  color: #D15E14;
 }
 
 .period-date__status {
@@ -569,7 +655,7 @@
   right: 16rpx;
   font-size: 28rpx;
   font-weight: 600;
-  color: #993921;
+  color: #D15E14;
 }
 
 .period-sheet__people-control {
@@ -596,8 +682,8 @@
   min-height: 0;
   padding: 24rpx 0 24rpx 24rpx;
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-  background: #fff;
-  border-top: 1rpx solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 249, 242, 0.92);
+  border-top: 1rpx solid rgba(153, 57, 33, 0.1);
 }
 
 .period-sheet__total {
@@ -614,7 +700,7 @@
 .period-sheet__total-price {
   font-size: 40rpx;
   font-weight: 600;
-  color: #993921;
+  color: #D15E14;
 }
 
 .period-sheet__next {
@@ -630,11 +716,11 @@
   font-size: 30rpx;
   font-weight: 600;
   line-height: 1;
-  color: #fff;
-  background: #993921;
+  color: #fff9f2;
+  background: #D15E14;
   border-radius: 999rpx;
   border: none;
-  box-shadow: 0 12rpx 28rpx rgba(153, 57, 33, 0.18);
+  box-shadow: 0 14rpx 30rpx rgba(209, 94, 20, 0.18);
 }
 
 .period-sheet__next::after {
@@ -657,8 +743,8 @@
   line-height: 48rpx;
   text-align: center;
   color: #2b241d;
-  background: rgba(0, 0, 0, 0.06);
-  border-radius: 10rpx;
+  background: rgba(153, 57, 33, 0.08);
+  border-radius: 14rpx;
   border: none;
   box-sizing: border-box;
 }
@@ -690,7 +776,7 @@
   z-index: 20;
   padding: 12rpx 0 28rpx;
   background:
-    linear-gradient(180deg, rgba(242, 230, 201, 0.98), rgba(242, 230, 201, 0.94));
+    linear-gradient(180deg, rgba(242, 230, 201, 0.99), rgba(242, 230, 201, 0.92));
 }
 
 .travel-detail-tabs--sticky .section-tabs {
@@ -715,7 +801,7 @@
 
 .travel-section__title {
   display: block;
-  color: #993921;
+  color: #2b241d;
 }
 
 .travel-section__version-tags {
@@ -735,8 +821,8 @@
 }
 
 .travel-section__version-tag--active {
-  color: #ffffff;
-  background: #993921;
+  color: #fff9f2;
+  background: #D15E14;
 }
 
 .travel-section__hint {
@@ -902,7 +988,7 @@
 .media-sheet__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(43, 36, 29, 0.28);
 }
 
 .media-sheet__panel {
@@ -912,9 +998,10 @@
   bottom: 0;
   top: 140rpx;
   height: calc(100vh - 140rpx);
-  background: #f9f4ec;
+  background:
+    linear-gradient(180deg, #FFF9F2 0%, #F9F4EC 64%, #F2E6C9 100%);
   border-radius: 32rpx 32rpx 0 0;
-  box-shadow: 0 -12rpx 40rpx rgba(0, 0, 0, 0.18);
+  box-shadow: 0 -18rpx 46rpx rgba(84, 57, 31, 0.14);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -930,7 +1017,7 @@
   width: 96rpx;
   height: 10rpx;
   border-radius: 999rpx;
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(153, 57, 33, 0.18);
   margin: 20rpx auto 12rpx;
 }
 
@@ -953,12 +1040,12 @@
   padding: 10rpx 26rpx;
   border-radius: 999rpx;
   font-size: 26rpx;
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(255, 249, 242, 0.58);
   color: #6a5a4b;
 }
 
 .media-sheet__tab--active {
-  background: #ffffff;
+  background: rgba(255, 249, 242, 0.96);
   color: #2b241d;
   font-weight: 500;
 }
@@ -976,9 +1063,21 @@
   gap: 24rpx;
 }
 
+.media-sheet__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320rpx;
+}
+
+.media-sheet__loading-text {
+  font-size: 26rpx;
+  color: #6a5a4b;
+}
+
 .media-sheet__image {
+  display: block;
   width: 100%;
-  height: 420rpx;
   border-radius: 24rpx;
 }
 
@@ -991,7 +1090,7 @@
 .consult-sheet__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(43, 36, 29, 0.32);
 }
 
 .consult-sheet__panel {
@@ -999,9 +1098,10 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: #f9f4ec;
+  background:
+    linear-gradient(180deg, #FFF9F2 0%, #F9F4EC 100%);
   border-radius: 32rpx 32rpx 0 0;
-  box-shadow: 0 -12rpx 40rpx rgba(0, 0, 0, 0.18);
+  box-shadow: 0 -18rpx 46rpx rgba(84, 57, 31, 0.14);
   padding: 20rpx 32rpx 32rpx;
   transform: translateY(100%);
   transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -1015,7 +1115,7 @@
   width: 96rpx;
   height: 10rpx;
   border-radius: 999rpx;
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(153, 57, 33, 0.18);
   margin: 8rpx auto 16rpx;
 }
 
@@ -1064,6 +1164,10 @@
   text-align: center;
 }
 
+.consult-card--tappable:active {
+  opacity: 0.86;
+}
+
 .consult-card__qr {
   width: 300rpx;
   height: 300rpx;
@@ -1098,7 +1202,7 @@
 .suitable-sheet__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(43, 36, 29, 0.32);
 }
 
 .suitable-sheet__panel {
@@ -1107,9 +1211,10 @@
   right: 0;
   bottom: 0;
   max-height: 70vh;
-  background: #f9f4ec;
+  background:
+    linear-gradient(180deg, #FFF9F2 0%, #F9F4EC 100%);
   border-radius: 32rpx 32rpx 0 0;
-  box-shadow: 0 -12rpx 40rpx rgba(0, 0, 0, 0.18);
+  box-shadow: 0 -18rpx 46rpx rgba(84, 57, 31, 0.14);
   display: flex;
   flex-direction: column;
   transform: translateY(100%);
@@ -1124,7 +1229,7 @@
   width: 96rpx;
   height: 10rpx;
   border-radius: 999rpx;
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(153, 57, 33, 0.18);
   margin: 8rpx auto 12rpx;
 }
 

@@ -23,9 +23,9 @@
     "durationTag": "6天",
     "priceLabel": "¥4280 / 6天",
     "styles": [
-      "徒步与自然",
-      "慢旅行",
-      "摄影创作"
+      "户外",
+      "山野",
+      "研学"
     ],
     "travelDetail": {
       "id": "travel-detail-ridge-journal",
@@ -422,9 +422,13 @@
       ]
     },
     "tags": [
-      "徒步与自然",
-      "慢旅行",
-      "摄影创作"
+      "户外",
+      "山野",
+      "研学"
+    ],
+    "creatorMessage": "把徒步从“走完”变成“看见”。这段行程会带你在牧场、寺院与峡谷的连续抬升中，用手绘地图与固定记录节奏把观察落到纸面，最终形成可复用的徒步手帐方法。",
+    "regionCodes": [
+      "cn_tibetan"
     ]
   },
   {
@@ -446,9 +450,9 @@
     "durationTag": "5-7天",
     "priceLabel": "¥1990 起",
     "styles": [
-      "徒步与自然",
-      "摄影创作",
-      "慢旅行"
+      "山野",
+      "文化",
+      "研学"
     ],
     "travelDetail": {
       "id": "travel-detail-hexi-tracing",
@@ -767,9 +771,13 @@
       ]
     },
     "tags": [
-      "徒步与自然",
-      "摄影创作",
-      "慢旅行"
+      "山野",
+      "文化",
+      "研学"
+    ],
+    "creatorMessage": "河西这一段我跑过很多次，烽燧和河谷的声景特别适合用录音留下来，节奏可以按你们体力来调。",
+    "regionCodes": [
+      "cn_great_northwest"
     ]
   },
   {
@@ -793,8 +801,9 @@
     "durationTag": "7天",
     "priceLabel": "¥5980 / 7天",
     "styles": [
-      "徒步与自然",
-      "慢旅行"
+      "研学",
+      "山野",
+      "户外"
     ],
     "travelDetail": {
       "id": "travel-detail-lancang-source-lab",
@@ -1113,8 +1122,13 @@
       ]
     },
     "tags": [
-      "徒步与自然",
-      "慢旅行"
+      "研学",
+      "山野",
+      "户外"
+    ],
+    "creatorMessage": "澜沧江源区的水文小实验我做了好几年，带大家用简单仪器测水温、含沙量，能真正理解一条河是怎么诞生的。",
+    "regionCodes": [
+      "cn_tibetan"
     ]
   },
   {
@@ -1137,8 +1151,9 @@
     "durationTag": "4天",
     "priceLabel": "¥3680 / 4天",
     "styles": [
-      "慢旅行",
-      "徒步与自然"
+      "乡土",
+      "文化",
+      "户外"
     ],
     "travelDetail": {
       "id": "travel-detail-miao-night-walk",
@@ -1376,8 +1391,14 @@
       ]
     },
     "tags": [
-      "慢旅行",
-      "徒步与自然"
+      "乡土",
+      "文化",
+      "户外"
+    ],
+    "creatorMessage": "侗寨的夜步我走了很多回，织娘和歌师愿意聊的话，会打开完全不同的世界。推荐给愿意慢下来听故事的人。",
+    "regionCodes": [
+      "cn_yun_gui_chuan",
+      "cn_central_landscape"
     ]
   },
   {
@@ -1399,9 +1420,9 @@
     "durationTag": "3天",
     "priceLabel": "¥980 起",
     "styles": [
-      "城市漫游",
-      "慢旅行",
-      "摄影创作"
+      "乡土",
+      "城市",
+      "研学"
     ],
     "travelDetail": {
       "id": "travel-detail-salt-pan-diary",
@@ -1608,9 +1629,13 @@
       ]
     },
     "tags": [
-      "城市漫游",
-      "慢旅行",
-      "摄影创作"
+      "乡土",
+      "城市",
+      "研学"
+    ],
+    "creatorMessage": "琼海盐田的潮汐和渔市我拍过很多次，三天刚好能把工序和居民作息摸清楚，适合想拍纪录片式旅行的人。",
+    "regionCodes": [
+      "cn_south_islands"
     ]
   },
   {
@@ -1632,9 +1657,9 @@
     "durationTag": "3天",
     "priceLabel": "¥2280 / 3天",
     "styles": [
-      "城市漫游",
-      "慢旅行",
-      "摄影创作"
+      "城市",
+      "文化",
+      "研学"
     ],
     "travelDetail": {
       "id": "travel-detail-songhua-dock",
@@ -1841,9 +1866,13 @@
       ]
     },
     "tags": [
-      "城市漫游",
-      "慢旅行",
-      "摄影创作"
+      "城市",
+      "文化",
+      "研学"
+    ],
+    "creatorMessage": "松花江口的老码头和厂区我画过很多线稿，工人愿意讲的话，一条线能串起几十年。适合能扛冻、喜欢手绘的人。",
+    "regionCodes": [
+      "cn_northeast_region"
     ]
   },
   {
@@ -1865,9 +1894,9 @@
     "durationTag": "5天",
     "priceLabel": "¥2680 起",
     "styles": [
-      "慢旅行",
-      "摄影创作",
-      "度假放松"
+      "乡土",
+      "文化",
+      "山野"
     ],
     "travelDetail": {
       "id": "travel-detail-enxi-residency",
@@ -2132,9 +2161,13 @@
       ]
     },
     "tags": [
-      "慢旅行",
-      "摄影创作",
-      "度假放松"
+      "乡土",
+      "文化",
+      "山野"
+    ],
+    "creatorMessage": "鄂西峡谷这几户人家我合作很久了，住进去三晚能拍出一组很扎实的纪实。适合愿意做家务、尊重拍摄对象的人。",
+    "regionCodes": [
+      "cn_central_landscape"
     ]
   },
   {
@@ -2156,9 +2189,9 @@
     "durationTag": "5天",
     "priceLabel": "¥4580 / 5天",
     "styles": [
-      "徒步与自然",
-      "度假放松",
-      "摄影创作"
+      "山野",
+      "户外",
+      "内在成长"
     ],
     "travelDetail": {
       "id": "travel-detail-dune-sunset",
@@ -2423,9 +2456,13 @@
       ]
     },
     "tags": [
-      "徒步与自然",
-      "度假放松",
-      "摄影创作"
+      "山野",
+      "户外",
+      "内在成长"
+    ],
+    "creatorMessage": "南疆沙丘的黄昏我录过很多次，开车穿过去、停下来录音的那一段，特别适合想独处又喜欢公路的人。",
+    "regionCodes": [
+      "cn_xinjiang"
     ]
   },
   {
@@ -2448,9 +2485,9 @@
     "durationTag": "5-6天",
     "priceLabel": "¥1680 起",
     "styles": [
-      "徒步与自然",
-      "度假放松",
-      "慢旅行"
+      "山野",
+      "户外",
+      "乡土"
     ],
     "travelDetail": {
       "id": "travel-detail-qinghai-loop",
@@ -2711,9 +2748,14 @@
       ]
     },
     "tags": [
-      "徒步与自然",
-      "度假放松",
-      "慢旅行"
+      "山野",
+      "户外",
+      "乡土"
+    ],
+    "creatorMessage": "青海湖岸环线我跑过很多趟，观星和牧场交流的节点都摸熟了，可以根据你的时间帮你设计一版。",
+    "regionCodes": [
+      "cn_tibetan",
+      "cn_great_northwest"
     ]
   },
   {
@@ -2735,9 +2777,9 @@
     "durationTag": "5天",
     "priceLabel": "¥3980 / 5天",
     "styles": [
-      "徒步与自然",
-      "慢旅行",
-      "度假放松"
+      "山野",
+      "研学",
+      "乡土"
     ],
     "travelDetail": {
       "id": "travel-detail-rainforest-dawn",
@@ -2998,9 +3040,13 @@
       ]
     },
     "tags": [
-      "徒步与自然",
-      "慢旅行",
-      "度假放松"
+      "山野",
+      "研学",
+      "乡土"
+    ],
+    "creatorMessage": "雨林晨雾和茶树的气味我记了很多本，跟着植物学者走几趟，用嗅觉认茶会变成习惯。推荐给愿意早起、能静下来观察的人。",
+    "regionCodes": [
+      "cn_yun_gui_chuan"
     ]
   },
   {
@@ -3023,9 +3069,9 @@
     "durationTag": "4天",
     "priceLabel": "¥3280 / 4天",
     "styles": [
-      "慢旅行",
-      "徒步与自然",
-      "瑜伽疗愈"
+      "内在成长",
+      "文化",
+      "户外"
     ],
     "travelDetail": {
       "id": "travel-detail-wuyi-ink-trail",
@@ -3263,9 +3309,13 @@
       ]
     },
     "tags": [
-      "慢旅行",
-      "徒步与自然",
-      "瑜伽疗愈"
+      "内在成长",
+      "文化",
+      "户外"
+    ],
+    "creatorMessage": "武夷古道和茶农做青茶我走了很多年，体感写作这条线特别适合想慢下来、愿意动手、不怕淋雨的人。",
+    "regionCodes": [
+      "cn_jiang_zhe_hu"
     ]
   },
   {
@@ -3287,9 +3337,9 @@
     "durationTag": "3-5天",
     "priceLabel": "¥1180 起",
     "styles": [
-      "徒步与自然",
-      "慢旅行",
-      "摄影创作"
+      "山野",
+      "研学",
+      "户外"
     ],
     "travelDetail": {
       "id": "travel-detail-minbei-creek-study",
@@ -3496,9 +3546,13 @@
       ]
     },
     "tags": [
-      "徒步与自然",
-      "慢旅行",
-      "摄影创作"
+      "山野",
+      "研学",
+      "户外"
+    ],
+    "creatorMessage": "闽北溪谷的水声我录了很多段，按你的驻留天数可以帮你设计一条采集路线，适合自带设备、喜欢林间走的人。",
+    "regionCodes": [
+      "cn_jiang_zhe_hu"
     ]
   }
 ]

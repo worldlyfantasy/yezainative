@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "出行人",
+  "usingComponents": {
+    "app-tab-bar": "/custom-tab-bar/index"
+  }
+}

@@ -12,6 +12,8 @@ const {
   mapServiceConsultData,
   mapServiceDetailSummaryData,
   mapServiceDetailContentData,
+  mapServiceGalleryData,
+  mapServiceGalleryOriginalData,
   mapServiceDetailData
 } = require("../mappers/content");
 const CONTENT_CACHE_TTL_MS = 60 * 1000;
@@ -99,9 +101,10 @@ function buildServiceDetailSummaryFallback(legacyPayload) {
     creator: legacyPayload.creator || null,
     relatedDestinations: Array.isArray(legacyPayload.relatedDestinations) ? legacyPayload.relatedDestinations : [],
     heroCover: legacyPayload.heroCover || "",
-    photoGallery: Array.isArray(legacyPayload.photoGallery) ? legacyPayload.photoGallery.slice(0, 3) : [],
+    photoGallery: Array.isArray(legacyPayload.photoGallery) ? legacyPayload.photoGallery.slice(0, 4) : [],
     photoTotal: Number(legacyPayload.photoTotal) || 0,
-    mediaTabs: [],
+    mediaTabs: Array.isArray(legacyPayload.mediaTabs) ? legacyPayload.mediaTabs : [],
+    hasGalleryGroups: Boolean(legacyPayload.hasGalleryGroups),
     groupPeriods: []
   };
 }
@@ -113,10 +116,27 @@ function buildServiceDetailContentFallback(legacyPayload) {
 
   return {
     travelDetail: legacyPayload.travelDetail || null,
-    photoGallery: Array.isArray(legacyPayload.photoGallery) ? legacyPayload.photoGallery : [],
-    photoTotal: Number(legacyPayload.photoTotal) || 0,
-    mediaTabs: Array.isArray(legacyPayload.mediaTabs) ? legacyPayload.mediaTabs : [],
     groupPeriods: Array.isArray(legacyPayload.groupPeriods) ? legacyPayload.groupPeriods : []
+  };
+}
+
+function buildServiceGalleryFallback(legacyPayload) {
+  if (!legacyPayload) {
+    return null;
+  }
+
+  const mediaTabs = Array.isArray(legacyPayload.mediaTabs)
+    ? legacyPayload.mediaTabs.map((item) => ({
+      key: item && item.key ? item.key : "",
+      label: item && item.label ? item.label : "",
+      images: Array.isArray(item && item.images) ? item.images : []
+    }))
+    : [];
+
+  return {
+    mediaTabs,
+    photoTotal: Number(legacyPayload.photoTotal) || mediaTabs.flatMap((item) => item.images || []).filter(Boolean).length,
+    hasGalleryGroups: Boolean(legacyPayload.hasGalleryGroups)
   };
 }
 
@@ -209,7 +229,8 @@ function getServiceDetailSummaryData(slug) {
     "getServiceDetailSummaryData",
     mapServiceDetailSummaryData,
     slug,
-    buildServiceDetailSummaryFallback
+    buildServiceDetailSummaryFallback,
+    { cache: false }
   );
 }
 
@@ -219,6 +240,26 @@ function getServiceDetailContentData(slug) {
     mapServiceDetailContentData,
     slug,
     buildServiceDetailContentFallback,
+    { cache: false }
+  );
+}
+
+function getServiceGalleryData(slug) {
+  return invokeServiceDetailFallback(
+    "getServiceGalleryData",
+    mapServiceGalleryData,
+    slug,
+    buildServiceGalleryFallback,
+    { cache: false }
+  );
+}
+
+function getServiceGalleryOriginalData(slug) {
+  return invokeServiceDetailFallback(
+    "getServiceGalleryOriginalData",
+    mapServiceGalleryOriginalData,
+    slug,
+    buildServiceGalleryFallback,
     { cache: false }
   );
 }
@@ -236,5 +277,7 @@ module.exports = {
   getServiceConsultData,
   getServiceDetailSummaryData,
   getServiceDetailContentData,
+  getServiceGalleryData,
+  getServiceGalleryOriginalData,
   getServiceDetailData
 };

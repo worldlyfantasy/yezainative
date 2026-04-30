@@ -1,0 +1,22 @@
+/**
+ * WXML 中不能可靠使用 Array#indexOf/includes，用 WXS 判断选中态。
+ * @see https://developers.weixin.qq.com/community/develop/doc/00060c7dd546a832e29e0be8556400
+ */
+function includes(arr, value) {
+  if (!arr || arr.length === 0) {
+    return false;
+  }
+  var target = value === undefined || value === null ? "" : value + "";
+  var i = 0;
+  var n = arr.length;
+  for (; i < n; i++) {
+    var cur = arr[i];
+    var s = cur === undefined || cur === null ? "" : cur + "";
+    if (s === target) {
+      return true;
+    }
+  }
+  return false;
+}
+
+module.exports.includes = includes;

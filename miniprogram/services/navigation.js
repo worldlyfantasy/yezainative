@@ -61,6 +61,8 @@ function resolveTopLevelRoute(route) {
     normalized.indexOf("pages/profile/") === 0 ||
     normalized.indexOf("pkg/account/favorites/") === 0 ||
     normalized.indexOf("pkg/account/orders/") === 0 ||
+    normalized.indexOf("pkg/account/assets/") === 0 ||
+    normalized.indexOf("pkg/account/travelers/") === 0 ||
     normalized.indexOf("pkg/account/order-detail/") === 0 ||
     normalized.indexOf("pkg/account/payment-result/") === 0
   ) {

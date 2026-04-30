@@ -12,6 +12,11 @@ interface IModal_TravelOrder {
    */
   travelerName?: string;
   /**
+   * 订单联系人姓名
+   * 订单联系人姓名
+   */
+  orderContactName?: string;
+  /**
    * 短编号
    * 短编号
    */
@@ -81,6 +86,11 @@ interface IModal_TravelOrder {
    * 联系人电话
    */
   travelerPhone?: string;
+  /**
+   * 订单联系人电话
+   * 订单联系人电话
+   */
+  orderContactPhone?: string;
   /**
    * 取消时间戳
    * 取消时间戳

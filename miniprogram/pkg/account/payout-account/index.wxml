@@ -1,0 +1,56 @@
+<view class="page-shell payout-page">
+  <text class="back-link" bindtap="goBack">← 返回现金奖励</text>
+  <text class="page-eyebrow">收款信息</text>
+  <text class="page-subtitle payout-intro">收款信息提交后将直接完成登记，并用于分享家活动奖励发放。后续如信息变化，可随时回来修改。</text>
+
+  <view wx:if="{{loading}}" class="section-block paper-block">
+    <text class="section-title">正在读取收款信息</text>
+    <text class="page-subtitle">请稍等片刻，云端状态正在同步。</text>
+  </view>
+
+  <view wx:elif="{{!loggedIn}}" class="section-block paper-block">
+    <text class="section-title">登录后完善收款信息</text>
+    <text class="page-subtitle">登录后，你的分享家现金奖励和收款信息会沉淀在同一个账户下。</text>
+  </view>
+
+  <view wx:elif="{{errorText}}" class="section-block paper-block page-feedback">
+    <text class="page-feedback__title">加载失败</text>
+    <text class="page-feedback__desc">{{errorText}}</text>
+  </view>
+
+  <block wx:else>
+    <view class="section-block paper-block payout-form-block">
+      <view class="traveler-form-group">
+        <text class="traveler-form-group__label">收款人姓名</text>
+        <input class="search-input traveler-form-group__input {{formErrors.accountName ? 'traveler-form-group__input--error' : ''}}" data-field="accountName" placeholder="与银行卡开户名一致" value="{{form.accountName}}" bindinput="onInput" />
+        <text wx:if="{{formErrors.accountName}}" class="traveler-form-group__error">{{formErrors.accountName}}</text>
+      </view>
+
+      <view class="traveler-form-group">
+        <text class="traveler-form-group__label">收款手机号</text>
+        <input class="search-input traveler-form-group__input {{formErrors.phone ? 'traveler-form-group__input--error' : ''}}" data-field="phone" maxlength="11" placeholder="用于收款核验和异常联系" type="number" value="{{form.phone}}" bindinput="onInput" />
+        <text wx:if="{{formErrors.phone}}" class="traveler-form-group__error">{{formErrors.phone}}</text>
+      </view>
+
+      <view class="traveler-form-group">
+        <text class="traveler-form-group__label">开户银行</text>
+        <input class="search-input traveler-form-group__input {{formErrors.bankName ? 'traveler-form-group__input--error' : ''}}" data-field="bankName" placeholder="例如：招商银行杭州分行" value="{{form.bankName}}" bindinput="onInput" />
+        <text wx:if="{{formErrors.bankName}}" class="traveler-form-group__error">{{formErrors.bankName}}</text>
+      </view>
+
+      <view class="traveler-form-group">
+        <text class="traveler-form-group__label">银行卡号</text>
+        <input class="search-input traveler-form-group__input {{formErrors.bankAccountNo ? 'traveler-form-group__input--error' : ''}}" data-field="bankAccountNo" placeholder="用于奖励打款，默认脱敏展示" type="number" value="{{form.bankAccountNo}}" bindinput="onInput" />
+        <text wx:if="{{formErrors.bankAccountNo}}" class="traveler-form-group__error">{{formErrors.bankAccountNo}}</text>
+      </view>
+
+      <view class="traveler-form-group">
+        <text class="traveler-form-group__label">证件后四位</text>
+        <input class="search-input traveler-form-group__input {{formErrors.idNumberLast4 ? 'traveler-form-group__input--error' : ''}}" data-field="idNumberLast4" maxlength="4" placeholder="选填，用于财务二次核验" value="{{form.idNumberLast4}}" bindinput="onInput" />
+        <text wx:if="{{formErrors.idNumberLast4}}" class="traveler-form-group__error">{{formErrors.idNumberLast4}}</text>
+      </view>
+    </view>
+
+    <button class="primary-button payout-submit-button {{saving ? 'payout-submit-button--disabled' : ''}}" bindtap="submit" disabled="{{saving}}">{{saving ? '保存中...' : '保存提交'}}</button>
+  </block>
+</view>

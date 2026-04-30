@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const {
   parseIdeaBody,
   renderIdeaBodyRichText
-} = require("../miniprogram/utils/content");
+} = require("../miniprogram/pkg/content/utils/content");
 
 test("idea body parser recognizes headings, quotes, paragraphs and horizontal rules", () => {
   assert.deepEqual(

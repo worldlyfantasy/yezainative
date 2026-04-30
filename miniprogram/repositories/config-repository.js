@@ -5,6 +5,7 @@ const {
   mapServiceDetailPageConfig,
   mapPaymentResultPageConfig,
   mapOrderDetailPageConfig,
+  mapProfilePageConfig,
   mapFavoritesPageConfig,
   mapArticleBridgePageConfig
 } = require("../mappers/config");
@@ -25,18 +26,32 @@ function getCachedValue(methodName) {
   return cached.value;
 }
 
-async function invoke(methodName, mapper) {
-  const cachedValue = getCachedValue(methodName);
-  if (cachedValue !== undefined) {
-    return cachedValue;
+async function invoke(methodName, mapper, options) {
+  const settings = Object.assign(
+    {
+      cache: true,
+      ttlMs: CONFIG_CACHE_TTL_MS
+    },
+    options || {}
+  );
+
+  if (settings.cache) {
+    const cachedValue = getCachedValue(methodName);
+    if (cachedValue !== undefined) {
+      return cachedValue;
+    }
   }
 
   const payload = await cloudConfigApi[methodName].apply(cloudConfigApi);
   const mapped = mapper(payload);
-  responseCache.set(methodName, {
-    expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,
-    value: mapped
-  });
+
+  if (settings.cache && settings.ttlMs > 0) {
+    responseCache.set(methodName, {
+      expiresAt: Date.now() + settings.ttlMs,
+      value: mapped
+    });
+  }
+
   return mapped;
 }
 
@@ -60,6 +75,12 @@ function getOrderDetailPageConfig() {
   return invoke("getOrderDetailPageConfig", mapOrderDetailPageConfig);
 }
 
+function getProfilePageConfig() {
+  return invoke("getProfilePageConfig", mapProfilePageConfig, {
+    cache: false
+  });
+}
+
 function getFavoritesPageConfig() {
   return invoke("getFavoritesPageConfig", mapFavoritesPageConfig);
 }
@@ -74,6 +95,7 @@ module.exports = {
   getServiceDetailPageConfig,
   getPaymentResultPageConfig,
   getOrderDetailPageConfig,
+  getProfilePageConfig,
   getFavoritesPageConfig,
   getArticleBridgePageConfig
 };

@@ -1,6 +1,10 @@
+const { normalizeImageRef } = require("../services/image-ref");
+
 function isPlainObject(value) {
   return Boolean(value) && Object.prototype.toString.call(value) === "[object Object]";
 }
+
+const DISPLAY_SERVICE_TYPES = ["在地体验", "短途旅行", "长途旅行", "国际旅行"];
 
 function parseDateOnly(dateValue) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateValue || "").trim());
@@ -70,6 +74,71 @@ function buildTripDateRange(order) {
   }
 
   return `${startDate} ～ ${endDate}`;
+}
+
+function inferDisplayServiceType(order) {
+  const period = getOrderTravelPeriod(order);
+  const startDate = parseDateOnly(period && period.dateStart ? period.dateStart : "");
+  const endDate = parseDateOnly(period && period.dateEnd ? period.dateEnd : period && period.dateStart ? period.dateStart : "");
+
+  if (!startDate || !endDate) {
+    return "短途旅行";
+  }
+
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const durationDays = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / oneDayMs) + 1);
+
+  if (durationDays >= 4) {
+    return "长途旅行";
+  }
+
+  if (durationDays >= 2) {
+    return "短途旅行";
+  }
+
+  return "在地体验";
+}
+
+function normalizeOrderServiceType(order) {
+  const serviceType = String(
+    (order && order.serviceSnapshot && order.serviceSnapshot.serviceType)
+      || (order && order.serviceType)
+      || ""
+  ).trim();
+
+  if (DISPLAY_SERVICE_TYPES.includes(serviceType)) {
+    return serviceType;
+  }
+
+  return inferDisplayServiceType(order);
+}
+
+function getOrderDurationDays(order) {
+  const period = getOrderTravelPeriod(order);
+  const startDate = parseDateOnly(period && period.dateStart ? period.dateStart : "");
+  const endDate = parseDateOnly(period && period.dateEnd ? period.dateEnd : period && period.dateStart ? period.dateStart : "");
+
+  if (!startDate || !endDate) {
+    return 0;
+  }
+
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  return Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / oneDayMs) + 1);
+}
+
+function shouldShowOrderRoomingPreference(order, serviceType) {
+  const durationDays = getOrderDurationDays(order);
+  if (durationDays > 0) {
+    return durationDays > 1;
+  }
+
+  return serviceType === "长途旅行" || serviceType === "国际旅行";
+}
+
+function formatCurrency(amount) {
+  const numericAmount = Number(amount);
+  const normalizedAmount = Number.isFinite(numericAmount) ? numericAmount : 0;
+  return `¥${normalizedAmount}`;
 }
 
 function getDisplayStatusKey(order) {
@@ -154,14 +223,31 @@ function buildOrderCard(order) {
   const statusMeta = getStatusMeta();
   const displayStatusKey = getDisplayStatusKey(order);
   const displayStatus = statusMeta[displayStatusKey] || statusMeta[order.status];
+  const peopleCount = Number.isFinite(Number(order && order.peopleCount)) && Number(order.peopleCount) > 0
+    ? Number(order.peopleCount)
+    : 1;
+  const amount = Number.isFinite(Number(order && order.amount)) ? Number(order.amount) : 0;
+  const discount = Number.isFinite(Number(order && order.discount)) ? Number(order.discount) : 0;
+  const payable = Number.isFinite(Number(order && order.payable)) ? Number(order.payable) : amount - discount;
+  const serviceSnapshot = isPlainObject(order && order.serviceSnapshot) ? order.serviceSnapshot : {};
+  const normalizedCover = normalizeImageRef(serviceSnapshot.cover || order.cover, "card");
+  const normalizedServiceType = normalizeOrderServiceType(order);
+
   return Object.assign({}, order, {
     createdAt: order.createdAt,
     displayOrderNo: buildOrderDisplayNo(order),
     idPrefixText: "报名",
     statusText: displayStatus ? displayStatus.label : order.statusText,
     displayStatusKey,
-    amountText: `¥${order.amount}`,
-    payableText: `¥${order.payable}`,
+    cover: normalizedCover,
+    serviceType: normalizedServiceType,
+    showRoomingPreference: shouldShowOrderRoomingPreference(order, normalizedServiceType),
+    amountText: formatCurrency(amount),
+    unitPriceText: formatCurrency(Math.round(amount / peopleCount)),
+    peopleCountText: `${peopleCount}人`,
+    discountText: formatCurrency(discount),
+    payableText: formatCurrency(payable),
+    totalPriceText: formatCurrency(payable),
     travelDateText: buildTripDateRange(order),
     canContinuePay: false,
     primaryActionText: "查看详情"

@@ -1,6 +1,8 @@
 const {
   getServiceDetailSummaryData,
-  getServiceDetailContentData
+  getServiceDetailContentData,
+  getServiceGalleryData,
+  getServiceGalleryOriginalData
 } = require("../../../repositories/content-repository");
 const { getServiceDetailPageConfig } = require("../../../repositories/config-repository");
 const { isFavorited, toggleFavorite } = require("../../../repositories/transaction-repository");
@@ -11,7 +13,6 @@ const { isAuditMode, pickAuditText } = require("../../../utils/audit");
 const {
   getExceededOrderPeopleLimitMessage,
   getInsufficientSeatsMessage,
-  getOrderPeopleLimitMessage,
   hasEnoughSeats,
   normalizeOrderPeopleCount
 } = require("../period-seat");
@@ -21,6 +22,7 @@ const {
 } = require("./version-state");
 const { calcDurationLabel } = require("./duration-state");
 const { enablePageShareMenus, createShareAppMessage, createShareTimeline } = require("../../../utils/share");
+const { normalizeRouteTypeLabel } = require("../../../constants/journey");
 
 const SECTION_SCROLL_DURATION = 320;
 
@@ -177,8 +179,15 @@ function buildTravelDetailState(travelDetail, preferredVersionName) {
   };
 }
 
+function formatFullGroupSize(period) {
+  const totalSeats = Number(period && period.totalSeats);
+  return Number.isFinite(totalSeats) && totalSeats > 0 ? `${totalSeats}人` : "待确认";
+}
+
 function buildServiceMetaCards(durationLabel, options) {
   const canJumpToItinerary = !(options && options.disableDurationAction);
+  const selectedPeriod = options && options.selectedPeriod;
+  const travelDetail = options && options.travelDetail;
   return [
     {
       key: "duration",
@@ -187,15 +196,32 @@ function buildServiceMetaCards(durationLabel, options) {
       clickable: canJumpToItinerary
     },
     {
-      key: "consultation",
-      label: "报名咨询",
-      value: "路线专属客服",
-      clickable: true
+      key: "fullGroupSize",
+      label: "满团人数",
+      value: formatFullGroupSize(selectedPeriod),
+      clickable: false
+    },
+    {
+      key: "meetingPoint",
+      label: "集合地",
+      value: String(travelDetail && travelDetail.meetingPoint || "").trim() || "待确认",
+      clickable: false
+    },
+    {
+      key: "dismissalPoint",
+      label: "解散地",
+      value: String(travelDetail && travelDetail.dismissalPoint || "").trim() || "待确认",
+      clickable: false
     }
   ];
 }
 
 function getCreatorQuoteText(service, travelDetail) {
+  const creatorMessage = String(service && service.creatorMessage ? service.creatorMessage : "").trim();
+  if (creatorMessage) {
+    return creatorMessage;
+  }
+
   const source = travelDetail && travelDetail.overview && travelDetail.overview.whyJoinText
     ? String(travelDetail.overview.whyJoinText)
     : "";
@@ -205,6 +231,94 @@ function getCreatorQuoteText(service, travelDetail) {
   }
 
   return String(service && service.summary ? service.summary : "").trim();
+}
+
+function formatGalleryLabel(label) {
+  const normalized = String(label || "").trim();
+  if (normalized === "封面") {
+    return "精选";
+  }
+  return normalized;
+}
+
+function normalizeMediaTabs(mediaTabs, hasGalleryGroups) {
+  const normalizedTabs = Array.isArray(mediaTabs)
+    ? mediaTabs.map((item, index) => {
+      const images = Array.isArray(item && item.images)
+        ? item.images.map((image) => String(image || "").trim()).filter(Boolean)
+        : [];
+      const rawLabel = String(item && item.label ? item.label : "").trim();
+      const label = formatGalleryLabel(rawLabel) || `图集${index + 1}`;
+
+      return {
+        key: item && item.key ? item.key : `gallery-${index}`,
+        label,
+        images,
+        imageCount: Number(item && item.imageCount) || images.length
+      };
+    }).filter((item) => item.images.length || item.imageCount)
+    : [];
+
+  if (hasGalleryGroups || normalizedTabs.length <= 1) {
+    return normalizedTabs;
+  }
+
+  const images = Array.from(new Set(
+    normalizedTabs.flatMap((item) => Array.isArray(item.images) ? item.images : []).filter(Boolean)
+  ));
+  return images.length
+    ? [{
+      key: "cover",
+      label: "精选",
+      images,
+      imageCount: images.length
+    }]
+    : [];
+}
+
+function buildGalleryCounterText(label, total) {
+  const count = Number(total) || 0;
+  if (count <= 4) {
+    return "";
+  }
+  return `1/${count}`;
+}
+
+function buildGalleryPreviewState(photoGallery, heroCover, mediaTabs, activeIndex, hasGalleryGroups, photoTotal) {
+  const normalizedTabs = normalizeMediaTabs(mediaTabs, hasGalleryGroups);
+  const galleryTabs = hasGalleryGroups ? normalizedTabs : [];
+  const safeActiveIndex = Number.isFinite(activeIndex)
+    ? Math.max(0, Math.min(activeIndex, Math.max(galleryTabs.length - 1, 0)))
+    : 0;
+  const activeTab = galleryTabs[safeActiveIndex] || null;
+  const fallbackImages = Array.isArray(photoGallery)
+    ? photoGallery.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
+  const previewImages = activeTab && activeTab.images.length ? activeTab.images : fallbackImages;
+  const currentLabel = activeTab ? activeTab.label : "创作者实拍";
+  const currentTotal = activeTab ? activeTab.imageCount : Number(photoTotal) || previewImages.length;
+
+  return {
+    galleryHero: previewImages[0] || heroCover || "",
+    galleryHeroMode: currentTotal === 1 ? "aspectFit" : "aspectFill",
+    galleryThumbs: previewImages.slice(1, 4),
+    mediaTabs: normalizedTabs,
+    galleryTabs,
+    activeGalleryTabIndex: safeActiveIndex,
+    currentGalleryLabel: currentLabel,
+    currentGalleryTotal: currentTotal,
+    galleryCounterText: buildGalleryCounterText(currentLabel, currentTotal),
+    galleryLayoutClass: currentTotal === 1
+      ? "service-gallery--single"
+      : currentTotal === 2 ? "service-gallery--two" : "",
+    photoGallery: previewImages
+  };
+}
+
+function normalizePreviewUrls(images) {
+  return Array.isArray(images)
+    ? images.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
 }
 
 Page({
@@ -240,16 +354,30 @@ Page({
     creatorQuoteText: "",
     relatedDestinations: [],
     heroCover: "",
+    galleryHero: "",
+    galleryHeroMode: "aspectFill",
+    galleryThumbs: [],
+    galleryTabs: [],
+    hasStructuredGallery: false,
+    activeGalleryTabIndex: 0,
+    currentGalleryLabel: "",
+    currentGalleryTotal: 0,
+    galleryCounterText: "",
+    galleryLayoutClass: "",
     photoGallery: [],
     photoTotal: 0,
     mediaTabs: [],
+    galleryLoaded: false,
+    galleryLoading: false,
+    galleryOriginalTabs: [],
+    galleryOriginalLoaded: false,
+    galleryOriginalLoading: false,
     activeMediaTabIndex: 0,
     mediaSheetVisible: false,
     mediaSheetAnimating: false,
     consultSheetVisible: false,
     consultSheetAnimating: false,
     consultWeChatQr: "",
-    consultGroupQr: "",
     consultSheetTitle: "",
     consultCardLabel: "",
     consultCardDesc: "",
@@ -270,7 +398,7 @@ Page({
     periodSheetDates: [],
     periodSheetSelectedDateId: null,
     periodSheetPeople: 1,
-    periodSheetPeopleLimitText: getOrderPeopleLimitMessage(),
+    periodSheetPeopleLimitText: "",
     periodSheetTotalPrice: 0,
     periodSheetCanCheckout: false,
     timelineTitleText: "",
@@ -282,6 +410,8 @@ Page({
   async onLoad(options) {
     this.pageScrollTop = 0;
     this.isPageActive = true;
+    this.galleryRequestPromise = null;
+    this.galleryOriginalRequestPromise = null;
     enablePageShareMenus();
 
     try {
@@ -309,12 +439,24 @@ Page({
 
       const originalService = payload.service || {};
       const routeTags = Array.isArray(originalService.tags)
-        ? originalService.tags.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 3)
+        ? Array.from(new Set(
+          originalService.tags
+            .map((item) => normalizeRouteTypeLabel(item))
+            .filter(Boolean)
+        )).slice(0, 3)
         : [];
       const summaryDetailState = buildTravelDetailState(null, "");
       const summaryMetaCards = buildServiceMetaCards(
         calcDurationLabel(payload, summaryDetailState.travelDetail),
         { disableDurationAction: true }
+      );
+      const galleryPreviewState = buildGalleryPreviewState(
+        payload.photoGallery,
+        payload.heroCover,
+        payload.mediaTabs,
+        0,
+        Boolean(payload.hasGalleryGroups),
+        payload.photoTotal
       );
 
       this.setData(
@@ -328,14 +470,28 @@ Page({
             creatorQuoteText: getCreatorQuoteText(originalService, null),
             relatedDestinations: payload.relatedDestinations || [],
             heroCover: payload.heroCover || "",
-            photoGallery: payload.photoGallery || [],
+            galleryHero: galleryPreviewState.galleryHero,
+            galleryHeroMode: galleryPreviewState.galleryHeroMode,
+            galleryThumbs: galleryPreviewState.galleryThumbs,
+            hasStructuredGallery: Boolean(payload.hasGalleryGroups),
+            galleryTabs: galleryPreviewState.galleryTabs,
+            activeGalleryTabIndex: galleryPreviewState.activeGalleryTabIndex,
+            currentGalleryLabel: galleryPreviewState.currentGalleryLabel,
+            currentGalleryTotal: galleryPreviewState.currentGalleryTotal,
+            galleryCounterText: galleryPreviewState.galleryCounterText,
+            galleryLayoutClass: galleryPreviewState.galleryLayoutClass,
+            photoGallery: galleryPreviewState.photoGallery,
             photoTotal: payload.photoTotal || 0,
-            mediaTabs: payload.mediaTabs || [],
+            mediaTabs: galleryPreviewState.mediaTabs,
+            galleryLoaded: false,
+            galleryLoading: false,
+            galleryOriginalTabs: [],
+            galleryOriginalLoaded: false,
+            galleryOriginalLoading: false,
             groupPeriods: [],
             showGroupPeriodVersionTags: false,
             selectedPeriodId: null,
             consultWeChatQr: pageConfig.consultWeChatQr,
-            consultGroupQr: pageConfig.consultGroupQr,
             consultSheetTitle: pageConfig.consultSheetTitle,
             consultCardLabel: pageConfig.consultCardLabel,
             consultCardDesc: pageConfig.consultCardDesc,
@@ -352,7 +508,10 @@ Page({
             isAutoScrolling: false
           },
           summaryDetailState
-        )
+        ),
+        () => {
+          this.ensureGalleryData();
+        }
       );
 
       this.loadFavoriteState(originalService.slug);
@@ -391,6 +550,8 @@ Page({
 
   onUnload() {
     this.isPageActive = false;
+    this.galleryRequestPromise = null;
+    this.galleryOriginalRequestPromise = null;
     if (this.autoScrollTimer) {
       clearTimeout(this.autoScrollTimer);
     }
@@ -424,11 +585,16 @@ Page({
     });
   },
 
-  refreshDurationMetaCard() {
+  refreshDurationMetaCard(selectedPeriodOverride) {
+    const selectedPeriod = selectedPeriodOverride || getSelectedPeriod(this.data.groupPeriods, this.data.selectedPeriodId);
     this.setData({
       serviceMetaCards: buildServiceMetaCards(
         calcDurationLabel({ groupPeriods: this.data.groupPeriods }, this.data.travelDetail),
-        { disableDurationAction: !this.data.travelDetail }
+        {
+          disableDurationAction: !this.data.travelDetail,
+          selectedPeriod,
+          travelDetail: this.data.travelDetail
+        }
       )
     });
   },
@@ -479,18 +645,18 @@ Page({
             displayItinerary: detailState.displayItinerary,
             costTableGroups: detailState.costTableGroups,
             activeSectionKey: detailState.activeSectionKey,
-            photoGallery: payload.photoGallery || this.data.photoGallery,
-            photoTotal: payload.photoTotal || this.data.photoTotal,
-            mediaTabs: payload.mediaTabs || [],
             groupPeriods,
             showGroupPeriodVersionTags,
             selectedPeriodId: selectedPeriod ? selectedPeriod.id : null,
-            consultWeChatQr:
-              (payload.travelDetail && payload.travelDetail.consultWeChatQr) || pageConfig.consultWeChatQr
+            consultWeChatQr: pageConfig.consultWeChatQr || ""
           },
           {
             serviceMetaCards: buildServiceMetaCards(
-              calcDurationLabel({ groupPeriods }, detailState.travelDetail)
+              calcDurationLabel({ groupPeriods }, detailState.travelDetail),
+              {
+                selectedPeriod,
+                travelDetail: detailState.travelDetail
+              }
             )
           }
         ),
@@ -524,7 +690,7 @@ Page({
         displayItinerary: itineraryState.displayItinerary
       },
       () => {
-        this.refreshDurationMetaCard();
+        this.refreshDurationMetaCard(selectedPeriod);
         this.scheduleMeasureTravelDetailLayout();
       }
     );
@@ -701,6 +867,45 @@ Page({
     }
   },
 
+  previewTravelDetailImages(images, currentIndex) {
+    const previewUrls = normalizePreviewUrls(images);
+    if (!previewUrls.length) {
+      return;
+    }
+
+    const safeIndex = Number.isFinite(currentIndex)
+      ? Math.max(0, Math.min(currentIndex, previewUrls.length - 1))
+      : 0;
+    wx.previewImage({
+      current: previewUrls[safeIndex] || previewUrls[0],
+      urls: previewUrls
+    });
+  },
+
+  onOverviewImageTap() {
+    const overview = this.data.travelDetail && this.data.travelDetail.overview;
+    const coverImage = overview && overview.coverImage ? String(overview.coverImage).trim() : "";
+    if (!coverImage) {
+      return;
+    }
+
+    this.previewTravelDetailImages([coverImage], 0);
+  },
+
+  onHighlightImageTap(event) {
+    const cardIndex = Number(event.currentTarget.dataset.cardIndex);
+    const imageIndex = Number(event.currentTarget.dataset.imageIndex);
+    const highlights = this.data.travelDetail && Array.isArray(this.data.travelDetail.highlights)
+      ? this.data.travelDetail.highlights
+      : [];
+    const highlight = Number.isFinite(cardIndex) ? highlights[cardIndex] : null;
+    if (!highlight) {
+      return;
+    }
+
+    this.previewTravelDetailImages(highlight.images, imageIndex);
+  },
+
   goBack() {
     goTopLevel(TOP_LEVEL_ROUTES.journeys);
   },
@@ -723,10 +928,6 @@ Page({
           key: "itinerary"
         }
       });
-      return;
-    }
-    if (key === "consultation") {
-      this.openConsultSheet();
       return;
     }
   },
@@ -808,6 +1009,29 @@ Page({
     }, 260);
   },
 
+  onConsultQrTap() {
+    const qrUrl = String(this.data.consultWeChatQr || "").trim();
+    if (!qrUrl) {
+      wx.showToast({
+        title: "客服二维码暂不可用",
+        icon: "none"
+      });
+      return;
+    }
+
+    wx.previewImage({
+      current: qrUrl,
+      urls: [qrUrl],
+      showmenu: true,
+      fail: () => {
+        wx.showToast({
+          title: "二维码打开失败",
+          icon: "none"
+        });
+      }
+    });
+  },
+
   updatePeriodSheetDates(versionKey, monthLabel, preferredPeriodId) {
     const versionFiltered = filterPeriodsByVersion(this.data.groupPeriods, versionKey);
     const months = getMonthsFromPeriods(versionFiltered);
@@ -862,6 +1086,7 @@ Page({
       periodSheetDates: [],
       periodSheetSelectedDateId: period.id,
       periodSheetPeople: normalizeOrderPeopleCount(1, 1),
+      periodSheetPeopleLimitText: "",
       periodSheetTotalPrice: period.price * 1,
       periodSheetCanCheckout: isBookablePeriod(period) && hasEnoughSeats(period, 1)
     });
@@ -923,6 +1148,9 @@ Page({
     const n = this.data.periodSheetPeople + 1;
     const peopleLimitError = getExceededOrderPeopleLimitMessage(n);
     if (peopleLimitError) {
+      this.setData({
+        periodSheetPeopleLimitText: peopleLimitError
+      });
       wx.showToast({
         title: peopleLimitError,
         icon: "none"
@@ -941,6 +1169,7 @@ Page({
     const price = selected ? selected.price * n : 0;
     this.setData({
       periodSheetPeople: n,
+      periodSheetPeopleLimitText: "",
       periodSheetTotalPrice: price,
       periodSheetCanCheckout: isBookablePeriod(selected) && hasEnoughSeats(selected, n)
     });
@@ -953,6 +1182,7 @@ Page({
     const price = selected ? selected.price * n : 0;
     this.setData({
       periodSheetPeople: n,
+      periodSheetPeopleLimitText: "",
       periodSheetTotalPrice: price,
       periodSheetCanCheckout: isBookablePeriod(selected) && hasEnoughSeats(selected, n)
     });
@@ -1073,8 +1303,138 @@ Page({
     goTopLevel(TOP_LEVEL_ROUTES.profile);
   },
 
+  async ensureGalleryData() {
+    if (this.data.galleryLoaded) {
+      return {
+        mediaTabs: this.data.mediaTabs || [],
+        photoTotal: this.data.photoTotal || 0
+      };
+    }
+
+    if (!this.data.service || !this.data.service.slug) {
+      return null;
+    }
+
+    if (!this.galleryRequestPromise) {
+      this.setData({
+        galleryLoading: true
+      });
+
+      this.galleryRequestPromise = getServiceGalleryData(this.data.service.slug)
+        .then((payload) => {
+          if (!this.isPageActive || !payload) {
+            return payload;
+          }
+
+          const hasStructuredGallery = Boolean(payload.hasGalleryGroups);
+          const mediaTabs = normalizeMediaTabs(payload.mediaTabs, hasStructuredGallery);
+          const imageCount = mediaTabs.flatMap((item) => item.images || []).filter(Boolean).length;
+          const galleryPreviewState = buildGalleryPreviewState(
+            this.data.photoGallery,
+            this.data.heroCover,
+            mediaTabs,
+            this.data.activeGalleryTabIndex,
+            hasStructuredGallery,
+            Number(payload.photoTotal) || this.data.photoTotal || imageCount
+          );
+
+          this.setData({
+            mediaTabs,
+            galleryHero: galleryPreviewState.galleryHero || this.data.galleryHero,
+            galleryHeroMode: galleryPreviewState.galleryHeroMode,
+            galleryThumbs: galleryPreviewState.galleryThumbs,
+            galleryTabs: galleryPreviewState.galleryTabs,
+            hasStructuredGallery,
+            activeGalleryTabIndex: galleryPreviewState.activeGalleryTabIndex,
+            activeMediaTabIndex: galleryPreviewState.activeGalleryTabIndex,
+            currentGalleryLabel: galleryPreviewState.currentGalleryLabel,
+            currentGalleryTotal: galleryPreviewState.currentGalleryTotal,
+            galleryCounterText: galleryPreviewState.galleryCounterText,
+            galleryLayoutClass: galleryPreviewState.galleryLayoutClass,
+            photoGallery: galleryPreviewState.photoGallery,
+            galleryLoaded: true,
+            galleryLoading: false,
+            photoTotal: Number(payload.photoTotal) || this.data.photoTotal || imageCount
+          });
+
+          return {
+            mediaTabs,
+            photoTotal: Number(payload.photoTotal) || imageCount
+          };
+        })
+        .catch((error) => {
+          console.error("Failed to load service gallery", error);
+          if (this.isPageActive) {
+            this.setData({
+              galleryLoading: false
+            });
+          }
+          return null;
+        })
+        .finally(() => {
+          this.galleryRequestPromise = null;
+        });
+    }
+
+    return this.galleryRequestPromise;
+  },
+
+  async ensureGalleryOriginalData() {
+    if (this.data.galleryOriginalLoaded) {
+      return {
+        mediaTabs: this.data.galleryOriginalTabs || [],
+        photoTotal: this.data.photoTotal || 0
+      };
+    }
+
+    if (!this.data.service || !this.data.service.slug) {
+      return null;
+    }
+
+    if (!this.galleryOriginalRequestPromise) {
+      this.setData({
+        galleryOriginalLoading: true
+      });
+
+      this.galleryOriginalRequestPromise = getServiceGalleryOriginalData(this.data.service.slug)
+        .then((payload) => {
+          if (!this.isPageActive || !payload) {
+            return payload;
+          }
+
+          const mediaTabs = normalizeMediaTabs(payload.mediaTabs, Boolean(payload.hasGalleryGroups));
+
+          this.setData({
+            galleryOriginalTabs: mediaTabs,
+            galleryOriginalLoaded: true,
+            galleryOriginalLoading: false,
+            photoTotal: Number(payload.photoTotal) || this.data.photoTotal
+          });
+
+          return {
+            mediaTabs,
+            photoTotal: Number(payload.photoTotal) || this.data.photoTotal
+          };
+        })
+        .catch((error) => {
+          console.error("Failed to load service gallery originals", error);
+          if (this.isPageActive) {
+            this.setData({
+              galleryOriginalLoading: false
+            });
+          }
+          return null;
+        })
+        .finally(() => {
+          this.galleryOriginalRequestPromise = null;
+        });
+    }
+
+    return this.galleryOriginalRequestPromise;
+  },
+
   openMediaSheet() {
-    if (!this.data.mediaTabs || !this.data.mediaTabs.length) {
+    if (!(this.data.photoTotal || this.data.galleryHero)) {
       return;
     }
     this.setData(
@@ -1090,6 +1450,8 @@ Page({
         }, 20);
       }
     );
+
+    this.ensureGalleryData();
   },
 
   closeMediaSheet() {
@@ -1113,5 +1475,75 @@ Page({
         activeMediaTabIndex: index
       });
     }
+  },
+
+  onGalleryTabTap(event) {
+    const index = Number(event.currentTarget.dataset.index);
+    if (Number.isNaN(index)) {
+      return;
+    }
+
+    const galleryPreviewState = buildGalleryPreviewState(
+      this.data.photoGallery,
+      this.data.heroCover,
+      this.data.mediaTabs,
+      index,
+      this.data.hasStructuredGallery,
+      this.data.photoTotal
+    );
+
+    this.setData({
+      galleryHero: galleryPreviewState.galleryHero,
+      galleryHeroMode: galleryPreviewState.galleryHeroMode,
+      galleryThumbs: galleryPreviewState.galleryThumbs,
+      galleryTabs: galleryPreviewState.galleryTabs,
+      activeGalleryTabIndex: galleryPreviewState.activeGalleryTabIndex,
+      activeMediaTabIndex: galleryPreviewState.activeGalleryTabIndex,
+      currentGalleryLabel: galleryPreviewState.currentGalleryLabel,
+      currentGalleryTotal: galleryPreviewState.currentGalleryTotal,
+      galleryCounterText: galleryPreviewState.galleryCounterText,
+      galleryLayoutClass: galleryPreviewState.galleryLayoutClass,
+      photoGallery: galleryPreviewState.photoGallery
+    });
+  },
+
+  onMediaImageTap(event) {
+    const tabIndex = Number(event.currentTarget.dataset.tabIndex);
+    const imageIndex = Number(event.currentTarget.dataset.imageIndex);
+    const mediaTabs = Array.isArray(this.data.mediaTabs) ? this.data.mediaTabs : [];
+    const tab = mediaTabs[tabIndex];
+    if (!tab) {
+      return;
+    }
+
+    this.ensureGalleryOriginalData().then((galleryData) => {
+      const originalTabs = galleryData && Array.isArray(galleryData.mediaTabs)
+        ? galleryData.mediaTabs
+        : [];
+      const originalTab = originalTabs[tabIndex];
+      const previewUrls = Array.isArray(originalTab && originalTab.images)
+        ? originalTab.images.filter(Boolean)
+        : Array.isArray(tab.images)
+          ? tab.images.filter(Boolean)
+          : [];
+      if (!previewUrls.length) {
+        return;
+      }
+
+      const safeIndex = Number.isFinite(imageIndex)
+        ? Math.max(0, Math.min(imageIndex, previewUrls.length - 1))
+        : 0;
+      wx.previewImage({
+        current: previewUrls[safeIndex] || previewUrls[0],
+        urls: previewUrls
+      });
+    });
+  },
+
+  onGalleryAreaTap() {
+    if (!(this.data.galleryHero || this.data.photoGallery.length)) {
+      return;
+    }
+    this.openMediaSheet();
   }
 });

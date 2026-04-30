@@ -5,6 +5,7 @@ const {
   normalizeDestinationAssetFields,
   normalizeHeroSlides,
   normalizeIdeaAssetFields,
+  normalizeImageRef,
   normalizeServiceAssetFields
 } = require("./image-ref");
 
@@ -129,45 +130,61 @@ const SERVICE_TYPE_OPTIONS = ["在地体验", "短途旅行", "长途旅行", "�
 const LEGACY_SERVICE_TYPE_OPTIONS = ["带团旅行", "定制规划", "路线设计"];
 const DEFAULT_SERVICE_TYPE = "短途旅行";
 const ROUTE_TAG_OPTIONS = [
-  "城市漫游",
-  "慢旅行",
-  "徒步与自然",
-  "度假放松",
-  "亲子&逆向亲子",
-  "人宠",
-  "摄影创作",
-  "瑜伽疗愈",
+  "山野",
+  "城市",
+  "乡土",
+  "户外",
+  "研学",
+  "文化",
+  "内在成长",
+  "家庭",
   "特殊节庆"
 ];
-const CREATOR_TAG_OPTIONS = [
-  "自然野行",
-  "在地人文",
-  "城市探索",
-  "公路旅行",
-  "影像记录",
-  "身心疗愈",
-  "研学观察",
-  "风物美食",
-  "亲子同行",
-  "宠物同行"
-];
+const LEGACY_ROUTE_TAG_ALIASES = {
+  "城市漫游": "城市",
+  "慢旅行": "文化",
+  "徒步与自然": "户外",
+  "徒步自然": "户外",
+  "度假放松": "山野",
+  "亲子&逆向亲子": "家庭",
+  "人宠": "家庭",
+  "摄影创作": "研学",
+  "瑜伽疗愈": "内在成长",
+  "特殊节庆": "特殊节庆"
+};
 const IDEA_THEME_OPTIONS = [
-  { key: "hiking-nature", label: "徒步自然" },
-  { key: "city-walk", label: "城市漫游" },
-  { key: "local-life", label: "在地生活" },
-  { key: "craft-labor", label: "劳动手艺" },
-  { key: "reset-recovery", label: "疲惫重置" },
-  { key: "sensory-notes", label: "感官采集" },
-  { key: "inner-growth", label: "内在成长" }
+  { key: "xiaoye-travel-notes", label: "小野旅记" },
+  { key: "yezai-traveler-voice", label: "野哉旅人说" },
+  { key: "xiaoye-reflections", label: "小野行思" },
+  { key: "yezai-field-notes", label: "野哉采风" }
 ];
-const CUSTOM_IDEA_THEME_KEY = "custom";
 const IDEA_SOURCE_TYPES = ["mini", "wechat", "hybrid"];
 const DEFAULT_PUBLIC_IDEA_SOURCE_TYPE = "mini";
 const DEFAULT_IDEA_READ_MORE_TEXT = "阅读全文";
+const DEFAULT_IDEA_THEME_KEY = "yezai-field-notes";
 const IDEA_THEME_LABEL_MAP = IDEA_THEME_OPTIONS.reduce((map, item) => {
   map[item.key] = item.label;
   return map;
 }, {});
+const LEGACY_IDEA_THEME_KEY_ALIASES = {
+  "hiking-nature": "xiaoye-travel-notes",
+  "city-walk": "xiaoye-travel-notes",
+  "local-life": "xiaoye-travel-notes",
+  "craft-labor": "yezai-field-notes",
+  "reset-recovery": "yezai-field-notes",
+  "sensory-notes": "yezai-field-notes",
+  "inner-growth": "xiaoye-reflections",
+  "custom": ""
+};
+const LEGACY_IDEA_THEME_LABEL_ALIASES = {
+  "徒步自然": "xiaoye-travel-notes",
+  "城市漫游": "xiaoye-travel-notes",
+  "在地生活": "xiaoye-travel-notes",
+  "劳动手艺": "yezai-field-notes",
+  "疲惫重置": "yezai-field-notes",
+  "感官采集": "yezai-field-notes",
+  "内在成长": "xiaoye-reflections"
+};
 const CREATOR_CARD_COLLECTION_FIELDS = {
   id: true,
   slug: true,
@@ -195,7 +212,9 @@ const DESTINATION_CARD_COLLECTION_FIELDS = {
 const DESTINATION_NAME_COLLECTION_FIELDS = {
   slug: true,
   name: true,
-  status: true
+  status: true,
+  regionCode: true,
+  cover: true
 };
 const SERVICE_LIST_COLLECTION_FIELDS = {
   id: true,
@@ -205,6 +224,8 @@ const SERVICE_LIST_COLLECTION_FIELDS = {
   name: true,
   creatorId: true,
   creatorRoles: true,
+  creatorMessage: true,
+  regionCodes: true,
   destinationSlugs: true,
   summary: true,
   durationTag: true,
@@ -222,6 +243,8 @@ const SERVICE_DETAIL_SUMMARY_COLLECTION_FIELDS = {
   name: true,
   creatorId: true,
   creatorRoles: true,
+  creatorMessage: true,
+  regionCodes: true,
   destinationSlugs: true,
   summary: true,
   styles: true,
@@ -232,13 +255,44 @@ const SERVICE_DETAIL_SUMMARY_COLLECTION_FIELDS = {
   galleryGroupsCard: true,
   status: true
 };
-const SERVICE_DETAIL_CONTENT_COLLECTION_FIELDS = Object.assign({}, SERVICE_DETAIL_SUMMARY_COLLECTION_FIELDS, {
+const SERVICE_DETAIL_CONTENT_COLLECTION_FIELDS = {
+  id: true,
+  slug: true,
+  cover: true,
+  coverDetail: true,
+  type: true,
+  name: true,
+  creatorId: true,
+  creatorRoles: true,
+  creatorMessage: true,
+  regionCodes: true,
+  destinationSlugs: true,
+  summary: true,
+  styles: true,
+  tags: true,
   groupPeriods: true,
-  travelDetail: true
-});
-const SERVICE_BOOKING_COLLECTION_FIELDS = Object.assign({}, SERVICE_DETAIL_SUMMARY_COLLECTION_FIELDS, {
-  groupPeriods: true
-});
+  travelDetail: true,
+  status: true
+};
+const SERVICE_GALLERY_COLLECTION_FIELDS = Object.assign({}, SERVICE_DETAIL_SUMMARY_COLLECTION_FIELDS);
+const SERVICE_BOOKING_COLLECTION_FIELDS = {
+  id: true,
+  slug: true,
+  cover: true,
+  coverDetail: true,
+  type: true,
+  name: true,
+  creatorId: true,
+  creatorRoles: true,
+  creatorMessage: true,
+  regionCodes: true,
+  destinationSlugs: true,
+  summary: true,
+  styles: true,
+  tags: true,
+  groupPeriods: true,
+  status: true
+};
 const SERVICE_CONSULT_COLLECTION_FIELDS = {
   slug: true,
   travelDetail: true,
@@ -253,6 +307,7 @@ const IDEA_CARD_COLLECTION_FIELDS = {
   summary: true,
   cover: true,
   authorId: true,
+  regionCodes: true,
   status: true
 };
 let contentDataCache = null;
@@ -278,7 +333,8 @@ function clearGatewayCache() {
   };
 }
 
-const SERVICE_PERIOD_SQL_FIELDS = "`serviceName`, `versionName`, `durationDays`, `serviceSlug`, `periodCode`, `dateStart`, `dateEnd`, `price`, `minGroup`, `remainingSeats`, `status`, `creatorId`, `createdAt`, `updatedAt`, `_id`, `owner`, `_mainDep`, `_openid`, `createBy`, `updateBy`";
+const SERVICE_PERIOD_SQL_FIELDS = "`serviceName`, `versionName`, `durationDays`, `serviceSlug`, `periodCode`, `dateStart`, `dateEnd`, `price`, `minGroup`, `remainingSeats`, `status`, `creatorId`, `singleRoomEnabled`, `singleRoomPrice`, `singleRoomPriceDec`, `singleRoomNotice`, `createdAt`, `updatedAt`, `_id`, `owner`, `_mainDep`, `_openid`, `createBy`, `updateBy`";
+const DEFAULT_SQL_RETRY_DELAYS_MS = [500];
 
 function normalizeText(value) {
   if (typeof value === "string" && value.trim()) {
@@ -301,6 +357,17 @@ function normalizeNumber(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function normalizeBoolean(value) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "number") {
+    return value > 0;
+  }
+  const normalized = normalizeText(value).toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on";
+}
+
 function isPublicContentActive(item) {
   return normalizeText(item && item.status) !== "inactive";
 }
@@ -310,17 +377,75 @@ function getSQLRows(result) {
   return Array.isArray(data.executeResultList) ? data.executeResultList : [];
 }
 
+function getSqlRetryDelaysMs() {
+  const override = normalizeText(process.env.CONTENT_GATEWAY_SQL_RETRY_DELAYS_MS);
+  if (!override) {
+    return DEFAULT_SQL_RETRY_DELAYS_MS;
+  }
+
+  return override
+    .split(",")
+    .map((item) => Number(item.trim()))
+    .filter((value) => Number.isFinite(value) && value >= 0);
+}
+
+function isTransientSqlError(error) {
+  const message = [
+    error && error.message,
+    error && error.errMsg,
+    error && error.code,
+    error && error.requestId
+  ].map((item) => String(item || "")).join(" ");
+
+  return /9449|resuming|Database connection failed|connection/i.test(message);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function runSQLWithRetry(sql, params) {
+  if (typeof runSQL !== "function") {
+    throw new Error("models.$runSQL unavailable");
+  }
+
+  const delays = getSqlRetryDelaysMs();
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= delays.length; attempt += 1) {
+    try {
+      return await runSQL(sql, params);
+    } catch (error) {
+      lastError = error;
+      if (!isTransientSqlError(error) || attempt >= delays.length) {
+        throw error;
+      }
+      await sleep(delays[attempt]);
+    }
+  }
+
+  throw lastError;
+}
+
+async function keepSqlAlive() {
+  const result = await runSQLWithRetry("SELECT 1 AS `keepAlive`");
+  const rows = getSQLRows(result);
+  return {
+    ok: true,
+    checkedAt: Date.now(),
+    rows: rows.length
+  };
+}
+
 async function listSqlServicePeriods(serviceSlug) {
   if (!serviceSlug) {
     return [];
   }
 
   try {
-    if (typeof runSQL !== "function") {
-      throw new Error("models.$runSQL unavailable");
-    }
-
-    const result = await runSQL(
+    const result = await runSQLWithRetry(
       `SELECT ${SERVICE_PERIOD_SQL_FIELDS} FROM \`ServicePeriod\` WHERE \`serviceSlug\` = {{serviceSlug}} ORDER BY \`dateStart\` ASC`,
       {
         serviceSlug: String(serviceSlug).trim()
@@ -342,11 +467,7 @@ async function getSoldCountByPeriodCodeMap(serviceSlug) {
   }
 
   try {
-    if (typeof runSQL !== "function") {
-      throw new Error("models.$runSQL unavailable");
-    }
-
-    const result = await runSQL(
+    const result = await runSQLWithRetry(
       "SELECT `servicePeriodCode`, SUM(COALESCE(`peopleCountInt`, `peopleCount`, 0)) AS `soldCount` FROM `TravelOrder` WHERE `serviceSlug` = {{serviceSlug}} AND COALESCE(`status`, '') <> 'canceled' GROUP BY `servicePeriodCode`",
       {
         serviceSlug: String(serviceSlug).trim()
@@ -373,11 +494,7 @@ async function getSoldCountByPeriodCodeMap(serviceSlug) {
 
 async function getAllSoldCountByPeriodCodeMap() {
   try {
-    if (typeof runSQL !== "function") {
-      throw new Error("models.$runSQL unavailable");
-    }
-
-    const result = await runSQL(
+    const result = await runSQLWithRetry(
       "SELECT `servicePeriodCode`, SUM(COALESCE(`peopleCountInt`, `peopleCount`, 0)) AS `soldCount` FROM `TravelOrder` WHERE COALESCE(`status`, '') <> 'canceled' GROUP BY `servicePeriodCode`"
     );
 
@@ -457,12 +574,20 @@ function buildPublicGroupPeriods(periods, soldCountMap) {
   );
 }
 
-function buildJourneySearchText(service, creator, relatedDestinations) {
+function buildJourneySearchText(service, creator, relatedDestinations, fallbackRegionLabels) {
+  const regionLabels = unique(
+    (relatedDestinations || []).map((item) => getDestinationRegionLabel(
+      resolveDestinationRegionCode(item && item.regionCode, item && item.slug)
+    ))
+  );
+  const effectiveRegionLabels = regionLabels.length ? regionLabels : normalizeArray(fallbackRegionLabels);
+
   return [
     service && service.name,
     service && service.summary,
     creator && creator.name,
     ...((relatedDestinations || []).map((item) => item && item.name)),
+    ...effectiveRegionLabels,
     ...(service && Array.isArray(service.tags) ? service.tags : []),
     ...(service && Array.isArray(service.styles) ? service.styles : [])
   ]
@@ -478,6 +603,25 @@ function buildJourneyCard(service, creator, relatedDestinations, activePeriods) 
   });
   const displayPeriod = activePeriods[0] || null;
   const routeTypes = getServiceRouteTags(service);
+  const explicitRegionCodes = unique(
+    normalizeArray(service && service.regionCodes)
+      .map((regionCode) => normalizeDestinationRegionCode(regionCode))
+      .filter(Boolean)
+  );
+  const destinationRegionCodes = explicitRegionCodes.length ? explicitRegionCodes : unique(
+    (relatedDestinations || []).map((item) => resolveDestinationRegionCode(item && item.regionCode, item && item.slug))
+  );
+  const destinationRegionLabels = unique(destinationRegionCodes.map((code) => getDestinationRegionLabel(code)));
+  const destinationRegionImageMap = destinationRegionCodes.reduce((result, regionCode) => {
+    const matchedDestination = (relatedDestinations || []).find((item) => (
+      resolveDestinationRegionCode(item && item.regionCode, item && item.slug) === regionCode
+      && normalizeText(item && item.cover)
+    ));
+    if (matchedDestination) {
+      result[regionCode] = normalizeText(matchedDestination.cover);
+    }
+    return result;
+  }, {});
 
   return Object.assign({}, publicService, {
     routeTypes,
@@ -491,22 +635,72 @@ function buildJourneyCard(service, creator, relatedDestinations, activePeriods) 
     displayDurationLabel: (displayPeriod && displayPeriod.durationLabel) || publicService.durationTag || "",
     displayVersionLabel: displayPeriod && displayPeriod.versionName ? displayPeriod.versionName : "",
     destinationNames: (relatedDestinations || []).map((item) => item && item.name).filter(Boolean),
-    searchText: buildJourneySearchText(publicService, creator, relatedDestinations)
+    destinationRegionCodes,
+    destinationRegionLabels,
+    destinationRegionImageMap,
+    searchText: buildJourneySearchText(publicService, creator, relatedDestinations, destinationRegionLabels)
   });
 }
 
-async function listAllSqlServicePeriods() {
-  try {
-    if (typeof runSQL !== "function") {
-      throw new Error("models.$runSQL unavailable");
+function buildJourneyRegionCardImageMap(configValue) {
+  return normalizeArray(configValue && configValue.regionCards).reduce((result, item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      return result;
     }
 
-    const result = await runSQL(
+    const regionCode = normalizeDestinationRegionCode(item.regionCode || item.value);
+    const image = normalizeImageRef(item.image || item.cover || item.imageCard, "detail");
+    if (!regionCode || !image) {
+      return result;
+    }
+
+    result[regionCode] = image;
+    return result;
+  }, {});
+}
+
+function buildJourneyRegionOptions(journeys, regionCardImageMap) {
+  const availableRegionSet = new Set();
+  const fallbackImageMap = {};
+
+  normalizeArray(journeys).forEach((journey) => {
+    normalizeArray(journey && journey.destinationRegionCodes).forEach((regionCode) => {
+      const normalizedRegionCode = normalizeDestinationRegionCode(regionCode);
+      if (!normalizedRegionCode) {
+        return;
+      }
+
+      availableRegionSet.add(normalizedRegionCode);
+      if (!fallbackImageMap[normalizedRegionCode]) {
+        fallbackImageMap[normalizedRegionCode] = normalizeText(
+          journey && journey.destinationRegionImageMap
+            ? journey.destinationRegionImageMap[normalizedRegionCode]
+            : ""
+        ) || normalizeText(journey && journey.cover);
+      }
+    });
+  });
+
+  return DESTINATION_REGION_OPTIONS
+    .filter((item) => availableRegionSet.has(item.value))
+    .map((item) => ({
+      label: item.label,
+      value: item.value,
+      image: normalizeText(regionCardImageMap && regionCardImageMap[item.value]) || normalizeText(fallbackImageMap[item.value])
+    }));
+}
+
+async function listAllSqlServicePeriods(options) {
+  try {
+    const result = await runSQLWithRetry(
       `SELECT ${SERVICE_PERIOD_SQL_FIELDS} FROM \`ServicePeriod\` ORDER BY \`serviceSlug\` ASC, \`dateStart\` ASC`
     );
     return filterPublicActivePeriods(getSQLRows(result));
   } catch (error) {
     console.error("Failed to list all SQL service periods", error);
+    if (options && options.returnNullOnError) {
+      return null;
+    }
     return [];
   }
 }
@@ -630,13 +824,17 @@ function parseIdeaBody(body) {
 function normalizeIdeaTheme(themeKeyValue, themeLabelValue, isCustomThemeValue) {
   const rawKey = typeof themeKeyValue === "string" ? themeKeyValue.trim() : "";
   const rawLabel = typeof themeLabelValue === "string" ? themeLabelValue.trim() : "";
-  const matchedByKey = rawKey && IDEA_THEME_LABEL_MAP[rawKey]
-    ? { key: rawKey, label: IDEA_THEME_LABEL_MAP[rawKey] }
+  const normalizedKey = rawKey && Object.prototype.hasOwnProperty.call(IDEA_THEME_LABEL_MAP, rawKey)
+    ? rawKey
+    : (LEGACY_IDEA_THEME_KEY_ALIASES[rawKey] || "");
+  const matchedByKey = normalizedKey && IDEA_THEME_LABEL_MAP[normalizedKey]
+    ? { key: normalizedKey, label: IDEA_THEME_LABEL_MAP[normalizedKey] }
     : null;
   const matchedByLabel = rawLabel
-    ? IDEA_THEME_OPTIONS.find((item) => item.label === rawLabel) || null
+    ? IDEA_THEME_OPTIONS.find((item) => item.label === rawLabel)
+      || IDEA_THEME_OPTIONS.find((item) => item.key === LEGACY_IDEA_THEME_LABEL_ALIASES[rawLabel])
+      || null
     : null;
-  const forceCustom = Boolean(isCustomThemeValue) || rawKey === CUSTOM_IDEA_THEME_KEY;
 
   if (!rawKey && !rawLabel) {
     return {
@@ -646,7 +844,7 @@ function normalizeIdeaTheme(themeKeyValue, themeLabelValue, isCustomThemeValue) 
     };
   }
 
-  if (!forceCustom && matchedByKey) {
+  if (matchedByKey) {
     return {
       themeKey: matchedByKey.key,
       themeLabel: matchedByKey.label,
@@ -654,7 +852,7 @@ function normalizeIdeaTheme(themeKeyValue, themeLabelValue, isCustomThemeValue) 
     };
   }
 
-  if (!forceCustom && matchedByLabel) {
+  if (matchedByLabel) {
     return {
       themeKey: matchedByLabel.key,
       themeLabel: matchedByLabel.label,
@@ -663,9 +861,9 @@ function normalizeIdeaTheme(themeKeyValue, themeLabelValue, isCustomThemeValue) 
   }
 
   return {
-    themeKey: CUSTOM_IDEA_THEME_KEY,
-    themeLabel: rawLabel || (matchedByKey ? matchedByKey.label : ""),
-    isCustomTheme: true
+    themeKey: DEFAULT_IDEA_THEME_KEY,
+    themeLabel: IDEA_THEME_LABEL_MAP[DEFAULT_IDEA_THEME_KEY],
+    isCustomTheme: false
   };
 }
 
@@ -696,6 +894,9 @@ function normalizeIdeaThemeDoc(idea) {
     themeLabel: theme.themeLabel,
     isCustomTheme: theme.isCustomTheme,
     sourceType: normalizeIdeaSourceType(idea && idea.sourceType),
+    regionCodes: normalizeArray(idea && idea.regionCodes)
+      .map((regionCode) => normalizeDestinationRegionCode(regionCode))
+      .filter(Boolean),
     relatedServiceSlugs: unique((Array.isArray(idea && idea.relatedServiceSlugs) ? idea.relatedServiceSlugs : []).map((item) => String(item || "").trim()).filter(Boolean)),
     excerptBody: normalizeText(idea && idea.excerptBody),
     wechatArticleUrl: sanitizeExternalUrl(idea && idea.wechatArticleUrl),
@@ -788,7 +989,10 @@ function buildGroupPeriodDisplay(period) {
     endDateLabel,
     durationDays,
     durationLabel: durationDays > 0 ? `${durationDays}天` : "",
-    statusText
+    statusText,
+    singleRoomEnabled: normalizeBoolean(period && period.singleRoomEnabled),
+    singleRoomPrice: Math.max(0, normalizeNumber(period && (period.singleRoomPriceDec || period.singleRoomPrice), 0)),
+    singleRoomNotice: normalizeText(period && period.singleRoomNotice)
   });
 }
 
@@ -888,20 +1092,12 @@ function normalizeServiceType(type, service) {
 
 function normalizeRouteTags(value, fallbackValue) {
   return unique((value && value.length ? value : fallbackValue) || [])
-    .map((item) => String(item || "").trim())
+    .map((item) => {
+      const normalized = String(item || "").trim();
+      return LEGACY_ROUTE_TAG_ALIASES[normalized] || normalized;
+    })
     .filter((item) => ROUTE_TAG_OPTIONS.includes(item))
     .slice(0, 3);
-}
-
-function normalizeCreatorTags(value, fallbackValue) {
-  return unique((value && value.length ? value : fallbackValue) || [])
-    .map((item) => String(item || "").trim())
-    .filter((item) => CREATOR_TAG_OPTIONS.includes(item))
-    .slice(0, 2);
-}
-
-function getCreatorTags(creator) {
-  return normalizeCreatorTags(creator && creator.tags);
 }
 
 function getServiceRouteTags(service) {
@@ -932,15 +1128,25 @@ function normalizeDestinationContentDoc(destination) {
 
 function buildPublicService(service, overrides) {
   const source = service && typeof service === "object" ? service : {};
-  const { groupPeriods, ...rest } = source;
+  const { groupPeriods, travelDetail, ...rest } = source;
   const durationTag = getServiceDurationTag(source);
+  const explicitCreatorMessage = String(source.creatorMessage || "").trim();
+  const overview =
+    travelDetail && typeof travelDetail === "object" && travelDetail.overview && typeof travelDetail.overview === "object"
+      ? travelDetail.overview
+      : {};
+  const whyJoinText = String(overview.whyJoinText || "").trim();
+  const creatorMessage = explicitCreatorMessage
+    || (whyJoinText ? whyJoinText.split(/\n\s*\n/)[0].trim() : "")
+    || String(source.summary || "").trim();
 
   return Object.assign({}, rest, {
     type: normalizeServiceType(source && source.type, Object.assign({}, source, { durationTag })),
     durationTag,
     priceLabel: getServicePriceLabel(source),
     tags: getServiceRouteTags(source),
-    styles: getServiceRouteTags(source)
+    styles: getServiceRouteTags(source),
+    creatorMessage
   }, overrides || {});
 }
 
@@ -978,9 +1184,83 @@ function listCreatorServiceIds(services, creator) {
     .map((service) => service.id);
 }
 
-function enrichCreatorDoc(creator, services) {
+function listCreatorRelatedServices(creator, services) {
+  return normalizeArray(services).filter((service) => service && matchesCreatorRef(creator, service.creatorId));
+}
+
+function listCreatorDestinationSlugs(creator, services) {
+  return unique(
+    listCreatorRelatedServices(creator, services)
+      .flatMap((service) => normalizeArray(service && service.destinationSlugs))
+      .map((slug) => normalizeText(slug))
+      .filter(Boolean)
+  );
+}
+
+function listCreatorRegionCodes(creator, services) {
+  return unique(
+    listCreatorRelatedServices(creator, services)
+      .flatMap((service) => normalizeArray(service && service.regionCodes))
+      .map((regionCode) => normalizeDestinationRegionCode(regionCode))
+      .filter(Boolean)
+  );
+}
+
+function hasCreatorBookablePeriods(service, soldCountMap) {
+  return buildPublicGroupPeriods(service && service.groupPeriods, soldCountMap).some((period) =>
+    isCreatorBookablePeriodStatus(period && period.status)
+  );
+}
+
+function getCreatorTags(creator, services, soldCountMap) {
+  const tagStatsMap = {};
+
+  listCreatorRelatedServices(creator, services).forEach((service) => {
+    const serviceTags = unique(getServiceRouteTags(service));
+    if (!serviceTags.length) {
+      return;
+    }
+
+    const hasBookablePeriods = hasCreatorBookablePeriods(service, soldCountMap);
+    serviceTags.forEach((tag) => {
+      if (!tagStatsMap[tag]) {
+        tagStatsMap[tag] = {
+          tag,
+          activeCount: 0,
+          totalCount: 0,
+          order: ROUTE_TAG_OPTIONS.indexOf(tag)
+        };
+      }
+
+      tagStatsMap[tag].totalCount += 1;
+      if (hasBookablePeriods) {
+        tagStatsMap[tag].activeCount += 1;
+      }
+    });
+  });
+
+  return Object.values(tagStatsMap)
+    .sort((left, right) => {
+      const activeCountDiff = right.activeCount - left.activeCount;
+      if (activeCountDiff !== 0) {
+        return activeCountDiff;
+      }
+
+      const totalCountDiff = right.totalCount - left.totalCount;
+      if (totalCountDiff !== 0) {
+        return totalCountDiff;
+      }
+
+      return left.order - right.order;
+    })
+    .map((item) => item.tag);
+}
+
+function enrichCreatorDoc(creator, services, soldCountMap) {
   return Object.assign({}, creator, {
-    tags: getCreatorTags(creator),
+    tags: getCreatorTags(creator, services, soldCountMap),
+    regionCodes: listCreatorRegionCodes(creator, services),
+    destinationSlugs: listCreatorDestinationSlugs(creator, services),
     serviceIds: listCreatorServiceIds(services, creator)
   });
 }
@@ -990,8 +1270,11 @@ function enrichDestinationDoc(destination, creators, services) {
   const relatedServices = (services || []).filter((service) =>
     Array.isArray(service && service.destinationSlugs) && service.destinationSlugs.includes(destinationSlug)
   );
+  const relatedCreatorRefs = new Set(relatedServices
+    .map((service) => normalizeText(service && service.creatorId))
+    .filter(Boolean));
   const relatedCreators = (creators || []).filter((creator) =>
-    Array.isArray(creator && creator.destinationSlugs) && creator.destinationSlugs.includes(destinationSlug)
+    listCreatorRefCandidates(creator).some((ref) => relatedCreatorRefs.has(ref))
   );
 
   return Object.assign({}, destination, {
@@ -1276,12 +1559,15 @@ function buildServiceOverview(service, tags, photoBaseList, highlights) {
 
 function buildServiceTravelDetail(service, tags, photoBaseList) {
   const meetingPoint = getServiceTagValue(tags, "meetingPoint");
+  const dismissalPoint = getServiceTagValue(tags, "dismissalPoint");
   const dayCount = getItineraryDayCount(service);
   const highlights = buildDefaultHighlights(service, tags, photoBaseList, meetingPoint, dayCount);
 
   return {
     id: service.id,
     title: service.name,
+    meetingPoint,
+    dismissalPoint,
     sections: [
       { key: "overview", title: "概况", anchorId: "section_overview" },
       { key: "highlights", title: "亮点", anchorId: "section_highlights" },
@@ -1345,6 +1631,7 @@ async function listCollectionHead(name, limit, options) {
 
 async function listCollectionByFieldValues(name, fieldName, values, options) {
   const fieldSpec = options && options.fieldSpec ? options.fieldSpec : null;
+  const includeInactive = Boolean(options && options.includeInactive);
   const normalizedValues = unique((values || []).map((value) => normalizeText(value)).filter(Boolean));
   if (!normalizedValues.length) {
     return [];
@@ -1374,7 +1661,7 @@ async function listCollectionByFieldValues(name, fieldName, values, options) {
 
     return normalizedValues
       .map((value) => docMap.get(value))
-      .filter((item) => item && isPublicContentActive(item));
+      .filter((item) => item && (includeInactive || isPublicContentActive(item)));
   } catch (error) {
     return [];
   }
@@ -1399,6 +1686,29 @@ async function listCreatorsByRefs(refs, options) {
       creatorMap.set(key, creator);
     }
   });
+
+  return Array.from(creatorMap.values());
+}
+
+function mergeCreatorResolverPool(primaryCreators, secondaryCreators) {
+  const creatorMap = new Map();
+
+  normalizeArray(primaryCreators)
+    .concat(normalizeArray(secondaryCreators))
+    .forEach((creator) => {
+      if (!creator) {
+        return;
+      }
+
+      const normalizedCreator = normalizeCreatorAssetFields(creator);
+      const creatorRefs = listCreatorRefCandidates(normalizedCreator);
+      const key = creatorRefs[0];
+      if (!key || creatorMap.has(key)) {
+        return;
+      }
+
+      creatorMap.set(key, normalizedCreator);
+    });
 
   return Array.from(creatorMap.values());
 }
@@ -1445,7 +1755,8 @@ async function loadHomePageCollectionsWithConfig(homeConfig) {
     fallbackCreators,
     fallbackDestinations,
     fallbackIdeas,
-    fallbackServices
+    fallbackServices,
+    allServices
   ] = await Promise.all([
     listCollectionBySlugs(COLLECTIONS.creators, featuredCreatorSlugs, { fieldSpec: CREATOR_CARD_COLLECTION_FIELDS }),
     listCollectionBySlugs(COLLECTIONS.destinations, featuredDestinationSlugs, { fieldSpec: DESTINATION_CARD_COLLECTION_FIELDS }),
@@ -1454,18 +1765,20 @@ async function loadHomePageCollectionsWithConfig(homeConfig) {
     listCollectionHead(COLLECTIONS.creators, 6, { fieldSpec: CREATOR_CARD_COLLECTION_FIELDS }),
     listCollectionHead(COLLECTIONS.destinations, 8, { fieldSpec: DESTINATION_CARD_COLLECTION_FIELDS }),
     listCollectionHead(COLLECTIONS.ideas, 6, { fieldSpec: IDEA_CARD_COLLECTION_FIELDS }),
-    listCollectionHead(COLLECTIONS.services, 12, { fieldSpec: SERVICE_LIST_COLLECTION_FIELDS })
+    listCollectionHead(COLLECTIONS.services, 12, { fieldSpec: SERVICE_LIST_COLLECTION_FIELDS }),
+    listCollection(COLLECTIONS.services, { fieldSpec: SERVICE_LIST_COLLECTION_FIELDS })
   ]);
 
+  const normalizedAllServices = allServices.map(normalizeServiceContentDoc);
   const normalizedFeaturedCreators = exactFeaturedCreators
     .map(normalizeCreatorAssetFields)
     .map((creator) => Object.assign({}, creator, {
-      tags: getCreatorTags(creator)
+      tags: getCreatorTags(creator, normalizedAllServices)
     }));
   const normalizedFallbackCreators = fallbackCreators
     .map(normalizeCreatorAssetFields)
     .map((creator) => Object.assign({}, creator, {
-      tags: getCreatorTags(creator)
+      tags: getCreatorTags(creator, normalizedAllServices)
     }));
   const normalizedFeaturedDestinations = exactFeaturedDestinations.map(normalizeDestinationContentDoc);
   const normalizedFallbackDestinations = fallbackDestinations.map(normalizeDestinationContentDoc);
@@ -1485,7 +1798,10 @@ async function loadHomePageCollectionsWithConfig(homeConfig) {
       .concat(featuredIdeasBase.map((idea) => idea && idea.authorId))
   );
   const creatorResolverPool = featuredCreators.concat(
-    await listCreatorsByRefs(creatorRefs, { fieldSpec: CREATOR_NAME_COLLECTION_FIELDS })
+    await listCreatorsByRefs(creatorRefs, {
+      fieldSpec: CREATOR_NAME_COLLECTION_FIELDS,
+      includeInactive: true
+    })
   );
   const featuredIdeas = featuredIdeasBase.map((idea) => {
     const author = findCreatorByRef(creatorResolverPool, idea.authorId);
@@ -1516,11 +1832,19 @@ async function loadJourneyPageCollections() {
     listCollection(COLLECTIONS.destinations, { fieldSpec: DESTINATION_NAME_COLLECTION_FIELDS }),
     listCollection(COLLECTIONS.services, { fieldSpec: SERVICE_LIST_COLLECTION_FIELDS })
   ]);
+  const services = rawServices.map(normalizeServiceContentDoc);
+  const linkedCreators = await listCreatorsByRefs(
+    unique(services.map((service) => normalizeText(service && service.creatorId)).filter(Boolean)),
+    {
+      fieldSpec: CREATOR_NAME_COLLECTION_FIELDS,
+      includeInactive: true
+    }
+  );
 
   return {
-    creators: rawCreators,
-    destinations: rawDestinations,
-    services: rawServices.map(normalizeServiceContentDoc)
+    creators: mergeCreatorResolverPool(rawCreators, linkedCreators),
+    destinations: rawDestinations.map(normalizeDestinationAssetFields),
+    services
   };
 }
 
@@ -1631,6 +1955,15 @@ function buildDestinationRegionCodeMap(destinations) {
 }
 
 function getServiceDestinationRegionCodes(service, destinationRegionCodeMap) {
+  const explicitRegionCodes = unique(
+    normalizeArray(service && service.regionCodes)
+      .map((regionCode) => normalizeDestinationRegionCode(regionCode))
+      .filter(Boolean)
+  );
+  if (explicitRegionCodes.length) {
+    return explicitRegionCodes;
+  }
+
   return unique(
     normalizeArray(service && service.destinationSlugs)
       .map((slug) => normalizeText(slug))
@@ -1643,10 +1976,7 @@ function getCreatorRelatedServices(creator, services, destinationRegionCodeMap, 
   const requestedDestination = normalizeText(filters && filters.destination);
   const requestedRegionCode = normalizeDestinationRegionCode(filters && filters.regionCode);
 
-  return normalizeArray(services).filter((service) => {
-    if (!service || !matchesCreatorRef(creator, service.creatorId)) {
-      return false;
-    }
+  return listCreatorRelatedServices(creator, services).filter((service) => {
 
     const destinationSlugs = normalizeArray(service.destinationSlugs).map((slug) => normalizeText(slug)).filter(Boolean);
     if (requestedDestination && !destinationSlugs.includes(requestedDestination)) {
@@ -1667,7 +1997,11 @@ function getCreatorRelatedServices(creator, services, destinationRegionCodeMap, 
 function filterCreators(creators, services, destinationRegionCodeMap, options) {
   const filters = options || {};
   return (creators || []).filter((creator) => {
-    const matchStyle = filters.style ? getCreatorTags(creator).includes(filters.style) : true;
+    if (!listCreatorRelatedServices(creator, services).length) {
+      return false;
+    }
+
+    const matchStyle = filters.style ? normalizeArray(creator && creator.tags).includes(filters.style) : true;
     if (!matchStyle) {
       return false;
     }
@@ -1740,25 +2074,70 @@ function buildCreatorDestinationOptions(destinations, creators, services, destin
   );
 }
 
-function buildCreatorRegionOptions(destinations, creators, services, destinationRegionCodeMap, filters) {
+function buildCreatorRegionOptions(destinations, creators, services, destinationRegionCodeMap, filters, regionCardImageMap) {
   const matchedCreators = filterCreators(creators, services, destinationRegionCodeMap, {
     style: filters && filters.style,
     destination: filters && filters.destination
   });
-  const regionCodeSet = new Set();
+  const destinationsBySlug = normalizeArray(destinations).reduce((result, destination) => {
+    const slug = normalizeText(destination && destination.slug);
+    if (slug) {
+      result[slug] = destination;
+    }
+    return result;
+  }, {});
+  const regionMetaMap = {};
 
   matchedCreators.forEach((creator) => {
+    const creatorRegionSet = new Set();
+
     getCreatorRelatedServices(creator, services, destinationRegionCodeMap, {
       destination: filters && filters.destination
     }).forEach((service) => {
       getServiceDestinationRegionCodes(service, destinationRegionCodeMap).forEach((regionCode) => {
-        regionCodeSet.add(regionCode);
+        const normalizedRegionCode = normalizeDestinationRegionCode(regionCode);
+        if (!normalizedRegionCode) {
+          return;
+        }
+
+        creatorRegionSet.add(normalizedRegionCode);
+        if (!regionMetaMap[normalizedRegionCode]) {
+          regionMetaMap[normalizedRegionCode] = {
+            count: 0,
+            image: ""
+          };
+        }
+
+        if (!regionMetaMap[normalizedRegionCode].image) {
+          const destinationImage = normalizeArray(service && service.destinationSlugs)
+            .map((slug) => destinationsBySlug[normalizeText(slug)])
+            .find((destination) => (
+              destination
+              && resolveDestinationRegionCode(destination && destination.regionCode, destination && destination.slug) === normalizedRegionCode
+              && normalizeText(destination && destination.cover)
+            ));
+
+          regionMetaMap[normalizedRegionCode].image =
+            normalizeText(destinationImage && destinationImage.cover)
+            || normalizeText(service && service.cover);
+        }
       });
+    });
+
+    creatorRegionSet.forEach((regionCode) => {
+      regionMetaMap[regionCode].count += 1;
     });
   });
 
-  return buildOptionList(
-    DESTINATION_REGION_OPTIONS.filter((item) => regionCodeSet.has(item.value))
+  return [{ label: "全部", value: "" }].concat(
+    DESTINATION_REGION_OPTIONS
+      .filter((item) => regionMetaMap[item.value])
+      .map((item) => ({
+        label: item.label,
+        value: item.value,
+        count: regionMetaMap[item.value].count,
+        image: normalizeText(regionCardImageMap && regionCardImageMap[item.value]) || regionMetaMap[item.value].image
+      }))
   );
 }
 
@@ -1768,10 +2147,10 @@ function buildCreatorStyleOptions(creators, services, destinationRegionCodeMap, 
     regionCode: filters && filters.regionCode
   });
   const tagSet = new Set(
-    matchedCreators.reduce((result, creator) => result.concat(getCreatorTags(creator)), [])
+    matchedCreators.reduce((result, creator) => result.concat(normalizeArray(creator && creator.tags)), [])
   );
 
-  return buildOptionList(CREATOR_TAG_OPTIONS.filter((tag) => tagSet.has(tag)));
+  return buildOptionList(ROUTE_TAG_OPTIONS.filter((tag) => tagSet.has(tag)));
 }
 
 function compareDateValueAsc(left, right) {
@@ -1971,9 +2350,10 @@ async function loadContentData() {
     listCollection(COLLECTIONS.destinations),
     listCollection(COLLECTIONS.services),
     listCollection(COLLECTIONS.ideas),
-    listAllSqlServicePeriods()
+    listAllSqlServicePeriods(),
+    getAllSoldCountByPeriodCodeMap()
   ])
-    .then(([rawCreators, rawDestinations, rawServices, rawIdeas, sqlPeriods]) => {
+    .then(([rawCreators, rawDestinations, rawServices, rawIdeas, sqlPeriods, soldCountMap]) => {
       const periodMap = groupSqlPeriodsByServiceSlug(sqlPeriods);
       const services = rawServices.map((service) =>
         normalizeServiceContentDoc(
@@ -1989,7 +2369,9 @@ async function loadContentData() {
           })
         )
       );
-      const creators = rawCreators.map(normalizeCreatorAssetFields).map((creator) => enrichCreatorDoc(creator, services));
+      const creators = rawCreators
+        .map(normalizeCreatorAssetFields)
+        .map((creator) => enrichCreatorDoc(creator, services, soldCountMap));
       const destinations = rawDestinations
         .map(normalizeDestinationContentDoc)
         .map((destination) => enrichDestinationDoc(destination, creators, services));
@@ -2095,11 +2477,14 @@ async function getJourneyPageData() {
 
   journeyPagePromise = (async () => {
   const { creators, destinations, services } = await loadJourneyPageCollections();
-  const [sqlPeriods, soldCountMap] = await Promise.all([
-    listAllSqlServicePeriods(),
-    getAllSoldCountByPeriodCodeMap()
+  const [sqlPeriods, soldCountMap, journeyPageConfig] = await Promise.all([
+    listAllSqlServicePeriods({ returnNullOnError: true }),
+    getAllSoldCountByPeriodCodeMap(),
+    getConfigValue("journeyPage")
   ]);
-  const sqlPeriodsByServiceSlug = groupSqlPeriodsByServiceSlug(sqlPeriods);
+  const sqlPeriodsAvailable = Array.isArray(sqlPeriods);
+  const sqlPeriodsByServiceSlug = groupSqlPeriodsByServiceSlug(sqlPeriodsAvailable ? sqlPeriods : []);
+  const regionCardImageMap = buildJourneyRegionCardImageMap(journeyPageConfig);
 
   const journeys = services
     .map((service) => {
@@ -2128,6 +2513,10 @@ async function getJourneyPageData() {
       return String(left && left.displayDateStart || "").localeCompare(String(right && right.displayDateStart || ""));
     });
 
+  if (!sqlPeriodsAvailable && !journeys.length) {
+    throw new Error("旅程数据正在唤醒，请稍后重试。");
+  }
+
   const routeTypeSet = new Set();
   journeys.forEach((journey) => {
     (journey.routeTypes || []).forEach((tag) => {
@@ -2142,12 +2531,15 @@ async function getJourneyPageData() {
         label: tag,
         value: tag
       })),
+    regionOptions: buildJourneyRegionOptions(journeys, regionCardImageMap),
     journeys
   };
-  journeyPageCache = {
-    expiresAt: Date.now() + JOURNEY_PAGE_CACHE_TTL_MS,
-    value: payload
-  };
+  if (sqlPeriodsAvailable || journeys.length) {
+    journeyPageCache = {
+      expiresAt: Date.now() + JOURNEY_PAGE_CACHE_TTL_MS,
+      value: payload
+    };
+  }
   return payload;
   })()
     .finally(() => {
@@ -2159,10 +2551,12 @@ async function getJourneyPageData() {
 
 async function getCreatorsPageData(filters) {
   const { creators, destinations, services } = await loadContentData();
-  const [soldCountMap] = await Promise.all([
-    getAllSoldCountByPeriodCodeMap()
+  const [soldCountMap, journeyPageConfig] = await Promise.all([
+    getAllSoldCountByPeriodCodeMap(),
+    getConfigValue("journeyPage")
   ]);
   const destinationRegionCodeMap = buildDestinationRegionCodeMap(destinations);
+  const regionCardImageMap = buildJourneyRegionCardImageMap(journeyPageConfig);
   const requestedFilters = filters || {};
   let style = String(requestedFilters.style || "").trim();
   let regionCode = normalizeDestinationRegionCode(requestedFilters.regionCode);
@@ -2182,7 +2576,8 @@ async function getCreatorsPageData(filters) {
     creators,
     services,
     destinationRegionCodeMap,
-    { style, destination }
+    { style, destination },
+    regionCardImageMap
   );
   regionCode = normalizeSelectedValue(regionOptions, regionCode);
 
@@ -2207,7 +2602,8 @@ async function getCreatorsPageData(filters) {
     creators,
     services,
     destinationRegionCodeMap,
-    { style, destination }
+    { style, destination },
+    regionCardImageMap
   );
   regionCode = normalizeSelectedValue(regionOptions, regionCode);
   styleOptions = buildCreatorStyleOptions(
@@ -2247,10 +2643,13 @@ async function getCreatorDetailData(slug) {
     return null;
   }
 
-  const creatorDestinations = destinations.filter((destination) => (creator.destinationSlugs || []).includes(destination.slug));
   const relatedServices = services
     .filter((service) => matchesCreatorRef(creator, service.creatorId))
     .map((service) => buildPublicService(service, { creatorName: creator.name }));
+  const creatorDestinationSlugs = unique(
+    relatedServices.flatMap((service) => normalizeArray(service && service.destinationSlugs))
+  );
+  const creatorDestinations = destinations.filter((destination) => creatorDestinationSlugs.includes(destination.slug));
   const creatorIdeas = ideas.filter((idea) => matchesCreatorRef(creator, idea.authorId));
 
   return {
@@ -2294,7 +2693,7 @@ async function getDestinationsPageData(options) {
 }
 
 async function getDestinationDetailData(slug, filters) {
-  const { creators, destinations, services, ideas } = await loadContentData();
+  const { creators, destinations, services } = await loadContentData();
   const destination = destinations.find((item) => item.slug === slug);
   if (!destination) {
     return null;
@@ -2332,17 +2731,22 @@ async function getDestinationDetailData(slug, filters) {
     style: normalizeSelectedValue(tagOptions, style)
   };
 
-  const relatedCreators = creators
-    .filter((creator) => (creator.destinationSlugs || []).includes(destination.slug))
+  const relatedCreatorRefs = unique(
+    services
+      .filter((service) => normalizeArray(service && service.destinationSlugs).includes(destination.slug))
+      .map((service) => normalizeText(service && service.creatorId))
+      .filter(Boolean)
+  );
+  const relatedCreators = unique(
+    relatedCreatorRefs
+      .map((creatorRef) => findCreatorByRef(creators, creatorRef))
+      .filter(Boolean)
+      .map((creator) => normalizeText(creator && creator.slug))
+  )
+    .map((creatorSlug) => creators.find((creator) => normalizeText(creator && creator.slug) === creatorSlug))
+    .filter(Boolean)
     .map((creator) => Object.assign({}, creator, { isFavorited: false }));
-  const relatedIdeas = ideas
-    .filter((idea) => Array.isArray(idea.destinationSlugs) && idea.destinationSlugs.includes(destination.slug))
-    .map((idea) => {
-      const author = findCreatorByRef(creators, idea.authorId);
-      return Object.assign({}, idea, {
-        authorName: author ? author.name : ""
-      });
-    });
+  const relatedIdeas = [];
   const matchedServices = filterServices(
     services,
     normalizedFilters
@@ -2400,8 +2804,22 @@ async function getIdeaDetailData(slug) {
   }
 
   const author = findCreatorByRef(creators, idea.authorId);
-  const relatedDestinations = destinations
-    .filter((destination) => (idea.destinationSlugs || []).includes(destination.slug));
+  const explicitRegionCodes = unique(normalizeArray(idea && idea.regionCodes)
+    .map((code) => normalizeDestinationRegionCode(code))
+    .filter(Boolean));
+  const destinationRegionCodeMap = buildDestinationRegionCodeMap(destinations);
+  const fallbackRegionCodes = unique(normalizeArray(idea && idea.destinationSlugs)
+    .map((destinationSlug) => {
+      const normalizedSlug = normalizeText(destinationSlug);
+      return destinationRegionCodeMap[normalizedSlug] || inferDestinationRegionCodeBySlug(normalizedSlug);
+    })
+    .map((code) => normalizeDestinationRegionCode(code))
+    .filter(Boolean));
+  const relatedRegions = (explicitRegionCodes.length ? explicitRegionCodes : fallbackRegionCodes)
+    .map((code) => ({
+      code,
+      label: getDestinationRegionLabel(code) || code
+    }));
   const relatedServiceSlugs = Array.isArray(idea.relatedServiceSlugs) ? idea.relatedServiceSlugs : [];
   const relatedServices = services
     .filter((service) => relatedServiceSlugs.includes(service.slug))
@@ -2415,26 +2833,37 @@ async function getIdeaDetailData(slug) {
   return {
     idea: Object.assign({}, idea, { isFavorited: false }),
     author,
-    relatedDestinations,
+    relatedDestinations: [],
+    relatedRegions,
     relatedServices,
     blocks: parseIdeaBody(detailBody)
   };
 }
 
-function normalizeServiceGalleryGroups(service) {
-  return (Array.isArray(service && service.galleryGroups) ? service.galleryGroups : [])
+function normalizeServiceGalleryGroupLabel(label, index) {
+  const normalized = String(label || "").trim();
+  if (index === 0 && (!normalized || /^图集\s*\d*$/u.test(normalized))) {
+    return "封面";
+  }
+
+  return normalized || `图集 ${index + 1}`;
+}
+
+function normalizeServiceGalleryGroupsBySource(value) {
+  return (Array.isArray(value) ? value : [])
     .map((item, index) => {
       if (!item || typeof item !== "object") {
         return null;
       }
 
-      const label = String(item.label || "").trim() || `图集 ${index + 1}`;
+      const label = normalizeServiceGalleryGroupLabel(item.label, index);
       const images = unique(Array.isArray(item.images) ? item.images.filter(Boolean) : []);
       if (!images.length) {
         return null;
       }
 
       return {
+        sourceIndex: index,
         key: String(item.key || "").trim() || `gallery-${index + 1}`,
         label,
         images
@@ -2443,42 +2872,57 @@ function normalizeServiceGalleryGroups(service) {
     .filter(Boolean);
 }
 
-function buildLegacyMediaTabs(photoBaseList) {
+function normalizeServiceGalleryGroups(service) {
+  return normalizeServiceGalleryGroupsBySource(service && service.galleryGroups);
+}
+
+function prioritizeServiceGalleryGroups(groups) {
+  const orderedGroups = Array.isArray(groups) ? groups.slice() : [];
+  const coverGroups = orderedGroups.filter((item) => item && item.label === "封面");
+  const otherGroups = orderedGroups.filter((item) => !item || item.label !== "封面");
+
+  return coverGroups.concat(otherGroups);
+}
+
+function buildLegacyMediaTabs(photoPreviewList, photoBaseList) {
   return [
     {
-      key: "landscape",
-      label: "景观",
-      images: photoBaseList.slice(0, 2)
-    },
-    {
-      key: "experience",
-      label: "体验",
-      images: photoBaseList.slice(1, 3).length ? photoBaseList.slice(1, 3) : photoBaseList.slice(0, 1)
-    },
-    {
-      key: "stay",
-      label: "住宿",
-      images: photoBaseList.slice(2, 4).length ? photoBaseList.slice(2, 4) : photoBaseList.slice(0, 1)
+      key: "cover",
+      label: "封面",
+      images: photoPreviewList,
+      previewImages: photoBaseList
     }
   ];
 }
 
 function buildServiceGalleryState(service, heroCover) {
   const galleryGroups = normalizeServiceGalleryGroups(service);
-  const galleryGroupsCard = Array.isArray(service && service.galleryGroupsCard) ? service.galleryGroupsCard : [];
+  const galleryGroupsCard = normalizeServiceGalleryGroupsBySource(service && service.galleryGroupsCard);
 
   if (galleryGroups.length) {
-    const photoGallery = unique((galleryGroupsCard.length ? galleryGroupsCard : galleryGroups).flatMap((item) => item.images || []));
-    const photoBaseList = unique(heroCover ? [heroCover].concat(photoGallery) : photoGallery);
+    const baseGroups = prioritizeServiceGalleryGroups(galleryGroups);
+    const mediaTabs = baseGroups.map((item) => {
+      const cardGroup = galleryGroupsCard.find((cardItem) => cardItem.sourceIndex === item.sourceIndex);
+      const previewImages = Array.isArray(item.images) ? item.images : [];
+      const images = cardGroup && Array.isArray(cardGroup.images) && cardGroup.images.length
+        ? cardGroup.images
+        : previewImages;
+
+      return {
+        key: item.key,
+        label: item.label,
+        images,
+        previewImages
+      };
+    });
+    const photoGallery = unique(mediaTabs.flatMap((item) => item.images || []));
+    const photoBaseList = unique(mediaTabs.flatMap((item) => item.previewImages || item.images || []));
 
     return {
       photoGallery,
       photoBaseList,
-      mediaTabs: galleryGroups.map((item) => ({
-        key: item.key,
-        label: item.label,
-        images: item.images
-      }))
+      mediaTabs,
+      hasGalleryGroups: true
     };
   }
 
@@ -2488,14 +2932,16 @@ function buildServiceGalleryState(service, heroCover) {
       ? service.gallery
     : heroCover ? [heroCover] : [];
   const detailGallery = Array.isArray(service && service.gallery) && service.gallery.length
-    ? service.gallery
-    : photoGallery;
-  const photoBaseList = unique(heroCover ? [heroCover].concat(detailGallery) : detailGallery);
+      ? service.gallery
+      : photoGallery;
+  const photoBaseList = unique(detailGallery.length ? detailGallery : (heroCover ? [heroCover] : []));
+  const photoPreviewList = unique(photoGallery.length ? photoGallery : photoBaseList);
 
   return {
-    photoGallery,
+    photoGallery: photoPreviewList,
     photoBaseList,
-    mediaTabs: buildLegacyMediaTabs(photoBaseList)
+    mediaTabs: buildLegacyMediaTabs(photoPreviewList, photoBaseList),
+    hasGalleryGroups: false
   };
 }
 
@@ -2505,14 +2951,56 @@ function buildServiceDetailGalleryPayload(service, heroCover, options) {
     ? Math.max(0, options.previewLimit)
     : 0;
   const photoGallery = previewLimit
-    ? galleryState.photoGallery.slice(0, previewLimit)
+    ? unique(
+      galleryState.photoGallery
+        .concat(galleryState.photoBaseList || [])
+        .filter(Boolean)
+    ).slice(0, previewLimit)
     : galleryState.photoGallery;
 
   return {
     photoGallery,
     photoTotal: galleryState.photoBaseList.length,
-    mediaTabs: options && options.includeMediaTabs === false ? [] : galleryState.mediaTabs,
-    photoBaseList: galleryState.photoBaseList
+    photoBaseList: galleryState.photoBaseList,
+    hasGalleryGroups: galleryState.hasGalleryGroups,
+    mediaTabs: galleryState.hasGalleryGroups
+      ? galleryState.mediaTabs.map((item) => ({
+        key: item.key,
+        label: item.label,
+        imageCount: Array.isArray(item.previewImages) && item.previewImages.length
+          ? item.previewImages.length
+          : Array.isArray(item.images) ? item.images.length : 0,
+        images: (Array.isArray(item.images) ? item.images : []).slice(0, 4)
+      }))
+      : []
+  };
+}
+
+function buildServiceGalleryPayload(service, heroCover) {
+  const galleryState = buildServiceGalleryState(service, heroCover);
+
+  return {
+    mediaTabs: galleryState.mediaTabs.map((item) => ({
+      key: item.key,
+      label: item.label,
+      images: item.images
+    })),
+    photoTotal: galleryState.photoBaseList.length,
+    hasGalleryGroups: galleryState.hasGalleryGroups
+  };
+}
+
+function buildServiceGalleryOriginalPayload(service, heroCover) {
+  const galleryState = buildServiceGalleryState(service, heroCover);
+
+  return {
+    mediaTabs: galleryState.mediaTabs.map((item) => ({
+      key: item.key,
+      label: item.label,
+      images: Array.isArray(item.previewImages) && item.previewImages.length ? item.previewImages : item.images
+    })),
+    photoTotal: galleryState.photoBaseList.length,
+    hasGalleryGroups: galleryState.hasGalleryGroups
   };
 }
 
@@ -2527,7 +3015,8 @@ async function loadServiceDetailBase(slug, serviceFieldSpec) {
   const service = normalizeServiceContentDoc(rawService);
   const [creatorDocs, destinationDocs] = await Promise.all([
     listCreatorsByRefs(service.creatorId ? [service.creatorId] : [], {
-      fieldSpec: CREATOR_CARD_COLLECTION_FIELDS
+      fieldSpec: CREATOR_CARD_COLLECTION_FIELDS,
+      includeInactive: true
     }),
     listCollectionBySlugs(COLLECTIONS.destinations, service.destinationSlugs || [], {
       fieldSpec: DESTINATION_CARD_COLLECTION_FIELDS
@@ -2555,8 +3044,7 @@ async function getServiceDetailSummaryData(slug) {
   }
 
   const galleryPayload = buildServiceDetailGalleryPayload(detailBase.service, detailBase.heroCover, {
-    previewLimit: 3,
-    includeMediaTabs: false
+    previewLimit: 4
   });
 
   return {
@@ -2569,7 +3057,8 @@ async function getServiceDetailSummaryData(slug) {
     heroCover: detailBase.heroCover,
     photoGallery: galleryPayload.photoGallery,
     photoTotal: galleryPayload.photoTotal,
-    mediaTabs: [],
+    mediaTabs: galleryPayload.mediaTabs,
+    hasGalleryGroups: galleryPayload.hasGalleryGroups,
     travelDetail: null,
     groupPeriods: []
   };
@@ -2605,6 +3094,10 @@ async function getServiceBookingData(slug) {
         dateEnd: period.dateEnd || period.dateStart || "",
         price: Number(period.price) || 0,
         status: period.status || "available",
+        singleRoomEnabled: period.singleRoomEnabled,
+        singleRoomPrice: period.singleRoomPrice,
+        singleRoomPriceDec: period.singleRoomPriceDec,
+        singleRoomNotice: period.singleRoomNotice,
         totalSeats:
           Number(period.totalSeats) ||
           (Number(period.remainingSeats) || 0) + (soldCountMap[period.periodCode || period.id || ""] || 0),
@@ -2633,9 +3126,6 @@ async function getServiceDetailContentData(slug) {
 
   return {
     travelDetail: detailBase.service.travelDetail || buildServiceTravelDetail(detailBase.service, [], galleryPayload.photoBaseList),
-    photoGallery: galleryPayload.photoGallery,
-    photoTotal: galleryPayload.photoTotal,
-    mediaTabs: galleryPayload.mediaTabs,
     groupPeriods: effectivePeriods.map((period) =>
       buildGroupPeriodDisplay({
         id: period.periodCode || period.id,
@@ -2646,6 +3136,10 @@ async function getServiceDetailContentData(slug) {
         dateEnd: period.dateEnd || period.dateStart || "",
         price: Number(period.price) || 0,
         status: period.status || "available",
+        singleRoomEnabled: period.singleRoomEnabled,
+        singleRoomPrice: period.singleRoomPrice,
+        singleRoomPriceDec: period.singleRoomPriceDec,
+        singleRoomNotice: period.singleRoomNotice,
         totalSeats:
           Number(period.totalSeats) ||
           (Number(period.remainingSeats) || 0) + (soldCountMap[period.periodCode || period.id || ""] || 0),
@@ -2655,6 +3149,24 @@ async function getServiceDetailContentData(slug) {
       })
     )
   };
+}
+
+async function getServiceGalleryData(slug) {
+  const detailBase = await loadServiceDetailBase(slug, SERVICE_GALLERY_COLLECTION_FIELDS);
+  if (!detailBase) {
+    return null;
+  }
+
+  return buildServiceGalleryPayload(detailBase.service, detailBase.heroCover);
+}
+
+async function getServiceGalleryOriginalData(slug) {
+  const detailBase = await loadServiceDetailBase(slug, SERVICE_GALLERY_COLLECTION_FIELDS);
+  if (!detailBase) {
+    return null;
+  }
+
+  return buildServiceGalleryOriginalPayload(detailBase.service, detailBase.heroCover);
 }
 
 async function getServiceConsultData(slug) {
@@ -2676,22 +3188,24 @@ async function getServiceConsultData(slug) {
 }
 
 async function getServiceDetailData(slug) {
-  const [summaryPayload, contentPayload] = await Promise.all([
+  const [summaryPayload, contentPayload, galleryPayload] = await Promise.all([
     getServiceDetailSummaryData(slug),
-    getServiceDetailContentData(slug)
+    getServiceDetailContentData(slug),
+    getServiceGalleryData(slug)
   ]);
   if (!summaryPayload) {
     return null;
   }
-  if (!contentPayload) {
+  if (!contentPayload && !galleryPayload) {
     return summaryPayload;
   }
 
-  return Object.assign({}, summaryPayload, contentPayload);
+  return Object.assign({}, summaryPayload, contentPayload || {}, galleryPayload || {});
 }
 
 const handlers = {
   clearCache: () => clearGatewayCache(),
+  keepSqlAlive: () => keepSqlAlive(),
   getHomePageData: (payload) => getHomePageData(payload),
   getJourneyPageData: () => getJourneyPageData(),
   getCreatorsPageData: (payload) => getCreatorsPageData(payload.filters),
@@ -2708,11 +3222,14 @@ const handlers = {
   getServiceConsultData: (payload) => getServiceConsultData(payload.slug),
   getServiceDetailSummaryData: (payload) => getServiceDetailSummaryData(payload.slug),
   getServiceDetailContentData: (payload) => getServiceDetailContentData(payload.slug),
+  getServiceGalleryData: (payload) => getServiceGalleryData(payload.slug),
+  getServiceGalleryOriginalData: (payload) => getServiceGalleryOriginalData(payload.slug),
   getServiceDetailData: (payload) => getServiceDetailData(payload.slug)
 };
 
 exports.main = async (event) => {
-  const action = event && event.action;
+  const isTimerEvent = event && (event.Type === "Timer" || event.TriggerName || event.triggerName);
+  const action = event && event.action ? event.action : (isTimerEvent ? "keepSqlAlive" : "");
   const payload = event && event.payload ? event.payload : {};
   const handler = handlers[action];
 

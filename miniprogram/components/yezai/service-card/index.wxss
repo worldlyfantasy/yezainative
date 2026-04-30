@@ -61,9 +61,9 @@
   min-height: 60rpx;
   padding: 0 22rpx;
   border-radius: 999rpx;
-  color: #ffffff;
-  background: #993921;
-  box-shadow: 0 10rpx 24rpx rgba(153, 57, 33, 0.18);
+  color: #fff9f2;
+  background: #D15E14;
+  box-shadow: 0 12rpx 26rpx rgba(209, 94, 20, 0.18);
   font-size: 24rpx;
   font-weight: 600;
   line-height: 60rpx;

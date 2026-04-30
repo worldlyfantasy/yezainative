@@ -1,0 +1,544 @@
+.share-referral-page {
+  min-height: 100vh;
+  padding-bottom: 120rpx;
+}
+
+.share-referral-flow {
+  animation: share-referral-rise 360ms ease both;
+}
+
+.share-referral-hero {
+  position: relative;
+  padding-bottom: 18rpx;
+}
+
+.share-referral-hero__title {
+  font-size: 56rpx;
+}
+
+.share-referral-hero__desc {
+  max-width: 560rpx;
+}
+
+.share-referral-loading-ring {
+  width: 58rpx;
+  height: 58rpx;
+  margin-top: 34rpx;
+  border: 4rpx solid rgba(184, 114, 75, 0.2);
+  border-top-color: #d7651d;
+  border-radius: 999rpx;
+  animation: share-referral-spin 880ms linear infinite;
+}
+
+.share-referral-status-card {
+  padding: 34rpx 32rpx;
+  border-radius: 32rpx;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(255, 251, 244, 0.86), rgba(255, 251, 244, 0) 26%),
+    linear-gradient(150deg, rgba(255, 247, 230, 0.98), rgba(241, 226, 196, 0.9));
+  box-shadow: 0 18rpx 42rpx rgba(93, 71, 45, 0.07);
+}
+
+.share-referral-status-card--failed {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(255, 251, 244, 0.76), rgba(255, 251, 244, 0) 26%),
+    linear-gradient(150deg, rgba(249, 236, 212, 0.96), rgba(232, 213, 184, 0.9));
+}
+
+.share-referral-status-card__eyebrow,
+.share-referral-award-card__meta {
+  display: block;
+  font-size: 22rpx;
+  letter-spacing: 2rpx;
+  color: #b8724b;
+}
+
+.share-referral-status-card__title {
+  display: block;
+  margin-top: 14rpx;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 42rpx;
+  line-height: 1.42;
+  color: #2b241d;
+}
+
+.share-referral-status-card__desc {
+  display: block;
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  line-height: 1.75;
+  color: rgba(102, 88, 74, 0.84);
+}
+
+.share-referral-result {
+  padding-bottom: 0;
+}
+
+.share-referral-pouch {
+  width: 112rpx;
+  height: 92rpx;
+  flex-shrink: 0;
+}
+
+.share-referral-award-head {
+  align-items: center;
+  min-height: 92rpx;
+}
+
+.share-referral-award-intro {
+  display: block;
+  margin: -18rpx 0 46rpx;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 34rpx;
+  line-height: 1.72;
+  letter-spacing: 1rpx;
+  color: #2b241d;
+}
+
+.share-referral-award-list,
+.share-referral-reason-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.share-referral-award-card {
+  position: relative;
+  overflow: hidden;
+  height: 228rpx;
+  padding: 26rpx 32rpx 22rpx 132rpx;
+  box-sizing: border-box;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.share-referral-award-card__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.share-referral-award-card__content {
+  position: relative;
+  z-index: 1;
+}
+
+.share-referral-award-card__value {
+  display: flex;
+  align-items: baseline;
+  color: #993921;
+}
+
+.share-referral-award-card__currency {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.share-referral-award-card__amount {
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 54rpx;
+  line-height: 0.95;
+  font-weight: 700;
+}
+
+.share-referral-award-card__title {
+  display: block;
+  margin-top: 12rpx;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 27rpx;
+  line-height: 1.45;
+  color: #2b241d;
+  font-weight: 600;
+}
+
+.share-referral-award-card__meta {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #6a5a4b;
+}
+
+.share-referral-reason-card {
+  display: flex;
+  gap: 20rpx;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid rgba(153, 57, 33, 0.1);
+}
+
+.share-referral-reason-card:last-child {
+  border-bottom: 0;
+}
+
+.share-referral-reason-card__mark {
+  width: 18rpx;
+  height: 18rpx;
+  margin-top: 16rpx;
+  border-radius: 999rpx;
+  background: #b8724b;
+  box-shadow: 0 0 0 10rpx rgba(184, 114, 75, 0.1);
+  flex-shrink: 0;
+}
+
+.share-referral-reason-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.share-referral-reason-card__title {
+  display: block;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 34rpx;
+  line-height: 1.42;
+  color: #2b241d;
+}
+
+.share-referral-reason-card__desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  line-height: 1.8;
+  color: #6a5a4b;
+}
+
+.share-referral-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.share-referral-actions__button {
+  width: 100%;
+}
+
+.share-referral-actions__button.primary-button {
+  height: 82rpx;
+  min-height: 82rpx;
+  border-radius: 999rpx;
+  background: #D15E14;
+  color: #fff9f2;
+  font-size: 30rpx;
+  line-height: 82rpx;
+  box-shadow: none;
+}
+
+.share-referral-actions__button.primary-button::after {
+  border: 0;
+}
+
+.share-referral-modal-mask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 44rpx;
+  background: rgba(43, 36, 29, 0.28);
+  -webkit-backdrop-filter: blur(10rpx);
+  backdrop-filter: blur(10rpx);
+}
+
+.share-referral-gift-modal {
+  position: relative;
+  width: 100%;
+  max-width: 620rpx;
+  padding: 46rpx 42rpx 40rpx;
+  border-radius: 34rpx;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(255, 245, 210, 0.56), rgba(255, 245, 210, 0) 28%),
+    rgba(255, 248, 236, 0.96);
+  box-shadow: 0 34rpx 80rpx rgba(67, 45, 26, 0.2);
+  text-align: center;
+  overflow: hidden;
+  animation: share-referral-modal-in 300ms ease both;
+}
+
+.share-referral-gift-modal--locked {
+  background: rgba(249, 241, 224, 0.96);
+}
+
+.share-referral-gift-modal__image {
+  position: relative;
+  z-index: 2;
+  width: 330rpx;
+  height: 300rpx;
+  margin: 0 auto 12rpx;
+  display: block;
+}
+
+.share-referral-gift-modal__image--shake {
+  animation: share-referral-shake 520ms ease both;
+}
+
+.share-referral-burst {
+  position: absolute;
+  z-index: 1;
+  top: 34rpx;
+  left: 50%;
+  width: 420rpx;
+  height: 420rpx;
+  transform: translateX(-50%);
+  opacity: 0.82;
+  animation: share-referral-burst 760ms ease both;
+}
+
+.share-referral-gift-modal__title {
+  position: relative;
+  z-index: 3;
+  display: block;
+  margin-top: 8rpx;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 40rpx;
+  line-height: 1.44;
+  color: #2b241d;
+}
+
+.share-referral-gift-modal__desc {
+  position: relative;
+  z-index: 3;
+  display: block;
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.8;
+  color: #6a5a4b;
+}
+
+.share-referral-gift-modal__button {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  margin-top: 30rpx;
+}
+
+.share-referral-confetti__piece {
+  position: absolute;
+  z-index: 3;
+  width: 12rpx;
+  height: 28rpx;
+  border-radius: 4rpx;
+  background: #d7651d;
+  opacity: 0;
+  animation: share-referral-confetti 900ms ease-out both;
+}
+
+.share-referral-confetti__piece--0 { top: 120rpx; left: 118rpx; animation-delay: 40ms; }
+.share-referral-confetti__piece--1 { top: 84rpx; right: 118rpx; background: #b8724b; animation-delay: 90ms; }
+.share-referral-confetti__piece--2 { top: 220rpx; left: 72rpx; background: #993921; animation-delay: 130ms; }
+.share-referral-confetti__piece--3 { top: 210rpx; right: 82rpx; animation-delay: 160ms; }
+.share-referral-confetti__piece--4 { top: 150rpx; left: 184rpx; background: #f3c46c; animation-delay: 210ms; }
+.share-referral-confetti__piece--5 { top: 152rpx; right: 184rpx; background: #f3c46c; animation-delay: 240ms; }
+.share-referral-confetti__piece--6 { top: 72rpx; left: 228rpx; background: #b8724b; animation-delay: 270ms; }
+.share-referral-confetti__piece--7 { top: 76rpx; right: 228rpx; background: #993921; animation-delay: 300ms; }
+
+.share-referral-flying-coupon {
+  position: absolute;
+  z-index: 4;
+  left: 76rpx;
+  bottom: 148rpx;
+  width: 250rpx;
+  padding: 20rpx 22rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 251, 244, 0.96);
+  box-shadow: 0 20rpx 44rpx rgba(93, 71, 45, 0.18);
+  text-align: left;
+  animation: share-referral-fly-coupon 760ms ease-in-out both;
+}
+
+.share-referral-flying-coupon__title {
+  display: block;
+  font-size: 22rpx;
+  color: #6a5a4b;
+}
+
+.share-referral-flying-coupon__amount {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 38rpx;
+  font-weight: 700;
+  color: #993921;
+}
+
+.share-referral-ledger-stage {
+  position: relative;
+  min-height: 340rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-referral-ledger-stage__image {
+  width: 650rpx;
+  height: 368rpx;
+  animation: share-referral-ledger-in 420ms ease both;
+}
+
+.share-referral-timeline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0;
+  padding: 20rpx 0 0;
+  border-left: 0;
+}
+
+.share-referral-timeline__item {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding-top: 38rpx;
+  text-align: center;
+  color: #6a5a4b;
+}
+
+.share-referral-timeline__item::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 999rpx;
+  background: #b8724b;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.share-referral-timeline__item::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  right: -50%;
+  top: 8rpx;
+  height: 2rpx;
+  background: rgba(153, 57, 33, 0.2);
+}
+
+.share-referral-timeline__item:last-child::after {
+  display: none;
+}
+
+.share-referral-timeline__title,
+.share-referral-timeline__desc {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.share-referral-timeline__title {
+  font-size: 24rpx;
+  line-height: 1.45;
+  color: #5f4b38;
+}
+
+.share-referral-timeline__desc {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  line-height: 1.4;
+  color: rgba(106, 90, 75, 0.72);
+}
+
+@keyframes share-referral-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes share-referral-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes share-referral-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(26rpx) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes share-referral-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  20% { transform: translateX(-8rpx) rotate(-2deg); }
+  40% { transform: translateX(7rpx) rotate(2deg); }
+  60% { transform: translateX(-5rpx) rotate(-1deg); }
+  80% { transform: translateX(4rpx) rotate(1deg); }
+}
+
+@keyframes share-referral-burst {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.74);
+  }
+  to {
+    opacity: 0.82;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+@keyframes share-referral-confetti {
+  0% {
+    opacity: 0;
+    transform: translateY(30rpx) rotate(0deg) scale(0.7);
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-120rpx) rotate(120deg) scale(1);
+  }
+}
+
+@keyframes share-referral-fly-coupon {
+  0% {
+    opacity: 0;
+    transform: translate(60rpx, -80rpx) rotate(-6deg) scale(0.82);
+  }
+  36% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(280rpx, 68rpx) rotate(8deg) scale(0.62);
+  }
+}
+
+@keyframes share-referral-ledger-in {
+  from {
+    opacity: 0;
+    transform: translateY(18rpx) rotate(-2deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes share-referral-seal {
+  0% {
+    opacity: 0;
+    transform: rotate(-12deg) scale(1.5);
+  }
+  72% {
+    opacity: 1;
+    transform: rotate(-12deg) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-12deg) scale(1);
+  }
+}

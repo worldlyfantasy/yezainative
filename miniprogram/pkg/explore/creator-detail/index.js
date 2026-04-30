@@ -1,10 +1,32 @@
 const { getCreatorDetailData } = require("../../../repositories/content-repository");
 const { isFavorited, toggleFavorite } = require("../../../repositories/transaction-repository");
-const { goTopLevel, setPendingJourneyFilter, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
+const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
 const { openIdea } = require("../../../services/idea-navigation");
 const { getCurrentUser } = require("../../../services/user");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../utils/favorite-notice");
 const { enablePageShareMenus, createShareAppMessage, createShareTimeline } = require("../../../utils/share");
+const MAX_CREATOR_TAGS = 3;
+
+function ensureArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeCreatorReviews(reviews) {
+  return ensureArray(reviews)
+    .map((review) => {
+      if (!review || typeof review !== "object") {
+        return null;
+      }
+
+      const content = typeof review.content === "string" ? review.content.trim() : "";
+      if (!content) {
+        return null;
+      }
+
+      return Object.assign({}, review, { content });
+    })
+    .filter(Boolean);
+}
 
 Page({
   data: {
@@ -15,7 +37,6 @@ Page({
     favoriteNoticeActionLabel: "进入我的收藏",
     favoriteNoticeMode: "success",
     favoriteNoticeActionType: "favorites",
-    creatorRouteTypes: [],
     relatedServices: [],
     displayIdeas: [],
     hasMoreIdeas: false
@@ -41,11 +62,11 @@ Page({
       }
 
       const creatorIdeas = payload.creatorIdeas || [];
-      const creatorRouteTypes = this.buildCreatorRouteTypes(payload.relatedServices);
+      const creator = this.decorateCreator(payload.creator);
       this.setData({
         ...payload,
+        creator,
         loading: false,
-        creatorRouteTypes,
         displayIdeas: creatorIdeas.slice(0, 2),
         hasMoreIdeas: creatorIdeas.length > 2
       });
@@ -117,29 +138,13 @@ Page({
     });
   },
 
-  buildCreatorRouteTypes(services) {
-    const tagSet = new Set();
-    (services || []).forEach((service) => {
-      (service && Array.isArray(service.tags) ? service.tags : []).forEach((item) => {
-        const value = String(item || "").trim();
-        if (value) {
-          tagSet.add(value);
-        }
-      });
+  decorateCreator(creator) {
+    const normalizedReviews = normalizeCreatorReviews(creator && creator.reviews);
+    return Object.assign({}, creator, {
+      displayTags: ensureArray(creator && creator.tags).slice(0, MAX_CREATOR_TAGS),
+      reviews: normalizedReviews,
+      hasVisibleReviews: normalizedReviews.length > 0
     });
-    return Array.from(tagSet).slice(0, 6);
-  },
-
-  onRouteTypeTap(event) {
-    const routeType = String(event.currentTarget.dataset.value || "").trim();
-    if (!routeType) {
-      return;
-    }
-
-    setPendingJourneyFilter({
-      routeType
-    });
-    goTopLevel(TOP_LEVEL_ROUTES.journeys);
   },
 
   onStoryTap(event) {

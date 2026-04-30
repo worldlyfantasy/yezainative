@@ -180,7 +180,7 @@
   font-size: 22rpx;
   line-height: 1.4;
   letter-spacing: 1rpx;
-  color: #9f3518;
+  color: #993921;
 }
 
 .journey-route-card__departure-date {
@@ -192,9 +192,9 @@
 
 .journey-route-card__price,
 .journey-route-card__compact-price {
-  font-family: "Georgia", "Times New Roman", serif;
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   font-weight: 700;
-  color: #9f3518;
+  color: #D15E14;
 }
 
 .journey-route-card__price {

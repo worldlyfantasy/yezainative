@@ -17,8 +17,8 @@ page {
   min-height: 100vh;
   overflow: hidden;
   background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0) 42%),
-    linear-gradient(180deg, #f6f4ef 0%, #f3f1ec 44%, #efede8 100%);
+    radial-gradient(circle at top, rgba(255, 249, 242, 0.72), rgba(255, 249, 242, 0) 42%),
+    linear-gradient(180deg, #FFF9F2 0%, #F9F4EC 44%, #F2E6C9 100%);
   opacity: 1;
   transition: opacity 420ms ease;
 }
@@ -62,7 +62,7 @@ page {
 
 /* 中间诗句字体大小 */
 .splash-quote__char {
-  color: #171514;
+  color: #2B241D;
   font-size: 50rpx;
   line-height: 1;
   font-family: "Songti SC", "STSong", serif;
@@ -78,4 +78,5 @@ page {
 .splash-page__logo {
   width: 220rpx;
   height: 116rpx;
+  opacity: 0.9;
 }

@@ -113,6 +113,29 @@
             "type": "number",
             "title": "总名额Int"
         },
+        "singleRoomEnabled": {
+            "default": false,
+            "description": "是否开启单房申请",
+            "type": "boolean",
+            "title": "单房申请开关"
+        },
+        "singleRoomPrice": {
+            "default": 0,
+            "description": "单房差参考价",
+            "type": "number",
+            "title": "单房差参考价"
+        },
+        "singleRoomPriceDec": {
+            "description": "单房差参考价Decimal",
+            "type": "number",
+            "title": "单房差参考价Decimal"
+        },
+        "singleRoomNotice": {
+            "description": "单房申请说明",
+            "type": "string",
+            "title": "单房申请说明",
+            "maxLength": 256
+        },
         "remainingSeats": {
             "x-required": true,
             "default": 0,

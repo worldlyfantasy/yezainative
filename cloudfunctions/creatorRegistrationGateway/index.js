@@ -1,5 +1,6 @@
 const cloud = require("wx-server-sdk");
 const cloudbase = require("@cloudbase/node-sdk");
+const crypto = require("node:crypto");
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -10,8 +11,21 @@ const app = cloudbase.init({
 const db = cloud.database();
 const auth = app.auth();
 const COLLECTION_NAME = "creator_registrations";
+const CREATORS_COLLECTION_NAME = "creators";
+const ADMIN_ACCOUNTS_COLLECTION_NAME = "admin_accounts";
 const MUTABLE_STATUSES = new Set(["draft", "rejected"]);
 const APPROVAL_EMAIL_STATUSES = new Set(["pending", "sent", "failed"]);
+const REGISTERED_CREATOR_EMAIL_MESSAGE = "该邮箱已经被注册过，可以用该邮箱作为用户名登录";
+const MAX_IMAGE_UPLOAD_BYTES = 15 * 1024 * 1024;
+const IMAGE_MIME_EXTENSION_MAP = {
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+  "image/heic": ".heic",
+  "image/heif": ".heif"
+};
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -56,6 +70,66 @@ function normalizeAbout(value) {
 function normalizeApprovalEmailStatus(value) {
   const status = normalizeText(value);
   return APPROVAL_EMAIL_STATUSES.has(status) ? status : "pending";
+}
+
+function hashActivationToken(token) {
+  return crypto.createHash("sha256").update(normalizeText(token)).digest("hex");
+}
+
+function sanitizePathSegment(value) {
+  return normalizeText(value)
+    .replace(/[^0-9a-zA-Z/!_\-.*\u4e00-\u9fa5 ]+/g, "-")
+    .replace(/\/+/g, "/")
+    .replace(/^\/|\/$/g, "");
+}
+
+function getExtensionFromMimeType(contentType) {
+  return IMAGE_MIME_EXTENSION_MAP[normalizeText(contentType).toLowerCase()] || "";
+}
+
+function getExtensionFromFileName(fileName) {
+  const normalized = normalizeText(fileName);
+  const matched = normalized.match(/(\.[a-zA-Z0-9]+)$/);
+  return matched ? matched[1].toLowerCase() : "";
+}
+
+function normalizeUploadImageFileName(fileName, contentType) {
+  const normalized = normalizeText(fileName);
+  const providedExtension = getExtensionFromFileName(normalized);
+  const fallbackExtension = getExtensionFromMimeType(contentType) || ".jpg";
+  const extension = providedExtension || fallbackExtension;
+  const baseName = providedExtension ? normalized.slice(0, -providedExtension.length) : normalized;
+  return `${baseName || "image"}${extension}`;
+}
+
+function buildCloudPath(folder, fileName, fallbackExtension) {
+  const safeFolder = sanitizePathSegment(folder || "uploads");
+  const normalizedName = normalizeText(fileName) || "image";
+  const detectedExtension = getExtensionFromFileName(normalizedName) || normalizeText(fallbackExtension);
+  const baseName = detectedExtension ? normalizedName.slice(0, -detectedExtension.length) : normalizedName;
+  const safeName = sanitizePathSegment(baseName || "image").replace(/\//g, "-");
+  return `${safeFolder}/${safeName}${detectedExtension}`;
+}
+
+function parseBase64ImagePayload(rawValue) {
+  const normalized = normalizeText(rawValue);
+  assertCondition(normalized, "缺少图片内容");
+
+  const dataUrlMatch = normalized.match(/^data:([^;,]+)?;base64,(.+)$/i);
+  const mimeType = normalizeText(dataUrlMatch && dataUrlMatch[1]).toLowerCase();
+  const rawBase64 = dataUrlMatch && dataUrlMatch[2] ? dataUrlMatch[2] : normalized;
+  const base64 = String(rawBase64 || "").replace(/\s+/g, "");
+  assertCondition(base64, "图片内容为空");
+  assertCondition(/^[A-Za-z0-9+/=]+$/.test(base64), "图片内容格式不正确");
+
+  const buffer = Buffer.from(base64, "base64");
+  assertCondition(buffer.length > 0, "图片内容解析失败");
+  assertCondition(buffer.length <= MAX_IMAGE_UPLOAD_BYTES, "图片体积过大，请控制在 15MB 以内");
+
+  return {
+    buffer,
+    mimeType
+  };
 }
 
 function isValidDateParts(year, month, day) {
@@ -166,26 +240,64 @@ function assertCondition(condition, message) {
   }
 }
 
-async function requireApplicant() {
-  const result = await auth.getEndUserInfo();
-  const userInfo = result && result.userInfo ? result.userInfo : null;
-  const authUserId = normalizeText(userInfo && userInfo.id);
+function isMissingDocumentError(error) {
+  const message = normalizeText(
+    (error && error.errMsg) || (error && error.message) || ""
+  ).toLowerCase();
+
+  return Boolean(
+    message
+    && (
+      message.includes("document with _id")
+      || message.includes("does not exist")
+      || message.includes("not exist")
+      || message.includes("不存在")
+    )
+  );
+}
+
+async function requireApplicant(options = {}) {
+  let callerInfo = {};
+  let userInfo = null;
+
+  try {
+    callerInfo = typeof auth.getUserInfo === "function" ? auth.getUserInfo() : {};
+  } catch (error) {
+    callerInfo = {};
+  }
+
+  try {
+    const result = await auth.getEndUserInfo();
+    userInfo = result && result.userInfo ? result.userInfo : null;
+  } catch (error) {
+    userInfo = null;
+  }
+
+  const authUserId =
+    normalizeText(userInfo && userInfo.id)
+    || normalizeText(userInfo && userInfo.uid)
+    || normalizeText(callerInfo && callerInfo.uid)
+    || normalizeText(callerInfo && callerInfo.customUserId)
+    || normalizeText(callerInfo && callerInfo.openId);
   const authEmail = normalizeEmail(userInfo && (userInfo.email || userInfo.mail));
 
   assertCondition(authUserId, "请先完成邮箱验证");
-  assertCondition(authEmail, "请先使用邮箱验证码登录");
+  if (options.requireEmail !== false) {
+    assertCondition(authEmail, "请先使用邮箱验证码登录");
+  }
 
   return { authUserId, authEmail };
 }
 
 function normalizeRegistrationPayload(payload, applicant) {
   const source = payload || {};
+  const contactEmail = normalizeEmail(source.contactEmail);
 
   return {
     _id: applicant.authUserId,
     authUserId: applicant.authUserId,
-    authEmail: applicant.authEmail,
-    contactEmail: normalizeEmail(source.contactEmail),
+    authEmail: applicant.authEmail || contactEmail,
+    contactEmail,
     applicantName: normalizeText(source.applicantName),
     phone: normalizePhone(source.phone),
     gender: normalizeGender(source.gender),
@@ -224,6 +336,11 @@ function normalizeRegistrationDoc(doc) {
     rejectionReason: normalizeText(doc.rejectionReason),
     linkedCreatorId: normalizeText(doc.linkedCreatorId),
     linkedCreatorSlug: normalizeText(doc.linkedCreatorSlug),
+    linkedAdminAccountId: normalizeText(doc.linkedAdminAccountId),
+    accessProvisionStatus: normalizeText(doc.accessProvisionStatus) || "pending",
+    activationTokenHash: normalizeText(doc.activationTokenHash),
+    activationExpiresAt: Number(doc.activationExpiresAt) || 0,
+    activationConsumedAt: Number(doc.activationConsumedAt) || 0,
     approvalEmailStatus: normalizeApprovalEmailStatus(doc.approvalEmailStatus),
     approvalEmailSentAt: Number(doc.approvalEmailSentAt) || 0,
     approvalEmailError: normalizeText(doc.approvalEmailError),
@@ -236,8 +353,196 @@ function normalizeRegistrationDoc(doc) {
 }
 
 async function findRegistrationByAuthUserId(authUserId) {
-  const result = await db.collection(COLLECTION_NAME).doc(authUserId).get();
-  return result && result.data ? result.data : null;
+  try {
+    const result = await db.collection(COLLECTION_NAME).doc(authUserId).get();
+    return result && result.data ? result.data : null;
+  } catch (error) {
+    if (isMissingDocumentError(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function findApprovedRegistrationByEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  const contactEmailResult = await db.collection(COLLECTION_NAME).where({
+    contactEmail: normalizedEmail,
+    status: "approved"
+  }).limit(1).get();
+  const contactEmailMatch = contactEmailResult
+    && contactEmailResult.data
+    && contactEmailResult.data[0];
+  if (contactEmailMatch) {
+    return contactEmailMatch;
+  }
+
+  const authEmailResult = await db.collection(COLLECTION_NAME).where({
+    authEmail: normalizedEmail,
+    status: "approved"
+  }).limit(1).get();
+  const authEmailMatch = authEmailResult
+    && authEmailResult.data
+    && authEmailResult.data[0];
+
+  return authEmailMatch || null;
+}
+
+function isActiveCreatorPortalAccount(account) {
+  return (
+    normalizeText(account && account.accountType) === "creator_portal"
+    && (normalizeText(account && account.status) || "active") === "active"
+  );
+}
+
+async function findRegisteredCreatorPortalAccountByEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  const emailResult = await db.collection(ADMIN_ACCOUNTS_COLLECTION_NAME).where({
+    accountType: "creator_portal",
+    email: normalizedEmail
+  }).limit(10).get();
+  const emailMatch = emailResult
+    && emailResult.data
+    && emailResult.data.find((item) => isActiveCreatorPortalAccount(item));
+  if (emailMatch) {
+    return emailMatch;
+  }
+
+  const usernameResult = await db.collection(ADMIN_ACCOUNTS_COLLECTION_NAME).where({
+    accountType: "creator_portal",
+    username: normalizedEmail
+  }).limit(10).get();
+  const usernameMatch = usernameResult
+    && usernameResult.data
+    && usernameResult.data.find((item) => isActiveCreatorPortalAccount(item));
+
+  return usernameMatch || null;
+}
+
+async function getRegisteredCreatorApplicationEmailMatch(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  const approvedRegistration = await findApprovedRegistrationByEmail(normalizedEmail);
+  if (approvedRegistration) {
+    const linkedAccount = await findAdminAccountByRegistration(approvedRegistration);
+    if (isActiveCreatorPortalAccount(linkedAccount)) {
+      return {
+        source: "creator_registration",
+        registration: normalizeRegistrationDoc(approvedRegistration)
+      };
+    }
+  }
+
+  const creatorPortalAccount = await findRegisteredCreatorPortalAccountByEmail(normalizedEmail);
+  if (creatorPortalAccount) {
+    return {
+      source: "creator_portal_account",
+      adminAccountId: normalizeText(creatorPortalAccount._id)
+    };
+  }
+
+  return null;
+}
+
+async function checkEmailAvailability(payload) {
+  const email = normalizeEmail(payload && payload.email);
+  assertCondition(email, "请填写邮箱");
+
+  const match = await getRegisteredCreatorApplicationEmailMatch(email);
+  return {
+    email,
+    available: !match,
+    message: match ? REGISTERED_CREATOR_EMAIL_MESSAGE : ""
+  };
+}
+
+async function assertCreatorApplicationEmailAvailable(email) {
+  const availability = await checkEmailAvailability({ email });
+  assertCondition(availability.available, availability.message || REGISTERED_CREATOR_EMAIL_MESSAGE);
+}
+
+async function findRegistrationByActivationToken(token) {
+  const hashedToken = hashActivationToken(token);
+  const result = await db.collection(COLLECTION_NAME).where({
+    activationTokenHash: hashedToken
+  }).limit(1).get();
+
+  return result && result.data && result.data[0] ? result.data[0] : null;
+}
+
+async function findCreatorDocByRegistration(registration) {
+  const creatorId = normalizeText(registration && registration.linkedCreatorId);
+  const creatorSlug = normalizeText(registration && registration.linkedCreatorSlug);
+  const candidates = [creatorId, creatorSlug].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const byIdResult = await db.collection(CREATORS_COLLECTION_NAME).where({
+      id: candidate
+    }).limit(1).get();
+
+    if (byIdResult && byIdResult.data && byIdResult.data[0]) {
+      return byIdResult.data[0];
+    }
+
+    const bySlugResult = await db.collection(CREATORS_COLLECTION_NAME).where({
+      slug: candidate
+    }).limit(1).get();
+
+    if (bySlugResult && bySlugResult.data && bySlugResult.data[0]) {
+      return bySlugResult.data[0];
+    }
+  }
+
+  return null;
+}
+
+async function findAdminAccountByRegistration(registration) {
+  const linkedAdminAccountId = normalizeText(registration && registration.linkedAdminAccountId);
+  if (linkedAdminAccountId) {
+    try {
+      const linkedAccount = await db.collection(ADMIN_ACCOUNTS_COLLECTION_NAME).doc(linkedAdminAccountId).get();
+      if (linkedAccount && linkedAccount.data) {
+        return linkedAccount.data;
+      }
+    } catch (error) {
+      if (!isMissingDocumentError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  const authUserId = normalizeText(registration && registration.authUserId);
+  const authEmail = normalizeEmail(registration && (registration.authEmail || registration.contactEmail));
+  if (authUserId) {
+    const result = await db.collection(ADMIN_ACCOUNTS_COLLECTION_NAME).where({
+      uid: authUserId
+    }).limit(1).get();
+
+    if (result && result.data && result.data[0]) {
+      return result.data[0];
+    }
+  }
+
+  if (!authEmail) {
+    return null;
+  }
+
+  const emailResult = await db.collection(ADMIN_ACCOUNTS_COLLECTION_NAME).where({
+    email: authEmail
+  }).limit(1).get();
+
+  return emailResult && emailResult.data && emailResult.data[0] ? emailResult.data[0] : null;
 }
 
 function assertMutableRegistration(existing) {
@@ -347,8 +652,37 @@ async function getMyRegistration() {
   return normalizeRegistrationDoc(existing);
 }
 
+function assertActivationRegistrationUsable(registration) {
+  assertCondition(registration, "激活链接无效");
+  assertCondition(registration.status === "approved", "当前申请尚未通过");
+  assertCondition(registration.accessProvisionStatus === "activation_pending", "当前申请无需激活");
+  assertCondition(registration.activationExpiresAt > Date.now(), "激活链接已过期");
+  assertCondition(!registration.activationConsumedAt, "激活链接已失效");
+}
+
+async function getActivationDetail(payload) {
+  const token = normalizeText(payload && payload.token);
+  assertCondition(token, "缺少激活 token");
+
+  const registration = normalizeRegistrationDoc(await findRegistrationByActivationToken(token));
+  assertActivationRegistrationUsable(registration);
+  const linkedAdminAccount = await findAdminAccountByRegistration(registration);
+
+  return {
+    registrationId: registration.registrationId,
+    applicantName: registration.applicantName,
+    contactEmail: registration.contactEmail,
+    loginUsername:
+      normalizeText(linkedAdminAccount && linkedAdminAccount.username)
+      || normalizeText(registration.authUserId),
+    linkedCreatorSlug: registration.linkedCreatorSlug,
+    status: registration.accessProvisionStatus,
+    expiresAt: registration.activationExpiresAt
+  };
+}
+
 async function saveDraft(payload) {
-  const applicant = await requireApplicant();
+  const applicant = await requireApplicant({ requireEmail: false });
   const nextDoc = normalizeRegistrationPayload(payload, applicant);
   return upsertRegistration(nextDoc, {
     nextStatus: "draft",
@@ -358,11 +692,14 @@ async function saveDraft(payload) {
 }
 
 async function submit(payload) {
-  const applicant = await requireApplicant();
+  const applicant = await requireApplicant({ requireEmail: false });
   const nextDoc = normalizeRegistrationPayload(payload, applicant);
 
   assertCondition(nextDoc.contactEmail, "请填写邮箱");
-  assertCondition(applicant.authEmail === nextDoc.contactEmail, "联系邮箱已变更，请重新验证邮箱");
+  await assertCreatorApplicationEmailAvailable(nextDoc.contactEmail);
+  if (applicant.authEmail) {
+    assertCondition(applicant.authEmail === nextDoc.contactEmail, "联系邮箱已变更，请重新验证邮箱");
+  }
   assertCondition(nextDoc.applicantName, "请填写真实姓名");
   assertCondition(nextDoc.phone, "请填写手机号");
   assertCondition(isValidMainlandMobile(nextDoc.phone), "请输入正确的手机号");
@@ -379,10 +716,84 @@ async function submit(payload) {
   });
 }
 
+async function uploadImageFile(payload) {
+  const applicant = await requireApplicant({ requireEmail: false });
+  const folder = normalizeText(payload && payload.folder);
+  const fileName = normalizeText(payload && payload.fileName);
+  const contentType = normalizeText(payload && payload.contentType).toLowerCase();
+  const base64 = payload && (payload.base64 || payload.dataUrl);
+
+  assertCondition(applicant.authUserId, "请先完成邮箱验证");
+  assertCondition(folder, "缺少图片存储目录");
+
+  const parsed = parseBase64ImagePayload(base64);
+  const effectiveContentType = parsed.mimeType || contentType;
+  const normalizedFileName = normalizeUploadImageFileName(fileName, effectiveContentType);
+  const cloudPath = buildCloudPath(
+    folder,
+    normalizedFileName,
+    getExtensionFromMimeType(effectiveContentType) || getExtensionFromFileName(normalizedFileName)
+  );
+  const uploadResult = await cloud.uploadFile({
+    cloudPath,
+    fileContent: parsed.buffer
+  });
+
+  return {
+    fileID: normalizeText(uploadResult && uploadResult.fileID),
+    cloudPath
+  };
+}
+
+async function consumeActivation(payload) {
+  const token = normalizeText(payload && payload.token);
+  assertCondition(token, "缺少激活 token");
+
+  const applicant = await requireApplicant({ requireEmail: false });
+  const registration = normalizeRegistrationDoc(await findRegistrationByActivationToken(token));
+  assertActivationRegistrationUsable(registration);
+
+  const expectedEmail = registration.contactEmail || registration.authEmail;
+  assertCondition(applicant.authUserId === registration.authUserId, "请使用申请邮箱完成激活");
+  if (applicant.authEmail && expectedEmail) {
+    assertCondition(applicant.authEmail === expectedEmail, "请使用申请邮箱完成激活");
+  }
+
+  const consumedAt = Date.now();
+  const creator = await findCreatorDocByRegistration(registration);
+  assertCondition(creator && normalizeText(creator._id), "未找到关联创作者资料，请联系管理员处理");
+
+  await db.collection(CREATORS_COLLECTION_NAME).doc(creator._id).update({
+    data: {
+      status: "active",
+      updatedAt: consumedAt,
+      updatedBy: normalizeText(applicant.authUserId)
+    }
+  });
+
+  await db.collection(COLLECTION_NAME).doc(registration.registrationId).update({
+    data: {
+      accessProvisionStatus: "provisioned",
+      activationConsumedAt: consumedAt,
+      updatedAt: consumedAt
+    }
+  });
+
+  return {
+    registrationId: registration.registrationId,
+    status: "provisioned",
+    activationConsumedAt: consumedAt
+  };
+}
+
 const handlers = {
+  checkEmailAvailability: (payload) => checkEmailAvailability(payload),
   getMyRegistration: () => getMyRegistration(),
+  getActivationDetail: (payload) => getActivationDetail(payload),
   saveDraft: (payload) => saveDraft(payload),
-  submit: (payload) => submit(payload)
+  submit: (payload) => submit(payload),
+  uploadImageFile: (payload) => uploadImageFile(payload),
+  consumeActivation: (payload) => consumeActivation(payload)
 };
 
 exports.main = async (event) => {
@@ -414,20 +825,36 @@ exports.main = async (event) => {
 exports.__test__ = {
   assertCondition,
   getMyRegistration,
+  REGISTERED_CREATOR_EMAIL_MESSAGE,
   normalizeEmail,
   normalizeApprovalEmailStatus,
+  hashActivationToken,
   normalizeAbout,
+  parseBase64ImagePayload,
   normalizeDocumentNumber,
   normalizeDocumentType,
   normalizeGender,
   normalizePhone,
   normalizeRegistrationDoc,
   normalizeRegistrationPayload,
+  normalizeUploadImageFileName,
   normalizeText,
+  isMissingDocumentError,
+  buildCloudPath,
   validateDocumentNumber,
   assertMutableRegistration,
+  assertCreatorApplicationEmailAvailable,
+  assertActivationRegistrationUsable,
+  checkEmailAvailability,
+  findApprovedRegistrationByEmail,
+  findRegisteredCreatorPortalAccountByEmail,
+  getRegisteredCreatorApplicationEmailMatch,
+  findRegistrationByActivationToken,
+  getActivationDetail,
   requireApplicant,
   saveDraft,
   submit,
+  uploadImageFile,
+  consumeActivation,
   upsertRegistration
 };

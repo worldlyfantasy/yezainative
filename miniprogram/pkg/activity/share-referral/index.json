@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "野哉分享家",
+  "usingComponents": {
+    "app-tab-bar": "/custom-tab-bar/index"
+  }
+}

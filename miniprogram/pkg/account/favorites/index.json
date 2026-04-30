@@ -1,7 +1,7 @@
 {
   "navigationBarTitleText": "",
   "usingComponents": {
-    "destination-card": "/components/yezai/destination-card/index",
+    "destination-card": "../components/destination-card/index",
     "creator-card": "/components/yezai/creator-card/index",
     "service-card": "/components/yezai/service-card/index"
   }

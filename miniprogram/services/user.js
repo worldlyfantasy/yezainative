@@ -1,33 +1,50 @@
-const { getCurrentUser, getSessionSnapshot, login, updateProfile, logout } = require("../repositories/user-repository");
+const { getCurrentUser, getSessionSnapshot, login, updateProfile, logout, activateSession } = require("../repositories/user-repository");
 const { getRecentOrders } = require("../repositories/transaction-repository");
 const { buildTripDateRange, getTripPhaseKey } = require("../constants/transaction-meta");
 const { getServiceCreatorRoles, getServiceCreatorRoleText } = require("./service-roles");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("./navigation");
+const { EMPTY_TRIP_STATE_IMAGE } = require("../config/profile-page");
 
 function isPlainObject(value) {
   return Boolean(value) && Object.prototype.toString.call(value) === "[object Object]";
 }
 
-const PROFILE_SHORTCUTS = [
-  {
-    key: "orders",
-    label: "我的订单",
-    cardClassName: "profile-entry-card--strong",
-    eyebrow: "旅程归档",
-    desc: "查看全部订单",
-    glyphSrc:
-      "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/野（扣底圆体）.png"
-  },
-  {
-    key: "favorites",
-    label: "我的收藏",
-    cardClassName: "",
-    eyebrow: "心意收藏",
-    desc: "回看喜欢的故事",
-    glyphSrc:
-      "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/哉（扣底圆体）.png"
-  }
-];
+function buildProfileShortcuts(user) {
+  return [
+    {
+      key: "orders",
+      label: "我的订单",
+      cardClassName: "profile-entry-card--strong",
+      desc: "全部订单",
+      glyphSrc:
+        "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/野（扣底圆体）.png"
+    },
+    {
+      key: "assets",
+      label: "野哉分享家",
+      cardClassName: "",
+      desc: "券与奖励",
+      glyphSrc:
+        "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/野（扣底圆体）.png"
+    },
+    {
+      key: "favorites",
+      label: "我的收藏",
+      cardClassName: "",
+      desc: "人物与旅程",
+      glyphSrc:
+        "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/哉（扣底圆体）.png"
+    },
+    {
+      key: "travelers",
+      label: "出行人档案",
+      cardClassName: "",
+      desc: "常用出行人",
+      glyphSrc:
+        "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/哉（扣底圆体）.png"
+    }
+  ];
+}
 
 const TRIP_PHASE_LABELS = {
   upcoming: "待出发",
@@ -81,9 +98,10 @@ async function getMyPageData() {
   return {
     loggedIn,
     user,
-    shortcuts: PROFILE_SHORTCUTS,
+    shortcuts: buildProfileShortcuts(user),
     recentOrders: recentOrderCandidates.slice(0, 2),
-    activeTrips: loggedIn ? buildActiveTrips(recentOrderCandidates) : []
+    activeTrips: loggedIn ? buildActiveTrips(recentOrderCandidates) : [],
+    emptyTripStateImage: EMPTY_TRIP_STATE_IMAGE
   };
 }
 
@@ -93,9 +111,10 @@ function getMyPageInitialState() {
   return {
     loggedIn: snapshot.loggedIn,
     user: snapshot.user,
-    shortcuts: PROFILE_SHORTCUTS,
+    shortcuts: buildProfileShortcuts(snapshot.user),
     recentOrders: [],
-    activeTrips: []
+    activeTrips: [],
+    emptyTripStateImage: EMPTY_TRIP_STATE_IMAGE
   };
 }
 
@@ -136,5 +155,6 @@ module.exports = {
   updateProfile,
   logout,
   getMyPageData,
+  activateSession,
   ensureLoggedIn
 };

@@ -1,31 +1,34 @@
 <view class="page-shell">
   <text class="page-eyebrow">创作者档案</text>
-  <text class="page-subtitle">他们有自己的节奏与价值观，我们负责透明呈现。按创作者类型和目的地区域筛选，就能更快找到合适的同行者。</text>
+  <text class="page-subtitle">每一位创作者都有自己的节奏与热爱，我们负责把真实的TA们完整呈现给你。</text>
 
-  <view class="section-block filter-shell creators-filter-shell">
-    <view class="filter-item creator-filter-item">
-      <text class="filter-label">创作者类型</text>
-      <picker
-        class="filter-picker-trigger"
-        mode="selector"
-        range="{{styleLabels.length ? styleLabels : ['全部']}}"
-        value="{{styleIndex}}"
-        bindchange="onStyleChange"
-      >
-        <view class="filter-picker creator-filter-picker">{{styleLabels[styleIndex] || '全部'}}</view>
-      </picker>
+  <view class="creator-tool-row">
+    <view class="creator-filter-trigger" bindtap="openStyleSheet" hover-class="creator-filter-trigger--pressed">
+      <view class="creator-filter-trigger__icon">
+        <view class="creator-filter-trigger__route-dots">
+          <view wx:for="{{routeTriggerDots}}" wx:key="*this" class="creator-filter-trigger__route-dot"></view>
+        </view>
+      </view>
+      <text class="creator-filter-trigger__label">{{selectedStyleLabel || '路线标签'}}</text>
+      <view
+        wx:if="{{selectedStyle}}"
+        class="creator-filter-trigger__clear"
+        catchtap="clearSelectedStyle"
+      >×</view>
     </view>
-    <view class="filter-item creator-filter-item">
-      <text class="filter-label">目的地区域</text>
-      <picker
-        class="filter-picker-trigger"
-        mode="selector"
-        range="{{regionLabels.length ? regionLabels : ['全部']}}"
-        value="{{regionIndex}}"
-        bindchange="onRegionChange"
-      >
-        <view class="filter-picker creator-filter-picker">{{regionLabels[regionIndex] || '全部'}}</view>
-      </picker>
+
+    <view class="creator-filter-trigger" bindtap="openRegionSheet" hover-class="creator-filter-trigger--pressed">
+      <view class="creator-filter-trigger__icon">
+        <view class="creator-filter-trigger__pin">
+          <view class="creator-filter-trigger__pin-core"></view>
+        </view>
+      </view>
+      <text class="creator-filter-trigger__label">{{selectedRegionLabel || '路线区域'}}</text>
+      <view
+        wx:if="{{selectedRegionCode}}"
+        class="creator-filter-trigger__clear"
+        catchtap="clearSelectedRegion"
+      >×</view>
     </view>
   </view>
 
@@ -42,4 +45,75 @@
   </view>
 </view>
 
-<app-tab-bar></app-tab-bar>
+<view wx:if="{{isStyleSheetVisible}}" class="creator-sheet">
+  <view class="creator-sheet__backdrop" bindtap="closeStyleSheet"></view>
+  <view class="creator-sheet__panel creator-sheet__panel--tags {{isStyleSheetAnimating ? 'creator-sheet__panel--active' : ''}}">
+    <view class="creator-sheet__header creator-sheet__header--compact">
+      <view class="creator-sheet__close" bindtap="closeStyleSheet" hover-class="creator-sheet__close--pressed">×</view>
+    </view>
+
+    <view class="creator-tag-grid">
+      <view
+        wx:for="{{visibleStyleOptions}}"
+        wx:key="key"
+        class="creator-tag-card {{item.available ? 'creator-tag-card--available' : 'creator-tag-card--unavailable'}} {{item.selected ? 'creator-tag-card--selected' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="onStyleTap"
+      >
+        <view class="creator-tag-card__icon-shell">
+          <image
+            wx:if="{{item.icon}}"
+            class="creator-tag-card__icon"
+            src="{{item.icon}}"
+            mode="aspectFit"
+            lazy-load="{{true}}"
+          ></image>
+        </view>
+        <text class="creator-tag-card__label">{{item.label}}</text>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view wx:if="{{isRegionSheetVisible}}" class="creator-sheet">
+  <view class="creator-sheet__backdrop" bindtap="closeRegionSheet"></view>
+  <view class="creator-sheet__panel creator-sheet__panel--region {{isRegionSheetAnimating ? 'creator-sheet__panel--active' : ''}}">
+    <view class="creator-sheet__header creator-sheet__header--compact">
+      <view class="creator-sheet__close" bindtap="closeRegionSheet" hover-class="creator-sheet__close--pressed">×</view>
+    </view>
+
+    <scroll-view wx:if="{{regionSheetColumns.length}}" class="creator-region-sheet__scroll" scroll-x="true" enhanced="{{true}}" show-scrollbar="{{false}}">
+      <view class="creator-region-sheet__track">
+        <view wx:for="{{regionSheetColumns}}" wx:key="index" class="creator-region-sheet__column">
+          <view
+            wx:for="{{item}}"
+            wx:key="key"
+            class="creator-region-card {{item.available ? 'creator-region-card--available' : 'creator-region-card--unavailable'}} {{item.selected ? 'creator-region-card--selected' : ''}}"
+            data-region="{{item.value}}"
+            bindtap="onRegionTap"
+          >
+            <image
+              wx:if="{{item.image}}"
+              class="creator-region-card__image"
+              src="{{item.image}}"
+              mode="aspectFill"
+              lazy-load="{{true}}"
+            ></image>
+            <view wx:else class="creator-region-card__fallback"></view>
+            <view class="creator-region-card__mask"></view>
+            <view class="creator-region-card__content">
+              <text class="creator-region-card__label">{{item.label}}</text>
+              <text class="creator-region-card__meta">{{item.countText}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view wx:else class="creator-sheet__empty">
+      <text class="creator-sheet__empty-text">当前筛选下还没有可选区域。</text>
+    </view>
+  </view>
+</view>
+
+<app-tab-bar wx:if="{{!isStyleSheetVisible && !isRegionSheetVisible}}"></app-tab-bar>

@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { buildArticleBridgeSrc } = require("../miniprogram/services/article-bridge");
+const { buildArticleBridgeSrc } = require("../miniprogram/pkg/content/article-bridge/bridge");
 
 test("article bridge uses configured business-domain page when provided", () => {
   const result = buildArticleBridgeSrc({

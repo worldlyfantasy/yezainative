@@ -8,5 +8,5 @@
     <circle cx="25.1" cy="9.8" r="1.9"/>
     <path d="M21.2 11.8c-2.5 0-4.5 1.9-4.5 4.4 0 2.8 2.1 4.6 4.5 4.6s4.5-1.8 4.5-4.6c0-2.5-2-4.4-4.5-4.4Z"/>
   </g>
-  <text x="41" y="15" fill="#fff" font-family="OPPOSans-B, OPPOSans" font-size="10" text-anchor="middle">人宠</text>
+  <text x="41" y="15" fill="#fff" font-family="OPPOSans-B, OPPOSans" font-size="10" text-anchor="middle">家庭</text>
 </svg>

@@ -50,10 +50,22 @@ async function logout() {
   userSessionStore.setCachedUser(null);
 }
 
+function activateSession(userPayload) {
+  const user = mapUser(userPayload);
+  if (!user) {
+    return null;
+  }
+
+  userSessionStore.setSessionActive(true);
+  userSessionStore.setCachedUser(user);
+  return user;
+}
+
 module.exports = {
   getCurrentUser,
   getSessionSnapshot,
   login,
   updateProfile,
-  logout
+  logout,
+  activateSession
 };

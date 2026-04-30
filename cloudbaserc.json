@@ -1,4 +1,35 @@
 {
   "version": "2.0",
-  "envId": "yezai-3gr73wd48057512e-10f17b581"
+  "envId": "yezai-3gr73wd48057512e-10f17b581",
+  "functionRoot": "./cloudfunctions",
+  "functions": [
+    {
+      "name": "adminGateway",
+      "runtime": "Nodejs16.13",
+      "installDependency": true,
+      "ignore": [
+        "node_modules",
+        "node_modules/**",
+        "node_modules/**/*",
+        "**/node_modules/**",
+        ".git",
+        ".DS_Store"
+      ]
+    },
+    {
+      "name": "referralGateway",
+      "runtime": "Nodejs18.15",
+      "timeout": 20,
+      "memorySize": 256,
+      "installDependency": true,
+      "ignore": [
+        "node_modules",
+        "node_modules/**",
+        "node_modules/**/*",
+        "**/node_modules/**",
+        ".git",
+        ".DS_Store"
+      ]
+    }
+  ]
 }
