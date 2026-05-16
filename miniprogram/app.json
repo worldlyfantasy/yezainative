@@ -12,6 +12,7 @@
       "root": "pkg/explore",
       "pages": [
         "creator-detail/index",
+        "custom-services/index",
         "destination-detail/index",
         "service-detail/index",
         "checkout/index"
@@ -29,6 +30,7 @@
       "root": "pkg/account",
       "pages": [
         "assets/index",
+        "share-referral-rules/index",
         "favorites/index",
         "orders/index",
         "payout-account/index",

@@ -1,6 +1,7 @@
 const { getServiceBookingData } = require("../../../repositories/content-repository");
 const { getCheckoutPageConfig } = require("../../../repositories/config-repository");
 const { createOrder } = require("../../../repositories/transaction-repository");
+const { payOrderWithWechat } = require("../../../repositories/payment-repository");
 const { ensureLoggedIn } = require("../../../services/user");
 const { getAssetOverview } = require("../../../api/cloud/referral");
 const cloudUserApi = require("../../../api/cloud/user");
@@ -43,6 +44,19 @@ const COUPON_OPTIONS = [
   { id: "", title: "暂不使用优惠", discountType: "none", amountOff: 0, threshold: 0, desc: "" }
 ];
 
+function toMoneyNumber(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return 0;
+  }
+  return Math.round(numericValue * 100) / 100;
+}
+
+function formatMoney(value) {
+  const amount = toMoneyNumber(value);
+  return Number.isInteger(amount) ? String(amount) : amount.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
 function getBasePrice(service, periods, unitPriceFromQuery) {
   if (unitPriceFromQuery != null && !isNaN(Number(unitPriceFromQuery))) {
     return Number(unitPriceFromQuery);
@@ -72,7 +86,7 @@ function resolveSingleRoomPeriodState(period) {
   const source = period && typeof period === "object" ? period : {};
   return {
     enabled: normalizeBooleanFlag(source.singleRoomEnabled),
-    price: Math.max(0, Number(source.singleRoomPrice) || 0),
+    price: toMoneyNumber(Math.max(0, Number(source.singleRoomPrice) || 0)),
     notice: String(source.singleRoomNotice || "").trim()
   };
 }
@@ -83,12 +97,12 @@ function resolveSelectedSingleRoomCharge(data) {
   if (roomingMode !== "singleRoomRequest") {
     return 0;
   }
-  return Math.max(0, Number(source.singleRoomPrice) || 0);
+  return toMoneyNumber(Math.max(0, Number(source.singleRoomPrice) || 0));
 }
 
 function resolveCheckoutAmount(data) {
   const subtotal = Number(data && data.subtotal) || 0;
-  return subtotal + resolveSelectedSingleRoomCharge(data);
+  return toMoneyNumber(subtotal + resolveSelectedSingleRoomCharge(data));
 }
 
 function parseDurationDaysFromTag(value) {
@@ -376,12 +390,12 @@ function resolveCouponDiscount(couponId, subtotal) {
   if (!coupon || !coupon.id || coupon.available === false) {
     return 0;
   }
-  const amount = Number(subtotal) || 0;
+  const amount = toMoneyNumber(subtotal);
   if (amount < (Number(coupon.threshold) || 0)) {
     return 0;
   }
   if (coupon.discountType === "amount") {
-    return Math.max(0, Number(coupon.amountOff) || 0);
+    return toMoneyNumber(Math.max(0, Number(coupon.amountOff) || 0));
   }
   return 0;
 }
@@ -423,14 +437,14 @@ function buildActivityCouponOption(items) {
 }
 
 function updateCouponOptionEligibility(couponOptions, amount) {
-  const normalizedAmount = Math.max(0, Number(amount) || 0);
+  const normalizedAmount = toMoneyNumber(Math.max(0, Number(amount) || 0));
   return (Array.isArray(couponOptions) ? couponOptions : COUPON_OPTIONS).map((item) => {
     const threshold = Math.max(0, Number(item && item.threshold) || 0);
     const available = !item.id || normalizedAmount >= threshold;
     return {
       ...item,
       available,
-      unavailableReason: available ? "" : `还差 ¥${threshold - normalizedAmount} 可用`
+      unavailableReason: available ? "" : `还差 ¥${formatMoney(threshold - normalizedAmount)} 可用`
     };
   });
 }
@@ -637,6 +651,7 @@ Page({
     agreedRefund: false,
     submitting: false,
     submissionToken: "",
+    currentOrderId: "",
     agreements: {},
     agreementSheetVisible: false,
     agreementSheetAnimating: false,
@@ -721,7 +736,7 @@ Page({
     const travelPersonErrors = buildTravelPersonErrors(peopleCount);
     const coupon = getCouponById("");
     const discount = resolveCouponDiscount(coupon.id, subtotal);
-    const payable = Math.max(0, subtotal - discount);
+    const payable = toMoneyNumber(Math.max(0, subtotal - discount));
 
     this.setData({
       creator: payload.creator || null,
@@ -735,13 +750,13 @@ Page({
       unitPrice,
       subtotal,
       total: payable,
-      summaryPrice: String(unitPrice),
+      summaryPrice: formatMoney(unitPrice),
       summaryCount: String(peopleCount),
-      summarySubtotal: String(subtotal),
-      summaryTotal: String(payable),
-      payableText: `¥${payable}`,
-      summaryDiscount: String(discount),
-      summaryPayable: String(payable),
+      summarySubtotal: formatMoney(subtotal),
+      summaryTotal: formatMoney(payable),
+      payableText: `¥${formatMoney(payable)}`,
+      summaryDiscount: formatMoney(discount),
+      summaryPayable: formatMoney(payable),
       peopleCountLimitText: getOrderPeopleLimitMessage(),
       periodCode,
       travelPersons,
@@ -752,6 +767,7 @@ Page({
       service,
       submitting: false,
       submissionToken: createSubmissionToken(),
+      currentOrderId: "",
       agreements: pageConfig.agreements || {},
       agreedService: false,
       agreedRisk: false,
@@ -1599,25 +1615,25 @@ Page({
   },
 
   refreshPayableSummary() {
-    const subtotal = Number(this.data.subtotal) || 0;
+    const subtotal = toMoneyNumber(this.data.subtotal);
     const singleRoomCharge = resolveSelectedSingleRoomCharge(this.data);
-    const amount = subtotal + singleRoomCharge;
+    const amount = toMoneyNumber(subtotal + singleRoomCharge);
     const couponOptions = updateCouponOptionEligibility(this.data.couponOptions, amount);
     const selectedCoupon = getCouponById(this.data.selectedCouponId, couponOptions);
     const effectiveCoupon = selectedCoupon.available === false ? COUPON_OPTIONS[0] : selectedCoupon;
     const discount = resolveCouponDiscount(effectiveCoupon.id, amount, couponOptions);
-    const payable = Math.max(0, amount - discount);
+    const payable = toMoneyNumber(Math.max(0, amount - discount));
     this.setData({
       couponOptions,
       selectedCouponId: effectiveCoupon.id,
       selectedCouponText: effectiveCoupon.title,
       amount,
       total: payable,
-      summarySingleRoomPrice: String(singleRoomCharge),
-      summaryDiscount: String(discount),
-      summaryPayable: String(payable),
-      summaryTotal: String(payable),
-      payableText: `¥${payable}`
+      summarySingleRoomPrice: formatMoney(singleRoomCharge),
+      summaryDiscount: formatMoney(discount),
+      summaryPayable: formatMoney(payable),
+      summaryTotal: formatMoney(payable),
+      payableText: `¥${formatMoney(payable)}`
     });
   },
 
@@ -1661,6 +1677,64 @@ Page({
         agreementSheetContent: ""
       });
     }, 260);
+  },
+
+  isPaymentCancel(error) {
+    const message = String(error && (error.errMsg || error.message) ? (error.errMsg || error.message) : "");
+    return message.indexOf("cancel") >= 0 || message.indexOf("取消") >= 0;
+  },
+
+  async startOrderPayment(order) {
+    const orderId = order && order.id ? order.id : "";
+    if (!orderId) {
+      throw new Error("订单号缺失");
+    }
+
+    this.setData({
+      currentOrderId: orderId,
+      submitButtonText: "支付",
+      submitting: true
+    });
+
+    try {
+      const result = await payOrderWithWechat(orderId);
+      if (result.confirmation && result.confirmation.paid === false) {
+        wx.showToast({
+          title: "支付确认中，请稍后查看",
+          icon: "none"
+        });
+      } else {
+        wx.showToast({
+          title: "支付成功",
+          icon: "success"
+        });
+      }
+      wx.redirectTo({
+        url: "/pkg/account/orders/index?status=not_departed"
+      });
+    } catch (error) {
+      if (error && error.paymentStage === "confirm") {
+        wx.showToast({
+          title: "支付确认中，请稍后查看",
+          icon: "none"
+        });
+        wx.redirectTo({
+          url: `/pkg/account/order-detail/index?id=${orderId}&pay=pending`
+        });
+        return;
+      }
+      if (this.isPaymentCancel(error)) {
+        wx.showToast({
+          title: "订单已保留，请在30分钟内完成支付",
+          icon: "none"
+        });
+        wx.redirectTo({
+          url: `/pkg/account/order-detail/index?id=${orderId}&pay=pending`
+        });
+        return;
+      }
+      throw error;
+    }
   },
 
   async submitOrder() {
@@ -1871,9 +1945,7 @@ Page({
         // ignore
       }
 
-      wx.redirectTo({
-        url: `/pkg/account/payment-result/index?id=${order.id}`
-      });
+      await this.startOrderPayment(order);
     } catch (error) {
       console.error("Failed to submit order", error);
       let debugDetail = "";

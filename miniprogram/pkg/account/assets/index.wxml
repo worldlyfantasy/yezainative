@@ -1,7 +1,12 @@
 <view class="page-shell assets-page">
   <view class="assets-header">
     <text class="page-title assets-title">野哉分享家</text>
-    <text class="page-subtitle">邀请新用户扫描你的二维码或填写备用码，新用户获得最高150元优惠券，而你在该用户完成第一次旅程后获得100元现金奖励。</text>
+    <view class="assets-rule-link" bindtap="openReferralRules" aria-label="查看野哉分享家活动规则说明">
+      <text class="assets-rule-link__mark"></text>
+      <text class="assets-rule-link__text">野哉分享家活动规则说明</text>
+      <text class="assets-rule-link__arrow">›</text>
+    </view>
+    <text class="page-subtitle">点击上方查看活动规则，邀请新用户扫描您的二维码，获取现金奖励。</text>
   </view>
 
   <view wx:if="{{loggedIn && ownReferralCode}}" class="section-block paper-block referral-share-card">
@@ -130,7 +135,7 @@
       <text class="reward-gift-modal__title">{{rewardGiftView.title}}</text>
       <text class="reward-gift-modal__desc">{{rewardGiftView.desc}}</text>
       <view class="reward-gift-card">
-        <image class="reward-gift-card__bg" src="/images/rewards/reward-bg-pending.png" mode="aspectFit"></image>
+        <image class="reward-gift-card__bg" src="images/reward-bg-pending.png" mode="aspectFit"></image>
         <view class="reward-gift-card__content">
           <view class="reward-gift-card__value">
             <text class="reward-gift-card__currency">¥</text>

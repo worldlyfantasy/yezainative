@@ -45,7 +45,7 @@
 
 .traveler-card__title {
   display: block;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 38rpx;
   line-height: 1.45;
   color: #2b241d;
@@ -132,7 +132,7 @@
 }
 
 .traveler-editor-sheet__title {
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Yezai Songti Fixed", "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 40rpx;
   line-height: 1.45;
   color: #2b241d;

@@ -27,6 +27,8 @@ const {
   normalizeImageAssetValue
 } = require("./image-assets");
 
+const ORDER_PAYMENT_EXPIRE_MS = 30 * 60 * 1000;
+
 const DESTINATION_REGION_OPTIONS = [
   { label: "藏区", value: "cn_tibetan" },
   { label: "新疆", value: "cn_xinjiang" },
@@ -149,6 +151,8 @@ const ORDER_EVENTS_COLLECTION = "order_events";
 const ORDER_DEBUG_RECORDS_COLLECTION = "order_debug_records";
 const COLLECTIONS = {
   services: "services",
+  serviceDrafts: "service_drafts",
+  serviceDraftVersions: "service_draft_versions",
   creators: "creators",
   creatorRegistrations: "creator_registrations",
   destinations: "destinations",
@@ -162,6 +166,7 @@ const COLLECTIONS = {
   orderDebugRecords: ORDER_DEBUG_RECORDS_COLLECTION
 };
 const EFFECTIVE_ORDER_STATUSES = new Set(["pending", "paid", "traveling", "completed"]);
+const SOLD_ORDER_STATUS_SQL = "COALESCE(`status`, '') IN ('paid', 'traveling', 'completed')";
 const CONTENT_GATEWAY_FUNCTION_NAME = normalizeText(process.env.CONTENT_GATEWAY_FUNCTION) || "contentGateway";
 const ADMIN_GATEWAY_MAINTENANCE_TOKEN_ENV_KEY = "ADMIN_GATEWAY_MAINTENANCE_TOKEN";
 const SERVICE_CREATOR_MESSAGE_BACKFILL_UPDATED_BY = "maintenance:backfill-service-creator-message";
@@ -182,6 +187,17 @@ const CACHE_INVALIDATE_ACTIONS = new Set([
 const SERVICE_TYPE_OPTIONS = ["在地体验", "短途旅行", "长途旅行", "国际旅行"];
 const LEGACY_SERVICE_TYPE_OPTIONS = ["带团旅行", "定制规划", "路线设计"];
 const DEFAULT_SERVICE_TYPE = "短途旅行";
+const SERVICE_GROUP_TYPES = ["regular", "custom"];
+const DEFAULT_SERVICE_GROUP_TYPE = "regular";
+const SERVICE_DRAFT_STATUSES = ["active", "deleted", "published"];
+const SERVICE_DRAFT_VERSION_KEEP_COUNT = 10;
+const SERVICE_DRAFT_MANUAL_VERSION_KEEP_COUNT = 5;
+const SERVICE_DRAFT_AUTOSAVE_VERSION_KEEP_COUNT = 3;
+const SERVICE_DRAFT_CRITICAL_VERSION_KEEP_COUNT = 5;
+const SERVICE_DRAFT_AUTOSAVE_SNAPSHOT_INTERVAL_MS = 30 * 60 * 1000;
+const SERVICE_DRAFT_SNAPSHOT_REASONS = new Set(["restore-version"]);
+const SERVICE_DRAFT_MANUAL_VERSION_REASONS = new Set(["restore-point", "manual-save"]);
+const SERVICE_DRAFT_CRITICAL_VERSION_REASONS = new Set(["before-delete", "before-publish", "restore-version"]);
 const ADMIN_ROLE_NAMES = ["admin", "super_admin", "yezai_admin", "ops_admin"];
 const ADMIN_ACCOUNT_TYPES = ["admin", "creator_portal"];
 const ADMIN_ACCOUNT_LEVELS = ["owner", "admin"];
@@ -1576,6 +1592,11 @@ function getServiceRouteTags(service) {
   return normalizeRouteTags(service && service.tags, service && service.styles);
 }
 
+function normalizeServiceGroupType(value) {
+  const normalized = normalizeText(value).toLowerCase();
+  return SERVICE_GROUP_TYPES.includes(normalized) ? normalized : DEFAULT_SERVICE_GROUP_TYPE;
+}
+
 function normalizeServiceRegionCodes(value) {
   return uniqueStrings(value)
     .map((item) => normalizeDestinationRegionCode(item))
@@ -1850,6 +1871,14 @@ async function generateDestinationSlug(name) {
 
 function createServiceLogicalId(slug) {
   return `svc-${slug}`;
+}
+
+function createServiceDraftId() {
+  return createSqlRecordId("svc_draft");
+}
+
+function createServiceDraftVersionId() {
+  return createSqlRecordId("svc_draft_ver");
 }
 
 function createTravelDetailId(slug) {
@@ -3547,13 +3576,34 @@ function collectServiceAssetRefs(source) {
       ? normalizeArray(item.images).flatMap((image) => listImageAssetRefs(image))
       : [];
   });
+  const itineraryImages = normalizeArray(detail.itinerary && detail.itinerary.days).flatMap((item) => {
+    return isPlainObject(item)
+      ? normalizeArray(item.images).flatMap((image) => listImageAssetRefs(image))
+      : [];
+  });
+  const versionItineraryImages = normalizeArray(detail.itineraryVersions).flatMap((version) => {
+    if (!isPlainObject(version)) {
+      return [];
+    }
+
+    const days = normalizeArray(version.days).length
+      ? version.days
+      : version.itinerary && version.itinerary.days;
+    return normalizeArray(days).flatMap((item) => {
+      return isPlainObject(item)
+        ? normalizeArray(item.images).flatMap((image) => listImageAssetRefs(image))
+        : [];
+    });
+  });
 
   return uniqueStrings([
     ...listImageAssetRefs(source.cover),
     ...flattenServiceGalleryGroups(source.galleryGroups, source.gallery).flatMap((image) => listImageAssetRefs(image)),
     ...listImageAssetRefs(detail.consultWeChatQr),
     ...listImageAssetRefs(overview.coverImage),
-    ...highlightImages
+    ...highlightImages,
+    ...itineraryImages,
+    ...versionItineraryImages
   ]).filter(isCloudFileId);
 }
 
@@ -3625,6 +3675,39 @@ function applyServiceAssetRefMap(source, refMap) {
 
       return Object.assign({}, item, {
         images: dedupeImageValues(item.images).map(mapRef).filter(Boolean)
+      });
+    });
+  }
+
+  const mapItineraryDays = (days) => {
+    return normalizeArray(days).map((item) => {
+      if (!isPlainObject(item)) {
+        return item;
+      }
+
+      return Object.assign({}, item, {
+        images: dedupeImageValues(item.images).map(mapRef).filter(Boolean)
+      });
+    });
+  };
+
+  const itinerary = isPlainObject(detail.itinerary) ? detail.itinerary : {};
+  detail.itinerary = Object.assign({}, itinerary, {
+    days: mapItineraryDays(itinerary.days)
+  });
+
+  if (Array.isArray(detail.itineraryVersions)) {
+    detail.itineraryVersions = detail.itineraryVersions.map((version) => {
+      if (!isPlainObject(version)) {
+        return version;
+      }
+
+      const versionItinerary = isPlainObject(version.itinerary) ? version.itinerary : null;
+      return Object.assign({}, version, {
+        days: mapItineraryDays(version.days),
+        itinerary: versionItinerary
+          ? Object.assign({}, versionItinerary, { days: mapItineraryDays(versionItinerary.days) })
+          : version.itinerary
       });
     });
   }
@@ -3860,6 +3943,49 @@ async function normalizeServiceImagePayload(payload, slug) {
     })
   );
 
+  const normalizeItineraryDayImages = async (days, folderPrefix) => {
+    const dayItems = normalizeArray(days);
+    const normalizedDays = [];
+
+    for (let index = 0; index < dayItems.length; index += 1) {
+      const item = dayItems[index];
+      if (!isPlainObject(item)) {
+        normalizedDays.push(item);
+        continue;
+      }
+
+      normalizedDays.push(Object.assign({}, item, {
+        images: await ensureImageAssetList(item.images, `${folderPrefix}/day-${index + 1}`)
+      }));
+    }
+
+    return normalizedDays;
+  };
+
+  const itinerary = isPlainObject(detail.itinerary) ? detail.itinerary : {};
+  detail.itinerary = Object.assign({}, itinerary, {
+    days: await normalizeItineraryDayImages(itinerary.days, `${assetRoot}/itinerary`)
+  });
+
+  detail.itineraryVersions = await Promise.all(
+    normalizeArray(detail.itineraryVersions).map(async (version, versionIndex) => {
+      if (!isPlainObject(version)) {
+        return version;
+      }
+
+      const versionFolder = `${assetRoot}/itinerary/version-${versionIndex + 1}`;
+      const versionItinerary = isPlainObject(version.itinerary) ? version.itinerary : null;
+      return Object.assign({}, version, {
+        days: await normalizeItineraryDayImages(version.days, versionFolder),
+        itinerary: versionItinerary
+          ? Object.assign({}, versionItinerary, {
+              days: await normalizeItineraryDayImages(versionItinerary.days, versionFolder)
+            })
+          : version.itinerary
+      });
+    })
+  );
+
   return nextPayload;
 }
 
@@ -3937,16 +4063,6 @@ async function normalizeConfigImagePayload(key, value) {
     return nextValue;
   }
 
-  if (key === "profilePage") {
-    const nextValue = cloneJson(value, {});
-    nextValue.emptyTripStateImage = await ensureImageAssetField(
-      nextValue.emptyTripStateImage || nextValue.emptyStateImage || nextValue.cloudFileID,
-      "config/profilePage/empty-trip-state"
-    );
-    nextValue.cloudFileID = "";
-    return nextValue;
-  }
-
   return value;
 }
 
@@ -4004,6 +4120,7 @@ function sanitizeItineraryDays(value) {
         key: normalizeText(item.key) || `day-${index + 1}`,
         day: normalizePositiveInteger(item.day, index + 1) || (index + 1),
         title: normalizeText(item.title) || `第 ${index + 1} 天`,
+        images: dedupeImageValues(item.images).map(normalizeImageAssetValue).filter(Boolean),
         modules
       };
     })
@@ -4110,6 +4227,18 @@ function sanitizeServiceNotices(value) {
     .filter(Boolean);
 }
 
+function sanitizeServiceChannelsVideo(value, fallback) {
+  const hasSource = isPlainObject(value);
+  const source = hasSource ? value : {};
+  const fallbackSource = isPlainObject(fallback) ? fallback : {};
+
+  return {
+    feedId: hasSource ? normalizeText(source.feedId) : normalizeText(fallbackSource.feedId),
+    feedToken: hasSource ? normalizeText(source.feedToken) : normalizeText(fallbackSource.feedToken),
+    finderUserName: hasSource ? normalizeText(source.finderUserName) : normalizeText(fallbackSource.finderUserName)
+  };
+}
+
 function sanitizeTravelDetail(value, serviceMeta, existingDetail) {
   const input = isPlainObject(value) ? value : {};
   const existingOverview = existingDetail && isPlainObject(existingDetail.overview) ? existingDetail.overview : {};
@@ -4134,6 +4263,10 @@ function sanitizeTravelDetail(value, serviceMeta, existingDetail) {
         normalizeImageAssetValue(input.overview && input.overview.coverImage)
         || normalizeImageAssetValue(existingOverview.coverImage)
         || normalizeImageAssetValue(serviceMeta.cover),
+      channelsVideo: sanitizeServiceChannelsVideo(
+        input.overview && input.overview.channelsVideo,
+        existingOverview.channelsVideo
+      ),
       whyJoinText:
         normalizeText(input.overview && input.overview.whyJoinText)
         || normalizeText(existingOverview.whyJoinText),
@@ -4216,6 +4349,7 @@ function buildServiceSummary(service, creatorNameMap, periodStatsMap, orderStats
     id: normalizeText(service.id) || serviceSlug,
     slug: serviceSlug,
     name: normalizeText(service.name),
+    groupType: normalizeServiceGroupType(service && service.groupType),
     type: normalizeServiceType(service && service.type, service),
     status: buildStatusTag(service),
     creatorId: normalizeText(service.creatorId),
@@ -4245,6 +4379,8 @@ function mapServiceDetailRecord(service, creatorNameMap, adminUser) {
     id: normalizeText(service && service.id),
     slug: normalizeText(service && service.slug),
     name: normalizeText(service && service.name),
+    fullGroupSize: normalizePositiveInteger(service && service.fullGroupSize, 0),
+    groupType: normalizeServiceGroupType(service && service.groupType),
     type: normalizeServiceType(service && service.type, service),
     status: buildStatusTag(service),
     creatorId: normalizeText(service && service.creatorId),
@@ -4285,6 +4421,28 @@ function mapServiceDetailRecord(service, creatorNameMap, adminUser) {
 
         return Object.assign({}, item, {
           images: normalizeArray(item.images).map((image) => getImageAssetOriginal(image)).filter(Boolean)
+        });
+      });
+      const mapItineraryDayImages = (days) => normalizeArray(days).map((item) => {
+        if (!isPlainObject(item)) {
+          return item;
+        }
+
+        return Object.assign({}, item, {
+          images: normalizeArray(item.images).map((image) => getImageAssetOriginal(image)).filter(Boolean)
+        });
+      });
+      const itinerary = isPlainObject(travelDetail.itinerary) ? travelDetail.itinerary : {};
+      travelDetail.itinerary = Object.assign({}, itinerary, {
+        days: mapItineraryDayImages(itinerary.days)
+      });
+      travelDetail.itineraryVersions = normalizeArray(travelDetail.itineraryVersions).map((version) => {
+        if (!isPlainObject(version)) {
+          return version;
+        }
+
+        return Object.assign({}, version, {
+          days: mapItineraryDayImages(version.days)
         });
       });
       return travelDetail;
@@ -4436,7 +4594,7 @@ async function getSoldCountByPeriodCode(periodCode) {
   }
 
   const rows = await queryRows(
-    "SELECT SUM(COALESCE(`peopleCountInt`, `peopleCount`, 0)) AS `soldCount` FROM `TravelOrder` WHERE `servicePeriodCode` = {{periodCode}} AND COALESCE(`status`, '') <> 'canceled'",
+    `SELECT SUM(COALESCE(\`peopleCountInt\`, \`peopleCount\`, 0)) AS \`soldCount\` FROM \`TravelOrder\` WHERE \`servicePeriodCode\` = {{periodCode}} AND ${SOLD_ORDER_STATUS_SQL}`,
     { periodCode: normalizedPeriodCode }
   );
 
@@ -4446,7 +4604,7 @@ async function getSoldCountByPeriodCode(periodCode) {
 async function getSoldCountByPeriodCodeMap(options = {}) {
   const queryFn = options.bestEffort ? queryRowsBestEffort : queryRows;
   const rows = await queryFn(
-    "SELECT `servicePeriodCode`, SUM(COALESCE(`peopleCountInt`, `peopleCount`, 0)) AS `soldCount` FROM `TravelOrder` WHERE COALESCE(`status`, '') <> 'canceled' GROUP BY `servicePeriodCode`"
+    `SELECT \`servicePeriodCode\`, SUM(COALESCE(\`peopleCountInt\`, \`peopleCount\`, 0)) AS \`soldCount\` FROM \`TravelOrder\` WHERE ${SOLD_ORDER_STATUS_SQL} GROUP BY \`servicePeriodCode\``
   );
 
   return rows.reduce((map, row) => {
@@ -4484,7 +4642,7 @@ async function getPeriodStatsMap(options = {}) {
 async function getOrderStatsMap(options = {}) {
   const queryFn = options.bestEffort ? queryRowsBestEffort : queryRows;
   const rows = await queryFn(
-    "SELECT `serviceSlug`, SUM(COALESCE(`peopleCountInt`, `peopleCount`, 0)) AS `soldSeats` FROM `TravelOrder` WHERE COALESCE(`status`, '') <> 'canceled' GROUP BY `serviceSlug`"
+    `SELECT \`serviceSlug\`, SUM(COALESCE(\`peopleCountInt\`, \`peopleCount\`, 0)) AS \`soldSeats\` FROM \`TravelOrder\` WHERE ${SOLD_ORDER_STATUS_SQL} GROUP BY \`serviceSlug\``
   );
 
   return rows.reduce((map, row) => {
@@ -4672,6 +4830,16 @@ function countCompletedPairItems(value, leftKey, rightKey) {
   }).length;
 }
 
+function countFilledPairItems(value, leftKey, rightKey) {
+  return normalizeArray(value).filter((item) => {
+    if (!isPlainObject(item)) {
+      return false;
+    }
+
+    return Boolean(normalizeText(item[leftKey]) || normalizeText(item[rightKey]));
+  }).length;
+}
+
 function summarizeServicePendingSections(service) {
   const rawTravelDetail = isPlainObject(service && service.travelDetail) ? service.travelDetail : {};
   const rawOverview = isPlainObject(rawTravelDetail.overview) ? rawTravelDetail.overview : {};
@@ -4684,6 +4852,7 @@ function summarizeServicePendingSections(service) {
 
   if (
     !normalizeText(service && service.name)
+    || normalizePositiveInteger(service && service.fullGroupSize, 0) <= 0
     || !normalizeText(service && service.creatorId)
     || !resolveServiceCreatorMessage(service, rawTravelDetail)
     || !normalizeServiceRegionCodes(service && service.regionCodes).length
@@ -4711,7 +4880,7 @@ function summarizeServicePendingSections(service) {
   if (
     !countCompletedPairItems(rawCosts.include, "label", "content")
     || !countCompletedPairItems(rawCosts.exclude, "label", "content")
-    || !countCompletedPairItems(rawCosts.refundRules, "days", "percent")
+    || !countFilledPairItems(rawCosts.refundRules, "days", "percent")
   ) {
     missingSections.push("费用与退款");
   }
@@ -5026,11 +5195,474 @@ async function getDashboardSummary(adminUser) {
   };
 }
 
+function normalizeServiceDraftStatus(value, fallback = "active") {
+  const normalized = normalizeText(value).toLowerCase();
+  return SERVICE_DRAFT_STATUSES.includes(normalized) ? normalized : fallback;
+}
+
+function getAdminUserRefs(adminUser) {
+  return uniqueStrings([
+    adminUser && adminUser.id,
+    adminUser && adminUser.uid,
+    adminUser && adminUser.customUserId,
+    adminUser && adminUser.username,
+    adminUser && adminUser.email
+  ]);
+}
+
+function normalizeServiceDraftValues(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return JSON.parse(JSON.stringify(value));
+}
+
+function buildServiceDraftTitle(values, fallbackTitle) {
+  return normalizeText(values && values.name)
+    || normalizeText(fallbackTitle)
+    || "未命名路线";
+}
+
+function hasText(value) {
+  return Boolean(normalizeText(value));
+}
+
+function hasStringListContent(value) {
+  return normalizeArray(value).some(hasText);
+}
+
+function hasServiceDraftImageContent(values) {
+  return Boolean(
+    hasText(values && values.cover)
+    || hasText(values && values.overviewCoverImage)
+    || normalizeArray(values && values.galleryGroups).some((group) => hasStringListContent(group && group.images))
+    || normalizeArray(values && values.highlights).some((item) => hasStringListContent(item && item.images))
+    || normalizeArray(values && values.itineraryDays).some((item) => hasStringListContent(item && item.images))
+    || normalizeArray(values && values.itineraryVersions).some((version) =>
+      normalizeArray(version && (version.itineraryDays || version.days)).some((item) => hasStringListContent(item && item.images))
+    )
+  );
+}
+
+function hasServiceDraftHighlightContent(values) {
+  return normalizeArray(values && values.highlights).some((item) =>
+    hasText(item && item.title)
+    || hasText(item && item.description)
+    || hasStringListContent(item && item.images)
+  );
+}
+
+function hasServiceDraftItineraryContent(values) {
+  const hasDayContent = (item) => (
+    hasText(item && item.title)
+    || hasStringListContent(item && item.images)
+    || normalizeArray(item && item.modules).some((module) => hasText(module && module.title) || hasText(module && module.content))
+  );
+
+  return normalizeArray(values && values.itineraryDays).some(hasDayContent)
+    || normalizeArray(values && values.itineraryVersions).some((version) =>
+      normalizeArray(version && (version.itineraryDays || version.days)).some(hasDayContent)
+    );
+}
+
+function hasSubstantialServiceDraftValues(values) {
+  return Boolean(
+    hasText(values && values.name)
+    || hasText(values && values.summary)
+    || hasText(values && values.whyJoinText)
+    || hasText(values && values.suitableText)
+    || hasServiceDraftImageContent(values)
+    || hasServiceDraftHighlightContent(values)
+    || hasServiceDraftItineraryContent(values)
+  );
+}
+
+function shouldSnapshotServiceDraft(existing, reason, now) {
+  if (!existing) {
+    return false;
+  }
+
+  const normalizedReason = normalizeText(reason) || "autosave";
+  if (SERVICE_DRAFT_SNAPSHOT_REASONS.has(normalizedReason)) {
+    return true;
+  }
+
+  if (normalizedReason !== "autosave") {
+    return false;
+  }
+
+  const latestSnapshotAt = normalizeNumber(existing.latestSnapshotAt, normalizeNumber(existing.createdAt, 0));
+  return latestSnapshotAt > 0 && now - latestSnapshotAt >= SERVICE_DRAFT_AUTOSAVE_SNAPSHOT_INTERVAL_MS;
+}
+
+function summarizeServiceDraft(doc) {
+  const values = normalizeServiceDraftValues(doc && doc.values);
+  return {
+    _id: normalizeText(doc && doc._id),
+    draftId: normalizeText(doc && (doc.draftId || doc._id)),
+    ownerUserId: normalizeText(doc && doc.ownerUserId),
+    ownerCreatorId: normalizeText(doc && doc.ownerCreatorId),
+    title: buildServiceDraftTitle(values, doc && doc.title),
+    status: normalizeServiceDraftStatus(doc && doc.status),
+    version: normalizePositiveInteger(doc && doc.version, 1),
+    serviceId: normalizeText(doc && doc.serviceId),
+    serviceSlug: normalizeText(doc && doc.serviceSlug),
+    createdAt: normalizeNumber(doc && doc.createdAt),
+    updatedAt: normalizeNumber(doc && doc.updatedAt),
+    deletedAt: normalizeNumber(doc && doc.deletedAt),
+    publishedAt: normalizeNumber(doc && doc.publishedAt)
+  };
+}
+
+function mapServiceDraftDetail(doc) {
+  return Object.assign({}, summarizeServiceDraft(doc), {
+    values: normalizeServiceDraftValues(doc && doc.values)
+  });
+}
+
+function mapServiceDraftVersion(doc) {
+  return {
+    _id: normalizeText(doc && doc._id),
+    draftId: normalizeText(doc && doc.draftId),
+    ownerUserId: normalizeText(doc && doc.ownerUserId),
+    ownerCreatorId: normalizeText(doc && doc.ownerCreatorId),
+    title: normalizeText(doc && doc.title) || "未命名路线",
+    values: normalizeServiceDraftValues(doc && doc.values),
+    version: normalizePositiveInteger(doc && doc.version, 1),
+    reason: normalizeText(doc && doc.reason) || "autosave",
+    createdAt: normalizeNumber(doc && doc.createdAt),
+    createdBy: normalizeText(doc && doc.createdBy)
+  };
+}
+
+function serviceDraftMatchesAdminUser(doc, adminUser, creatorRefSet) {
+  if (hasAdminPermission(adminUser, "services:write") || (!isCreatorPortalUser(adminUser) && hasAdminPermission(adminUser, "services:read"))) {
+    return true;
+  }
+
+  const userRefs = getAdminUserRefs(adminUser);
+  const ownerRefs = uniqueStrings([
+    doc && doc.ownerUserId,
+    doc && doc.createdBy,
+    doc && doc.updatedBy
+  ]);
+  if (ownerRefs.some((ref) => userRefs.includes(ref))) {
+    return true;
+  }
+
+  return matchesCreatorRefSet(creatorRefSet, [doc && doc.ownerCreatorId]);
+}
+
+async function assertServiceDraftAccess(doc, adminUser, mode) {
+  const permissionCandidates = mode === "read"
+    ? ["services:read", "services:write", "services:write:owned"]
+    : ["services:write", "services:write:owned"];
+  assertAnyAdminPermission(adminUser, permissionCandidates, "当前账号没有操作路线草稿的权限");
+
+  if (hasAdminPermission(adminUser, "services:write") || (!isCreatorPortalUser(adminUser) && mode === "read" && hasAdminPermission(adminUser, "services:read"))) {
+    return;
+  }
+
+  const creators = await listCollection(COLLECTIONS.creators);
+  const creatorRefSet = buildAdminCreatorRefSet(adminUser, creators);
+  assertCondition(
+    serviceDraftMatchesAdminUser(doc, adminUser, creatorRefSet),
+    "当前账号只能操作自己的路线草稿"
+  );
+}
+
+async function listServiceDrafts(payload, adminUser) {
+  assertAnyAdminPermission(adminUser, ["services:read", "services:write", "services:write:owned"], "当前账号没有查看路线草稿的权限");
+  const status = normalizeServiceDraftStatus(payload && payload.status, "active");
+  const limit = clampLimit(payload && payload.limit);
+  const keyword = normalizeText(payload && payload.keyword).toLowerCase();
+  const [drafts, creators] = await Promise.all([
+    listCollection(COLLECTIONS.serviceDrafts),
+    listCollection(COLLECTIONS.creators)
+  ]);
+  const creatorRefSet = buildAdminCreatorRefSet(adminUser, creators);
+
+  return drafts
+    .filter((draft) => normalizeServiceDraftStatus(draft && draft.status) === status)
+    .filter((draft) => serviceDraftMatchesAdminUser(draft, adminUser, creatorRefSet))
+    .map(summarizeServiceDraft)
+    .filter((draft) => !keyword || matchesKeyword([draft.title, draft.serviceSlug, draft.ownerCreatorId], keyword))
+    .sort((left, right) => normalizeNumber(right.updatedAt) - normalizeNumber(left.updatedAt))
+    .slice(0, limit);
+}
+
+async function findServiceDraftDoc(draftId) {
+  const normalizedDraftId = normalizeText(draftId);
+  if (!normalizedDraftId) {
+    return null;
+  }
+
+  try {
+    const result = await db.collection(COLLECTIONS.serviceDrafts).doc(normalizedDraftId).get();
+    return result && result.data ? result.data : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function addServiceDraftVersion(existing, reason, adminUser, now) {
+  if (!existing || !normalizeText(existing._id)) {
+    return null;
+  }
+
+  const versionDoc = {
+    _id: createServiceDraftVersionId(),
+    draftId: normalizeText(existing._id),
+    ownerUserId: normalizeText(existing.ownerUserId),
+    ownerCreatorId: normalizeText(existing.ownerCreatorId),
+    title: buildServiceDraftTitle(existing.values, existing.title),
+    values: normalizeServiceDraftValues(existing.values),
+    version: normalizePositiveInteger(existing.version, 1),
+    reason: normalizeText(reason) || "autosave",
+    createdAt: now || Date.now(),
+    createdBy: getAdminOperatorId(adminUser)
+  };
+
+  await db.collection(COLLECTIONS.serviceDraftVersions).add({ data: versionDoc });
+  return versionDoc;
+}
+
+async function pruneServiceDraftVersions(draftId) {
+  const normalizedDraftId = normalizeText(draftId);
+  if (!normalizedDraftId) {
+    return;
+  }
+
+  const versions = (await listCollection(COLLECTIONS.serviceDraftVersions))
+    .filter((item) => normalizeText(item && item.draftId) === normalizedDraftId)
+    .sort((left, right) => normalizeNumber(right.createdAt) - normalizeNumber(left.createdAt));
+
+  const candidateIds = new Set();
+  const addKeepCandidates = (predicate, limit) => {
+    versions
+      .filter(predicate)
+      .slice(0, limit)
+      .forEach((item) => {
+        const versionId = normalizeText(item && item._id);
+        if (versionId) {
+          candidateIds.add(versionId);
+        }
+      });
+  };
+
+  addKeepCandidates(
+    (item) => SERVICE_DRAFT_MANUAL_VERSION_REASONS.has(normalizeText(item && item.reason) || "autosave"),
+    SERVICE_DRAFT_MANUAL_VERSION_KEEP_COUNT
+  );
+  addKeepCandidates(
+    (item) => (normalizeText(item && item.reason) || "autosave") === "autosave",
+    SERVICE_DRAFT_AUTOSAVE_VERSION_KEEP_COUNT
+  );
+  addKeepCandidates(
+    (item) => {
+      const reason = normalizeText(item && item.reason) || "autosave";
+      return SERVICE_DRAFT_CRITICAL_VERSION_REASONS.has(reason)
+        || (reason !== "autosave" && !SERVICE_DRAFT_MANUAL_VERSION_REASONS.has(reason));
+    },
+    SERVICE_DRAFT_CRITICAL_VERSION_KEEP_COUNT
+  );
+
+  const keepIds = new Set(
+    versions
+      .filter((item) => candidateIds.has(normalizeText(item && item._id)))
+      .slice(0, SERVICE_DRAFT_VERSION_KEEP_COUNT)
+      .map((item) => normalizeText(item && item._id))
+  );
+  const removableVersions = versions.filter((item) => !keepIds.has(normalizeText(item && item._id)));
+  await Promise.all(removableVersions.map((item) => db.collection(COLLECTIONS.serviceDraftVersions).doc(item._id).remove()));
+}
+
+async function getServiceDraft(payload, adminUser) {
+  const draft = await findServiceDraftDoc(payload && (payload.draftId || payload._id));
+  assertCondition(draft, "未找到对应路线草稿");
+  await assertServiceDraftAccess(draft, adminUser, "read");
+  return mapServiceDraftDetail(draft);
+}
+
+async function saveServiceDraft(payload, adminUser) {
+  assertAnyAdminPermission(adminUser, ["services:write", "services:write:owned"], "当前账号没有保存路线草稿的权限");
+  const existing = await findServiceDraftDoc(payload && (payload.draftId || payload._id));
+  if (existing) {
+    await assertServiceDraftAccess(existing, adminUser, "write");
+  }
+
+  const now = Date.now();
+  const incomingValues = normalizeServiceDraftValues(payload && payload.values);
+  assertCondition(hasSubstantialServiceDraftValues(incomingValues), "路线草稿内容太少，暂不创建云端草稿");
+  const reason = normalizeText(payload && payload.reason) || "autosave";
+  const shouldCreateRestorePoint = reason === "restore-point";
+  const requestedBaseVersion = normalizePositiveInteger(payload && payload.baseVersion, 0);
+  if (existing && requestedBaseVersion > 0) {
+    assertCondition(
+      requestedBaseVersion === normalizePositiveInteger(existing.version, 1),
+      "路线草稿已在其他设备更新，请先刷新草稿后再保存"
+    );
+  }
+
+  const operatorId = getAdminOperatorId(adminUser);
+  const ownerCreatorId = isCreatorPortalUser(adminUser)
+    ? getCreatorPortalBoundCreatorId(adminUser)
+    : normalizeText(payload && payload.ownerCreatorId);
+  const nextDoc = {
+    ownerUserId: existing ? normalizeText(existing.ownerUserId) : operatorId,
+    ownerCreatorId: existing ? normalizeText(existing.ownerCreatorId) : ownerCreatorId,
+    title: buildServiceDraftTitle(incomingValues, payload && payload.title),
+    values: incomingValues,
+    status: "active",
+    version: existing ? normalizePositiveInteger(existing.version, 1) + 1 : 1,
+    serviceId: normalizeText(payload && payload.serviceId) || (existing ? normalizeText(existing.serviceId) : ""),
+    serviceSlug: normalizeText(payload && payload.serviceSlug) || (existing ? normalizeText(existing.serviceSlug) : ""),
+    updatedAt: now,
+    updatedBy: operatorId,
+    deletedAt: 0,
+    publishedAt: existing ? normalizeNumber(existing.publishedAt) : 0
+  };
+
+  if (existing) {
+    const shouldSnapshot = shouldSnapshotServiceDraft(existing, reason, now);
+    if (shouldSnapshot) {
+      await addServiceDraftVersion(existing, reason, adminUser, now);
+    }
+    nextDoc.latestSnapshotAt = shouldSnapshot || shouldCreateRestorePoint
+      ? now
+      : normalizeNumber(existing.latestSnapshotAt);
+    await db.collection(COLLECTIONS.serviceDrafts).doc(existing._id).update({ data: nextDoc });
+    const savedDoc = Object.assign({}, existing, nextDoc);
+    if (shouldCreateRestorePoint) {
+      await addServiceDraftVersion(savedDoc, reason, adminUser, now);
+    }
+    if (shouldSnapshot || shouldCreateRestorePoint) {
+      await pruneServiceDraftVersions(existing._id);
+    }
+    return mapServiceDraftDetail(savedDoc);
+  }
+
+  const draftId = createServiceDraftId();
+  const createDoc = Object.assign(
+    {
+      _id: draftId,
+      createdAt: now,
+      createdBy: operatorId,
+      latestSnapshotAt: shouldCreateRestorePoint ? now : 0
+    },
+    nextDoc
+  );
+  await db.collection(COLLECTIONS.serviceDrafts).add({ data: createDoc });
+  if (shouldCreateRestorePoint) {
+    await addServiceDraftVersion(createDoc, reason, adminUser, now);
+  }
+  return mapServiceDraftDetail(createDoc);
+}
+
+async function deleteServiceDraft(payload, adminUser) {
+  const draft = await findServiceDraftDoc(payload && (payload.draftId || payload._id));
+  assertCondition(draft, "未找到对应路线草稿");
+  await assertServiceDraftAccess(draft, adminUser, "write");
+  const now = Date.now();
+  await addServiceDraftVersion(draft, "before-delete", adminUser, now);
+  await db.collection(COLLECTIONS.serviceDrafts).doc(draft._id).update({
+    data: {
+      status: "deleted",
+      deletedAt: now,
+      latestSnapshotAt: now,
+      updatedAt: now,
+      updatedBy: getAdminOperatorId(adminUser)
+    }
+  });
+  await pruneServiceDraftVersions(draft._id);
+  return mapServiceDraftDetail(Object.assign({}, draft, {
+    status: "deleted",
+    deletedAt: now,
+    latestSnapshotAt: now,
+    updatedAt: now,
+    updatedBy: getAdminOperatorId(adminUser)
+  }));
+}
+
+async function restoreServiceDraft(payload, adminUser) {
+  const draft = await findServiceDraftDoc(payload && (payload.draftId || payload._id));
+  assertCondition(draft, "未找到对应路线草稿");
+  await assertServiceDraftAccess(draft, adminUser, "write");
+  const now = Date.now();
+  await db.collection(COLLECTIONS.serviceDrafts).doc(draft._id).update({
+    data: {
+      status: "active",
+      deletedAt: 0,
+      updatedAt: now,
+      updatedBy: getAdminOperatorId(adminUser)
+    }
+  });
+  return mapServiceDraftDetail(Object.assign({}, draft, {
+    status: "active",
+    deletedAt: 0,
+    updatedAt: now,
+    updatedBy: getAdminOperatorId(adminUser)
+  }));
+}
+
+async function listServiceDraftVersions(payload, adminUser) {
+  const draft = await findServiceDraftDoc(payload && (payload.draftId || payload._id));
+  assertCondition(draft, "未找到对应路线草稿");
+  await assertServiceDraftAccess(draft, adminUser, "read");
+  const limit = clampLimit(payload && payload.limit);
+  return (await listCollection(COLLECTIONS.serviceDraftVersions))
+    .filter((item) => normalizeText(item && item.draftId) === normalizeText(draft._id))
+    .map(mapServiceDraftVersion)
+    .sort((left, right) => normalizeNumber(right.createdAt) - normalizeNumber(left.createdAt))
+    .slice(0, limit);
+}
+
+async function restoreServiceDraftVersion(payload, adminUser) {
+  const draft = await findServiceDraftDoc(payload && payload.draftId);
+  assertCondition(draft, "未找到对应路线草稿");
+  await assertServiceDraftAccess(draft, adminUser, "write");
+  const versionId = normalizeText(payload && payload.versionId);
+  const version = (await listCollection(COLLECTIONS.serviceDraftVersions))
+    .find((item) => normalizeText(item && item._id) === versionId && normalizeText(item && item.draftId) === normalizeText(draft._id));
+  assertCondition(version, "未找到对应草稿历史版本");
+  return saveServiceDraft({
+    draftId: draft._id,
+    values: normalizeServiceDraftValues(version.values),
+    title: normalizeText(version.title),
+    reason: "restore-version"
+  }, adminUser);
+}
+
+async function markServiceDraftPublished(draftId, serviceDetail, adminUser) {
+  const draft = await findServiceDraftDoc(draftId);
+  if (!draft) {
+    return;
+  }
+
+  await assertServiceDraftAccess(draft, adminUser, "write");
+  const now = Date.now();
+  await addServiceDraftVersion(draft, "before-publish", adminUser, now);
+  await db.collection(COLLECTIONS.serviceDrafts).doc(draft._id).update({
+    data: {
+      status: "published",
+      serviceId: normalizeText(serviceDetail && serviceDetail.id) || normalizeText(draft.serviceId),
+      serviceSlug: normalizeText(serviceDetail && serviceDetail.slug) || normalizeText(draft.serviceSlug),
+      latestSnapshotAt: now,
+      publishedAt: now,
+      updatedAt: now,
+      updatedBy: getAdminOperatorId(adminUser)
+    }
+  });
+  await pruneServiceDraftVersions(draft._id);
+}
+
 async function listServices(payload, adminUser) {
   assertAdminPermission(adminUser, "services:read");
   const keyword = normalizeText(payload && payload.keyword).toLowerCase();
   const status = normalizeText(payload && payload.status).toLowerCase();
   const tag = normalizeText(payload && payload.tag);
+  const groupType = normalizeText(payload && payload.groupType);
   const serviceSlug = normalizeText(payload && payload.serviceSlug);
   const creatorSlug = normalizeText(payload && payload.creatorSlug);
   const completion = normalizeText(payload && payload.completion);
@@ -5070,6 +5702,9 @@ async function listServices(payload, adminUser) {
         return false;
       }
       if (tag && !normalizeArray(service.tags).includes(tag)) {
+        return false;
+      }
+      if (groupType && groupType !== "all" && normalizeServiceGroupType(service.groupType) !== groupType) {
         return false;
       }
       if (activeCreatorRefs.length && !activeCreatorRefs.includes(normalizeText(service.creatorId))) {
@@ -5114,6 +5749,8 @@ async function listServices(payload, adminUser) {
             return item.updatedAt;
           case "status":
             return item.status;
+          case "groupType":
+            return item.groupType;
           default:
             return item.updatedAt;
         }
@@ -5158,6 +5795,7 @@ async function saveService(payload, adminUser) {
     );
   }
   const previousCreatorId = existing ? normalizeText(existing.creatorId) : "";
+  const sourceDraftId = normalizeText(payload && payload.draftId);
   const name = normalizeText(payload && payload.name);
   const type = normalizeServiceType(
     payload && payload.type,
@@ -5205,8 +5843,16 @@ async function saveService(payload, adminUser) {
   const logicalId = existing ? normalizeText(existing.id) : (normalizeText(normalizedPayload && normalizedPayload.id) || createServiceLogicalId(slug));
   const creatorRoles = uniqueStrings(normalizedPayload && normalizedPayload.creatorRoles);
   const creatorMessage = normalizeText(normalizedPayload && normalizedPayload.creatorMessage);
+  const fullGroupSize = normalizePositiveInteger(
+    normalizedPayload && normalizedPayload.fullGroupSize,
+    existing ? normalizePositiveInteger(existing && existing.fullGroupSize, 0) : 0
+  );
   const regionCodes = normalizeServiceRegionCodes(normalizedPayload && normalizedPayload.regionCodes);
   const routeTags = normalizeRouteTags(normalizedPayload && normalizedPayload.tags, existing ? getServiceRouteTags(existing) : []);
+  const groupTypeSource =
+    normalizedPayload && Object.prototype.hasOwnProperty.call(normalizedPayload, "groupType")
+      ? normalizedPayload.groupType
+      : existing && existing.groupType;
   assertCondition(regionCodes.length >= 1, "请至少选择 1 个路线区域");
   assertCondition(routeTags.length >= 1, "请至少选择 1 个路线标签");
   assertCondition(routeTags.length <= 3, "路线标签最多选择 3 个");
@@ -5217,8 +5863,10 @@ async function saveService(payload, adminUser) {
     cover: normalizeImageAssetValue(normalizedPayload && normalizedPayload.cover),
     gallery: flattenServiceGalleryGroups(normalizedPayload && normalizedPayload.galleryGroups, normalizedPayload && normalizedPayload.gallery),
     galleryGroups: sanitizeServiceGalleryGroups(normalizedPayload && normalizedPayload.galleryGroups, normalizedPayload && normalizedPayload.gallery),
+    groupType: normalizeServiceGroupType(groupTypeSource),
     type,
     name,
+    fullGroupSize,
     creatorId: normalizeText(matchedCreator && matchedCreator.id) || normalizeText(normalizedPayload && normalizedPayload.creatorId),
     creatorRoles: creatorRoles.length ? creatorRoles : getDefaultCreatorRoles(type),
     creatorMessage,
@@ -5251,6 +5899,9 @@ async function saveService(payload, adminUser) {
     const detail = await getServiceDetail({ _id: createResult && createResult._id }, adminUser);
     await deleteServiceAssetFiles(preparedSave.migratedSourceRefs);
     await syncCreatorDestinationSlugsForServiceCreatorId(nextDoc.creatorId, adminUser);
+    if (sourceDraftId) {
+      await markServiceDraftPublished(sourceDraftId, detail, adminUser);
+    }
     return detail;
   }
 
@@ -5269,6 +5920,9 @@ async function saveService(payload, adminUser) {
   await syncCreatorDestinationSlugsForServiceCreatorId(nextDoc.creatorId, adminUser);
   if (previousCreatorId && previousCreatorId !== normalizeText(nextDoc.creatorId)) {
     await syncCreatorDestinationSlugsForServiceCreatorId(previousCreatorId, adminUser);
+  }
+  if (sourceDraftId) {
+    await markServiceDraftPublished(sourceDraftId, detail, adminUser);
   }
   return detail;
 }
@@ -5584,10 +6238,16 @@ function findLinkedAdminAccountForRegistration(detail, accounts) {
   const linkedAccountId = normalizeText(detail && detail.linkedAdminAccountId);
   const authUserId = normalizeText(detail && detail.authUserId);
   const authEmail = normalizeEmail(detail && detail.authEmail);
+  const explicitLinkedAccount = normalizeArray(accounts).find((account) => (
+    linkedAccountId && normalizeText(account && account._id) === linkedAccountId
+  )) || null;
+
+  if (explicitLinkedAccount || normalizeText(detail && detail.accessProvisionStatus) === "conflict") {
+    return explicitLinkedAccount;
+  }
 
   return normalizeArray(accounts).find((account) => (
-    normalizeText(account && account._id) === linkedAccountId
-    || (authUserId && normalizeText(account && account.uid) === authUserId)
+    (authUserId && normalizeText(account && account.uid) === authUserId)
     || (authEmail && normalizeEmail(account && account.email) === authEmail)
   )) || null;
 }
@@ -8593,7 +9253,7 @@ async function listOrders(payload, adminUser) {
   const limit = clampLimit(payload && payload.limit);
   const [rows, users, orderEventDocs, travelerDocs, services, creators] = await Promise.all([
     queryRows(
-      "SELECT `orderNo`, `userOpenid`, `serviceSlug`, `serviceName`, `servicePeriodCode`, `travelDateStart`, `status`, `versionName`, `peopleCountInt`, `createdAtTs`, `paidAtTs`, `canceledAtTs`, `updatedAt`, `travelersJson`, `creatorSnapshotJson`, `serviceSnapshotJson` FROM `TravelOrder` ORDER BY COALESCE(`updatedAt`, `createdAtTs`) DESC LIMIT 200"
+      "SELECT `orderNo`, `userOpenid`, `serviceSlug`, `serviceName`, `servicePeriodCode`, `travelDateStart`, `status`, `versionName`, `peopleCountInt`, `createdAtTs`, `paidAtTs`, `canceledAtTs`, `updatedAt`, `payExpireAtTs`, `amount`, `amountDec`, `payable`, `payableDec`, `priceAdjustmentAmount`, `priceAdjustmentReason`, `priceAdjustedAtTs`, `priceAdjustedBy`, `travelersJson`, `creatorSnapshotJson`, `serviceSnapshotJson` FROM `TravelOrder` ORDER BY COALESCE(`updatedAt`, `createdAtTs`) DESC LIMIT 200"
     ),
     listCollection(COLLECTIONS.users),
     listOptionalCollection(ORDER_EVENTS_COLLECTION),
@@ -8698,6 +9358,13 @@ async function listOrders(payload, adminUser) {
       userId: userSummary.userId,
       userNickname: userSummary.userNickname,
       peopleCount: normalizeNumber(row.peopleCountInt),
+      amount: normalizeNumber(row.amountDec || row.amount),
+      payable: normalizeNumber(row.payableDec || row.payable),
+      payExpireAtTs: getOrderPaymentExpireAtTs(row),
+      priceAdjustmentAmount: normalizeNumber(row.priceAdjustmentAmount, 0),
+      priceAdjustmentReason: normalizeText(row.priceAdjustmentReason),
+      priceAdjustedAtTs: normalizeNumber(row.priceAdjustedAtTs, 0),
+      priceAdjustedBy: normalizeText(row.priceAdjustedBy),
       updatedAtTs
     }));
 
@@ -8729,6 +9396,25 @@ async function listOrders(payload, adminUser) {
   }
 
   return items.slice(0, limit);
+}
+
+function getOrderPaymentExpireAtTs(orderRecord) {
+  const explicitExpireAt = normalizeNumber(orderRecord && orderRecord.payExpireAtTs, 0);
+  if (explicitExpireAt > 0) {
+    return explicitExpireAt;
+  }
+
+  const createdAtTs = normalizeNumber(orderRecord && (orderRecord.createdAtTs || orderRecord.createdAt), 0);
+  return createdAtTs > 0 ? createdAtTs + ORDER_PAYMENT_EXPIRE_MS : 0;
+}
+
+function isPendingOrderPaymentExpired(orderRecord, now = Date.now()) {
+  if (!orderRecord || normalizeText(orderRecord.status) !== "pending") {
+    return false;
+  }
+
+  const expireAtTs = getOrderPaymentExpireAtTs(orderRecord);
+  return expireAtTs > 0 && expireAtTs <= now;
 }
 
 async function getOrderDetail(payload, adminUser) {
@@ -8831,6 +9517,11 @@ async function getOrderDetail(payload, adminUser) {
     amount: normalizeNumber(row.amountDec || row.amount),
     discount: normalizeNumber(row.discountDec || row.discount),
     payable: normalizeNumber(row.payableDec || row.payable),
+    payExpireAtTs: getOrderPaymentExpireAtTs(row),
+    priceAdjustmentAmount: normalizeNumber(row.priceAdjustmentAmount, 0),
+    priceAdjustmentReason: normalizeText(row.priceAdjustmentReason),
+    priceAdjustedAtTs: normalizeNumber(row.priceAdjustedAtTs, 0),
+    priceAdjustedBy: normalizeText(row.priceAdjustedBy),
     orderContactName,
     orderContactPhone,
     travelerName: normalizeText(row.travelerName || orderContactName),
@@ -8857,6 +9548,83 @@ async function getOrderDetail(payload, adminUser) {
     updatedAtTs: resolveLastOrderUpdateTs(row, statusLogs),
     statusLogs
   };
+}
+
+function normalizeOrderPayableInput(value) {
+  const amount = Math.round(normalizeNumber(value, NaN) * 100) / 100;
+  assertCondition(Number.isFinite(amount) && amount > 0, "请填写有效的订单价格");
+  return amount;
+}
+
+function resolveOrderPriceOperatorId(adminUser) {
+  return normalizeText(
+    adminUser && (
+      adminUser.uid
+      || adminUser.id
+      || adminUser.username
+      || adminUser.email
+      || adminUser.realName
+    )
+  ) || "admin";
+}
+
+async function adjustOrderPrice(payload, adminUser) {
+  const orderNo = normalizeText(payload && payload.orderNo);
+  const nextPayable = normalizeOrderPayableInput(payload && (payload.payable != null ? payload.payable : payload.amount));
+  const reason = normalizeText(payload && payload.reason).slice(0, 256);
+  assertCondition(orderNo, "缺少订单号");
+
+  const rows = await queryRows(
+    "SELECT * FROM `TravelOrder` WHERE `orderNo` = {{orderNo}} LIMIT 1",
+    { orderNo }
+  );
+  const row = rows[0];
+  assertCondition(row, "未找到对应订单");
+
+  const [services, creators] = await Promise.all([
+    listCollection(COLLECTIONS.services),
+    listCollection(COLLECTIONS.creators)
+  ]);
+  const creatorRefSet = buildAdminCreatorRefSet(adminUser, creators);
+  const serviceMap = buildServiceMap(services);
+  assertCondition(canAccessOrderForAdmin(row, adminUser, creatorRefSet, serviceMap), "未找到对应订单");
+  assertCondition(normalizeText(row.status) === "pending", "只有待支付订单可以改价");
+  assertCondition(!isPendingOrderPaymentExpired(row), "订单待支付时间已过，不能改价");
+
+  const previousPayable = Math.round(normalizeNumber(row.payableDec != null ? row.payableDec : row.payable, 0) * 100) / 100;
+  assertCondition(previousPayable > 0, "订单原价格无效，不能改价");
+  assertCondition(Math.round(previousPayable * 100) !== Math.round(nextPayable * 100), "新价格与当前价格一致");
+
+  const now = Date.now();
+  const operatorId = resolveOrderPriceOperatorId(adminUser);
+  const priceAdjustmentAmount = Math.round((nextPayable - previousPayable) * 100) / 100;
+
+  await executeSQL(
+    "UPDATE `TravelOrder` SET `payable` = {{payable}}, `payableDec` = {{payable}}, `priceAdjustmentAmount` = {{priceAdjustmentAmount}}, `priceAdjustmentReason` = {{priceAdjustmentReason}}, `priceAdjustedAtTs` = {{priceAdjustedAtTs}}, `priceAdjustedBy` = {{priceAdjustedBy}}, `updatedAt` = {{updatedAt}} WHERE `orderNo` = {{orderNo}} AND `status` = 'pending' LIMIT 1",
+    {
+      orderNo,
+      payable: nextPayable,
+      priceAdjustmentAmount,
+      priceAdjustmentReason: reason,
+      priceAdjustedAtTs: now,
+      priceAdjustedBy: operatorId,
+      updatedAt: now
+    }
+  );
+
+  await appendOrderStatusEvent({
+    orderNo,
+    userOpenid: row.userOpenid,
+    status: "pending",
+    fromStatus: "pending",
+    source: "price_adjustment",
+    note: reason
+      ? `改价：${previousPayable.toFixed(2)} -> ${nextPayable.toFixed(2)}；${reason}`
+      : `改价：${previousPayable.toFixed(2)} -> ${nextPayable.toFixed(2)}`,
+    operatorId
+  });
+
+  return getOrderDetail({ orderNo }, adminUser);
 }
 
 function mapTravelerProfileForAdmin(doc) {
@@ -9084,6 +9852,10 @@ function buildTravelerRelationMaps(orderRows, travelerDocs) {
     statsByRecordId,
     ordersByRecordId
   };
+}
+
+function isSoldOrderStatus(status) {
+  return ["paid", "traveling", "completed"].includes(normalizeText(status));
 }
 
 function resolveTravelerRelationSummary(doc, relationMaps, options) {
@@ -9526,6 +10298,15 @@ function resolveTravelerProfileBackfillMatch(rawTraveler, normalizedTraveler, us
     }
   }
 
+  if (!documentNumbers.length && !phone) {
+    const byName = classifyTravelerBackfillMatches(
+      resolvedState.candidates.filter((candidate) => candidate.name === travelerName)
+    );
+    if (byName.status === "multiple") {
+      return Object.assign(byName, { reason: "name_only" });
+    }
+  }
+
   return {
     status: "unmatched",
     reason: "missing_document_or_phone_match",
@@ -9820,6 +10601,7 @@ async function listTravelers(payload, adminUser) {
   const keyword = normalizeText(payload && payload.keyword).toLowerCase();
   const status = normalizeText(payload && payload.status).toLowerCase();
   const hasOrders = normalizeText(payload && payload.hasOrders).toLowerCase();
+  const servicePeriodCode = normalizeText(payload && payload.servicePeriodCode);
   const limit = clampLimit(payload && payload.limit, 100);
 
   const [travelerDocs, users, relationOrderRows, services, creators] = await Promise.all([
@@ -9833,7 +10615,15 @@ async function listTravelers(payload, adminUser) {
   const userMap = buildOrderUserMap(users);
   const creatorRefSet = buildAdminCreatorRefSet(adminUser, creators);
   const serviceMap = buildServiceMap(services);
-  const visibleRelationOrderRows = filterOrderRowsForAdmin(relationOrderRows, adminUser, creatorRefSet, serviceMap);
+  const visibleRelationOrderRows = filterOrderRowsForAdmin(relationOrderRows, adminUser, creatorRefSet, serviceMap)
+    .filter((row) => {
+      if (!servicePeriodCode) {
+        return true;
+      }
+
+      return normalizeText(row && row.servicePeriodCode) === servicePeriodCode
+        && isSoldOrderStatus(row && row.status);
+    });
   const relationOrderMaps = buildTravelerRelationMaps(visibleRelationOrderRows, travelerDocs);
 
   const items = normalizeArray(travelerDocs)
@@ -9874,6 +10664,9 @@ async function listTravelers(payload, adminUser) {
     })
     .filter((item) => {
       if (isCreatorPortalUser(adminUser) && normalizeNumber(item && item.relatedOrderCount) <= 0) {
+        return false;
+      }
+      if (servicePeriodCode && normalizeNumber(item && item.relatedOrderCount) <= 0) {
         return false;
       }
       if (status && status !== "all" && status !== normalizeText(item && item.status).toLowerCase()) {
@@ -9923,6 +10716,110 @@ async function listTravelers(payload, adminUser) {
   }
 
   return items.slice(0, limit);
+}
+
+async function listServicePeriodTravelerExportRows(payload, adminUser) {
+  const servicePeriodCode = normalizeText(payload && payload.servicePeriodCode);
+  assertCondition(servicePeriodCode, "请选择要导出的团期");
+
+  const [periodRecord, orderRows, users, services, creators] = await Promise.all([
+    findServicePeriodByCode(servicePeriodCode),
+    queryRows(
+      `SELECT \`orderNo\`, \`userOpenid\`, \`serviceSlug\`, \`serviceName\`, \`serviceType\`, \`servicePeriodCode\`, \`versionName\`, \`status\`, \`travelDateStart\`, \`travelDateEnd\`, \`orderContactName\`, \`orderContactPhone\`, \`travelerName\`, \`travelerPhone\`, \`emergencyContactName\`, \`emergencyContactPhone\`, \`roomingMode\`, \`roommateName\`, \`roomType\`, \`singleRoomPrice\`, \`singleRoomPriceDec\`, \`singleRoomStatus\`, \`singleRoomNotice\`, \`allergyNotes\`, \`note\`, \`travelersJson\`, \`createdAtTs\`, \`updatedAt\`, \`creatorSnapshotJson\`, \`serviceSnapshotJson\` FROM \`TravelOrder\` WHERE \`servicePeriodCode\` = {{servicePeriodCode}} AND ${SOLD_ORDER_STATUS_SQL} ORDER BY COALESCE(\`paidAtTs\`, \`updatedAt\`, \`createdAtTs\`) ASC LIMIT 1000`,
+      { servicePeriodCode }
+    ),
+    listCollection(COLLECTIONS.users),
+    listCollection(COLLECTIONS.services),
+    listCollection(COLLECTIONS.creators)
+  ]);
+  assertCondition(periodRecord, "未找到对应团期");
+
+  const creatorRefSet = buildAdminCreatorRefSet(adminUser, creators);
+  const serviceMap = buildServiceMap(services);
+  assertCondition(
+    canAccessServicePeriodForAdmin(periodRecord, adminUser, creatorRefSet, serviceMap),
+    "未找到对应团期"
+  );
+
+  const userMap = buildOrderUserMap(users);
+  const visibleRows = filterOrderRowsForAdmin(orderRows, adminUser, creatorRefSet, serviceMap);
+  const items = [];
+
+  visibleRows.forEach((row) => {
+    const userSummary = resolveOrderUserSummary(userMap, row && row.userOpenid);
+    const serviceSnapshot = parseJsonText(row && row.serviceSnapshotJson, {}) || {};
+    const snapshotSingleRoom =
+      serviceSnapshot && typeof serviceSnapshot.singleRoom === "object" && serviceSnapshot.singleRoom !== null
+        ? serviceSnapshot.singleRoom
+        : {};
+    const orderContactName = normalizeText(row && (row.orderContactName || row.travelerName));
+    const orderContactPhone = normalizeText(row && (row.orderContactPhone || row.travelerPhone));
+    const roomingMode =
+      normalizeText(row && row.roomingMode)
+      || (normalizeBoolean(snapshotSingleRoom.requested) ? "singleRoomRequest" : "random");
+    const travelers = normalizeArray(parseJsonText(row && row.travelersJson, []))
+      .map(normalizeTravelerSnapshot)
+      .filter((traveler) => traveler && (traveler.name || traveler.phone || traveler.documentNumber || traveler.documents.length));
+
+    travelers.forEach((traveler, index) => {
+      const documents = normalizeArray(traveler.documents)
+        .map((document) => ({
+          documentType: normalizeText(document && document.documentType),
+          documentNumber: normalizeText(document && document.documentNumber)
+        }))
+        .filter((document) => document.documentType || document.documentNumber);
+
+      items.push({
+        orderNo: normalizeText(row && row.orderNo),
+        orderStatus: normalizeText(row && row.status),
+        serviceSlug: normalizeText(row && row.serviceSlug),
+        serviceName: normalizeText(row && row.serviceName),
+        serviceType: normalizeText(row && row.serviceType),
+        servicePeriodCode: normalizeText(row && row.servicePeriodCode),
+        versionName: normalizeText(row && row.versionName),
+        travelDateStart: normalizeText(row && row.travelDateStart),
+        travelDateEnd: normalizeText(row && row.travelDateEnd),
+        userId: userSummary.userId,
+        userOpenid: normalizeText(row && row.userOpenid),
+        userNickname: userSummary.userNickname,
+        orderContactName,
+        orderContactPhone,
+        emergencyContactName: normalizeText(row && row.emergencyContactName) || orderContactName,
+        emergencyContactPhone: normalizeText(row && row.emergencyContactPhone) || orderContactPhone,
+        roomingMode,
+        roommateName: normalizeText(row && row.roommateName),
+        roomType: normalizeText(row && row.roomType),
+        singleRoomPrice: Math.max(0, normalizeNumber(row && (row.singleRoomPriceDec || row.singleRoomPrice || snapshotSingleRoom.price), 0)),
+        singleRoomStatus: normalizeText(row && (row.singleRoomStatus || snapshotSingleRoom.status)),
+        singleRoomNotice: normalizeText(row && (row.singleRoomNotice || snapshotSingleRoom.notice)),
+        allergyNotes: normalizeText(row && row.allergyNotes),
+        orderNote: normalizeText(row && row.note),
+        travelerIndex: index + 1,
+        travelerRecordId: normalizeText(traveler.travelerRecordId),
+        profileId: normalizeText(traveler.profileId),
+        name: normalizeText(traveler.name),
+        phone: normalizeText(traveler.phone),
+        wechat: normalizeText(traveler.wechat),
+        email: normalizeText(traveler.email),
+        gender: normalizeText(traveler.gender),
+        birthday: normalizeText(traveler.birthday),
+        documentType: normalizeText(traveler.documentType || (documents[0] && documents[0].documentType)),
+        documentNumber: normalizeText(traveler.documentNumber || (documents[0] && documents[0].documentNumber)),
+        documents,
+        note: normalizeText(traveler.note)
+      });
+    });
+  });
+
+  return {
+    period: mapServicePeriodRecord(
+      periodRecord,
+      resolvePeriodSoldCount(periodRecord),
+      serviceMap[normalizeText(periodRecord && periodRecord.serviceSlug)] || null,
+      adminUser
+    ),
+    items
+  };
 }
 
 async function getTravelerDetail(payload, adminUser) {
@@ -10793,6 +11690,34 @@ const handlers = {
     const adminUser = await requireAdmin();
     return saveService(payload, adminUser);
   },
+  listServiceDrafts: async (payload) => {
+    const adminUser = await requireAdmin();
+    return listServiceDrafts(payload, adminUser);
+  },
+  getServiceDraft: async (payload) => {
+    const adminUser = await requireAdmin();
+    return getServiceDraft(payload, adminUser);
+  },
+  saveServiceDraft: async (payload) => {
+    const adminUser = await requireAdmin();
+    return saveServiceDraft(payload, adminUser);
+  },
+  deleteServiceDraft: async (payload) => {
+    const adminUser = await requireAdmin();
+    return deleteServiceDraft(payload, adminUser);
+  },
+  restoreServiceDraft: async (payload) => {
+    const adminUser = await requireAdmin();
+    return restoreServiceDraft(payload, adminUser);
+  },
+  listServiceDraftVersions: async (payload) => {
+    const adminUser = await requireAdmin();
+    return listServiceDraftVersions(payload, adminUser);
+  },
+  restoreServiceDraftVersion: async (payload) => {
+    const adminUser = await requireAdmin();
+    return restoreServiceDraftVersion(payload, adminUser);
+  },
   deleteService: async (payload) => {
     const adminUser = await requireAdmin();
     return deleteService(payload, adminUser);
@@ -10975,6 +11900,11 @@ const handlers = {
     assertAnyAdminPermission(adminUser, ["ops:read", "orders:detail:owned"]);
     return getOrderDetail(payload, adminUser);
   },
+  adjustOrderPrice: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAnyAdminPermission(adminUser, ["ops:read", "orders:update:owned"]);
+    return adjustOrderPrice(payload, adminUser);
+  },
   deleteOrder: async (payload) => {
     const adminUser = await requireAdmin();
     assertAdminPermission(adminUser, "ops:read");
@@ -10994,6 +11924,11 @@ const handlers = {
     const adminUser = await requireAdmin();
     assertAnyAdminPermission(adminUser, ["ops:read", "travelers:read:owned"]);
     return listTravelers(payload, adminUser);
+  },
+  exportServicePeriodTravelers: async (payload) => {
+    const adminUser = await requireAdmin();
+    assertAnyAdminPermission(adminUser, ["ops:read", "travelers:export:owned"]);
+    return listServicePeriodTravelerExportRows(payload, adminUser);
   },
   getTravelerDetail: async (payload) => {
     const adminUser = await requireAdmin();
@@ -11104,6 +12039,7 @@ exports.__test__ = {
   generateServiceSlug,
   getCreatorRelationSummaries,
   getOrderDetail,
+  adjustOrderPrice,
   getTravelerDetail,
   deleteTraveler,
   getUserDetail,
@@ -11112,10 +12048,18 @@ exports.__test__ = {
   listCreators,
   listDestinations,
   listOrders,
+  listServicePeriodTravelerExportRows,
   listReferralPayoutAccounts,
   listReferralRelations,
   listReferralRewardLedgers,
   listServices,
+  listServiceDrafts,
+  getServiceDraft,
+  saveServiceDraft,
+  deleteServiceDraft,
+  restoreServiceDraft,
+  listServiceDraftVersions,
+  restoreServiceDraftVersion,
   listTravelers,
   getOrderDebugToolDetail,
   listOrderDebugTestOrders,

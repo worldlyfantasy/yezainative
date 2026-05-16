@@ -113,7 +113,7 @@ function createJourney(options) {
     creatorName: options.creatorName || "野哉",
     routeTypes: options.routeTypes || [],
     durationTag: "",
-    priceLabel: "",
+    priceLabel: options.priceLabel || "",
     primaryRouteTypeWordmark: "",
     destinationRegionCodes: options.destinationRegionCodes || [],
     activePeriods: (options.activePeriods || []).map((period) => ({
@@ -296,6 +296,79 @@ test("journey page keeps region availability independent from transient calendar
       selected: false
     }
   ]);
+});
+
+test("journey page splits region sheet between domestic and international tabs", () => {
+  const page = createPageInstance();
+  page.allJourneys = [
+    createJourney({
+      slug: "qinghai-loop",
+      destinationRegionCodes: ["cn_tibetan"],
+      activePeriods: [
+        {
+          dateStart: "2026-05-01",
+          status: "available",
+          price: 3999
+        }
+      ]
+    }),
+    createJourney({
+      slug: "nanjiang-dune",
+      destinationRegionCodes: ["cn_xinjiang"],
+      activePeriods: [
+        {
+          dateStart: "2026-05-01",
+          status: "available",
+          price: 4999
+        }
+      ]
+    }),
+    createJourney({
+      slug: "northwest-road",
+      destinationRegionCodes: ["cn_great_northwest"],
+      activePeriods: [
+        {
+          dateStart: "2026-05-01",
+          status: "available",
+          price: 5999
+        }
+      ]
+    }),
+    createJourney({
+      slug: "europe-field-note",
+      destinationRegionCodes: ["intl_europe"],
+      activePeriods: [
+        {
+          dateStart: "2026-06-01",
+          status: "available",
+          price: 12999
+        }
+      ]
+    })
+  ];
+  page.regionOptions = [
+    { label: "藏区", value: "cn_tibetan", image: "tibetan.jpg" },
+    { label: "新疆", value: "cn_xinjiang", image: "xinjiang.jpg" },
+    { label: "西北", value: "cn_great_northwest", image: "northwest.jpg" },
+    { label: "欧洲", value: "intl_europe", image: "europe.jpg" }
+  ];
+
+  page.applyJourneyFilters();
+
+  assert.equal(page.data.activeRegionScope, "domestic");
+  assert.deepEqual(page.data.regionSheetColumns.map((column) => column.length), [2, 1]);
+  assert.deepEqual(page.data.regionSheetColumns.flat().map((item) => item.value), ["cn_tibetan", "cn_xinjiang", "cn_great_northwest"]);
+
+  page.onRegionScopeTabTap({
+    currentTarget: {
+      dataset: {
+        scope: "international"
+      }
+    }
+  });
+
+  assert.equal(page.data.activeRegionScope, "international");
+  assert.deepEqual(page.data.regionSheetColumns.flat().map((item) => item.value), ["intl_europe"]);
 });
 
 test("journey page shows a region-specific empty state when the selected region has no results", () => {
@@ -512,4 +585,106 @@ test("journey page normalizes legacy destination region filters to the current r
   assert.equal(page.data.selectedDestinationRegionLabel, "西北");
   assert.equal(page.data.resultCountText, "共 1 条符合条件的旅程");
   assert.equal(page.data.displayJourneys.length, 1);
+});
+
+test("journey page displays list prices from period price instead of raw service price labels", () => {
+  const page = createPageInstance();
+  page.allJourneys = [
+    createJourney({
+      slug: "rainforest-dawn",
+      priceLabel: "¥3980 / 5天",
+      activePeriods: [
+        {
+          dateStart: "2026-05-10",
+          status: "confirmed",
+          price: 3980
+        }
+      ]
+    })
+  ];
+
+  page.applyJourneyFilters();
+
+  assert.equal(page.data.displayJourneys.length, 1);
+  assert.equal(page.data.displayJourneys[0].priceText, "¥3980 起");
+});
+
+test("journey page only shows the confirmed tag for confirmed bookable periods", () => {
+  const page = createPageInstance();
+  page.allJourneys = [
+    createJourney({
+      slug: "rainforest-dawn",
+      activePeriods: [
+        {
+          dateStart: "2026-05-10",
+          status: "confirmed",
+          statusText: "确定成行",
+          price: 3980
+        }
+      ]
+    })
+  ];
+
+  page.applyJourneyFilters();
+
+  assert.deepEqual(
+    page.data.displayJourneys[0].displayStatusTags.map((item) => item.label),
+    ["确定成行"]
+  );
+});
+
+test("journey page hides the available tag for available periods", () => {
+  const page = createPageInstance();
+  page.allJourneys = [
+    createJourney({
+      slug: "rainforest-dawn",
+      activePeriods: [
+        {
+          dateStart: "2026-05-10",
+          status: "available",
+          statusText: "可报名",
+          price: 3980
+        }
+      ]
+    })
+  ];
+
+  page.applyJourneyFilters();
+
+  assert.deepEqual(page.data.displayJourneys[0].displayStatusTags, []);
+  assert.equal(page.data.displayJourneys[0].displayStatusText, "");
+});
+
+test("journey page builds stable two-column data for masonry journey cards", () => {
+  const page = createPageInstance();
+  const journeys = ["a", "b", "c", "d", "e"].map((slug) => ({ slug }));
+
+  assert.deepEqual(
+    page.buildJourneyColumns(journeys),
+    [
+      { key: "left", items: [{ slug: "a" }, { slug: "c" }, { slug: "e" }] },
+      { key: "right", items: [{ slug: "b" }, { slug: "d" }] }
+    ]
+  );
+});
+
+test("journey page toggles image-mode summary expansion by journey slug", () => {
+  const page = createPageInstance();
+  page.data.displayJourneys = [
+    { slug: "a", summaryExpanded: false },
+    { slug: "b", summaryExpanded: false }
+  ];
+
+  page.onJourneySummaryToggle({
+    detail: {
+      slug: "a",
+      expanded: true
+    }
+  });
+
+  assert.equal(page.data.displayJourneys[0].summaryExpanded, true);
+  assert.equal(page.data.displayJourneys[1].summaryExpanded, false);
+  assert.deepEqual(page.data.displayJourneyColumns[0].items, [
+    { slug: "a", summaryExpanded: true }
+  ]);
 });

@@ -20,8 +20,18 @@
   color: #6a5a4b;
 }
 
+.order-card__status {
+  flex-shrink: 0;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  line-height: 1.3;
+  color: #b36b08;
+  background: rgba(255, 171, 31, 0.16);
+}
+
 .order-card__name {
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 34rpx;
   line-height: 1.5;
   font-weight: 500;

@@ -72,3 +72,105 @@
   letter-spacing: 1rpx;
   color: #8a5a38;
 }
+
+.creator-card--grid {
+  gap: 0;
+  min-height: 266rpx;
+  padding: 18rpx 16rpx 20rpx;
+  border-bottom: 0;
+  border-radius: 20rpx;
+  background:
+    linear-gradient(180deg, rgba(255, 250, 240, 0.9), rgba(249, 239, 218, 0.78));
+  box-shadow:
+    0 8rpx 18rpx rgba(84, 57, 31, 0.035),
+    inset 0 0 0 2rpx rgba(255, 255, 255, 0.74),
+    inset 0 0 0 3rpx rgba(153, 57, 33, 0.045);
+  box-sizing: border-box;
+}
+
+.creator-card--grid .creator-card__head {
+  flex-direction: row;
+  align-items: center;
+  min-height: 124rpx;
+  gap: 16rpx;
+}
+
+.creator-card--grid .creator-card__avatar {
+  width: 118rpx;
+  height: 118rpx;
+  border: 3rpx solid rgba(255, 250, 243, 0.9);
+  box-shadow: 0 8rpx 14rpx rgba(84, 57, 31, 0.055);
+}
+
+.creator-card--grid .creator-card__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.creator-card--grid .creator-card__title-row {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 8rpx;
+}
+
+.creator-card--grid .creator-card__name {
+  max-width: 100%;
+  overflow: hidden;
+  flex: 0 1 auto;
+  text-align: left;
+  font-size: 36rpx;
+  line-height: 1.32;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creator-card--grid .creator-card__tags {
+  justify-content: flex-start;
+  align-items: center;
+  flex: 0 0 auto;
+  width: 100%;
+  padding-top: 0;
+  gap: 7rpx;
+}
+
+.creator-card--grid .creator-card__tag {
+  max-width: 116rpx;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 20rpx;
+  line-height: 1.4;
+  letter-spacing: 0;
+  color: #9a6738;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creator-card--grid .creator-card__tag-separator {
+  font-size: 18rpx;
+  line-height: 1.4;
+  color: rgba(154, 103, 56, 0.46);
+}
+
+.creator-card--grid .creator-card__stance-wrap {
+  width: 100%;
+  margin-top: 16rpx;
+  padding-top: 14rpx;
+  border-top: 1rpx solid rgba(153, 57, 33, 0.09);
+}
+
+.creator-card--grid .creator-card__stance {
+  display: -webkit-box;
+  overflow: hidden;
+  width: 100%;
+  margin-top: 0;
+  text-align: left;
+  font-size: 22rpx;
+  font-weight: 400;
+  line-height: 1.7;
+  color: #6f6254;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}

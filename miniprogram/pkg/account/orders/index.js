@@ -7,6 +7,14 @@ Page({
     orders: []
   },
 
+  onLoad(options) {
+    if (options && options.status) {
+      this.setData({
+        currentStatus: options.status
+      });
+    }
+  },
+
   async onShow() {
     this.setData({
       tabs: getOrderStatusTabs()

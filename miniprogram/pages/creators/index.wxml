@@ -5,7 +5,13 @@
   <view class="creator-tool-row">
     <view class="creator-filter-trigger" bindtap="openStyleSheet" hover-class="creator-filter-trigger--pressed">
       <view class="creator-filter-trigger__icon">
-        <view class="creator-filter-trigger__route-dots">
+        <image
+          wx:if="{{selectedStyleIcon}}"
+          class="creator-filter-trigger__style-icon"
+          src="{{selectedStyleIcon}}"
+          mode="aspectFit"
+        ></image>
+        <view wx:else class="creator-filter-trigger__route-dots">
           <view wx:for="{{routeTriggerDots}}" wx:key="*this" class="creator-filter-trigger__route-dot"></view>
         </view>
       </view>
@@ -32,14 +38,49 @@
     </view>
   </view>
 
+  <view class="creator-result-head">
+    <text class="creator-result-head__count">共 {{creators.length}} 位创作者</text>
+    <view class="creator-view-switch">
+      <view
+        class="creator-view-switch__item {{creatorViewMode === 'grid' ? 'creator-view-switch__item--active' : ''}}"
+        data-mode="grid"
+        bindtap="onCreatorViewModeTap"
+        hover-class="creator-view-switch__item--pressed"
+      >
+        <view class="creator-view-switch__icon creator-view-switch__icon--grid">
+          <view wx:for="{{[1,2,3,4]}}" wx:key="*this" class="creator-view-switch__grid-cell"></view>
+        </view>
+      </view>
+      <view
+        class="creator-view-switch__item {{creatorViewMode === 'card' ? 'creator-view-switch__item--active' : ''}}"
+        data-mode="card"
+        bindtap="onCreatorViewModeTap"
+        hover-class="creator-view-switch__item--pressed"
+      >
+        <view class="creator-view-switch__icon creator-view-switch__icon--list">
+          <view wx:for="{{[1,2,3]}}" wx:key="*this" class="creator-view-switch__list-row">
+            <view class="creator-view-switch__list-thumb"></view>
+            <view class="creator-view-switch__list-line"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
   <view class="section-block">
     <view wx:if="{{errorText}}" class="paper-block page-feedback">
       <text class="page-feedback__title">加载失败</text>
       <text class="page-feedback__desc">{{errorText}}</text>
     </view>
     <view wx:elif="{{loading}}" class="empty-state">创作者列表加载中...</view>
-    <view wx:elif="{{creators.length}}" class="card-stack">
-      <creator-card wx:for="{{creators}}" wx:key="id" creator="{{item}}" bind:cardtap="onCreatorTap"></creator-card>
+    <view wx:elif="{{creators.length}}" class="{{creatorViewMode === 'grid' ? 'creator-grid' : 'creator-list'}}">
+      <creator-card
+        wx:for="{{creators}}"
+        wx:key="id"
+        creator="{{item}}"
+        variant="{{creatorViewMode}}"
+        bind:cardtap="onCreatorTap"
+      ></creator-card>
     </view>
     <view wx:else class="empty-state">暂无符合条件的创作者。</view>
   </view>
@@ -64,7 +105,7 @@
           <image
             wx:if="{{item.icon}}"
             class="creator-tag-card__icon"
-            src="{{item.icon}}"
+            src="{{item.selected ? item.selectedIcon : item.icon}}"
             mode="aspectFit"
             lazy-load="{{true}}"
           ></image>
@@ -78,8 +119,18 @@
 <view wx:if="{{isRegionSheetVisible}}" class="creator-sheet">
   <view class="creator-sheet__backdrop" bindtap="closeRegionSheet"></view>
   <view class="creator-sheet__panel creator-sheet__panel--region {{isRegionSheetAnimating ? 'creator-sheet__panel--active' : ''}}">
-    <view class="creator-sheet__header creator-sheet__header--compact">
-      <view class="creator-sheet__close" bindtap="closeRegionSheet" hover-class="creator-sheet__close--pressed">×</view>
+    <view class="creator-sheet__header creator-sheet__header--region">
+      <view class="creator-region-tabs">
+        <view
+          wx:for="{{regionScopeTabs}}"
+          wx:key="key"
+          class="creator-region-tabs__item {{item.active ? 'creator-region-tabs__item--active' : ''}}"
+          data-scope="{{item.key}}"
+          bindtap="onRegionScopeTabTap"
+          hover-class="creator-region-tabs__item--pressed"
+        >{{item.label}}</view>
+      </view>
+      <view class="creator-sheet__close creator-region-sheet__close" bindtap="closeRegionSheet" hover-class="creator-sheet__close--pressed">×</view>
     </view>
 
     <scroll-view wx:if="{{regionSheetColumns.length}}" class="creator-region-sheet__scroll" scroll-x="true" enhanced="{{true}}" show-scrollbar="{{false}}">

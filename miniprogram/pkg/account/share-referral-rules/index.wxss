@@ -1,0 +1,170 @@
+.referral-rules-page {
+  min-height: 100vh;
+  padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
+}
+
+.referral-rules-header {
+  padding-bottom: 18rpx;
+}
+
+.referral-rules-title {
+  font-family: "Yezai Songti Fixed", "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
+  font-size: 52rpx;
+  line-height: 1.22;
+}
+
+.referral-rules-summary {
+  display: block;
+  margin-top: 22rpx;
+  font-size: 29rpx;
+  line-height: 1.9;
+  color: #5d4e40;
+}
+
+.referral-rules-quick-card {
+  display: flex;
+  align-items: stretch;
+  margin-top: 36rpx;
+  padding: 28rpx 26rpx;
+  background: rgba(255, 250, 241, 0.8);
+  border: 1rpx solid rgba(153, 57, 33, 0.12);
+}
+
+.referral-rules-quick-card__item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.referral-rules-quick-card__value {
+  font-family: "Yezai Songti Fixed", "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
+  font-size: 46rpx;
+  line-height: 1.1;
+  color: #993921;
+}
+
+.referral-rules-quick-card__label {
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  line-height: 1.5;
+  color: #6a5a4b;
+  text-align: center;
+}
+
+.referral-rules-quick-card__divider {
+  width: 1rpx;
+  margin: 4rpx 24rpx;
+  background: rgba(153, 57, 33, 0.16);
+}
+
+.referral-rules-section {
+  position: relative;
+  margin-top: 52rpx;
+  padding: 0 0 34rpx 54rpx;
+  border-bottom: 1rpx solid rgba(153, 57, 33, 0.12);
+}
+
+.referral-rules-section__index {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 34rpx;
+  height: 34rpx;
+  border-radius: 999rpx;
+  background: #D15E14;
+  color: #fffaf1;
+  font-size: 22rpx;
+  line-height: 34rpx;
+  text-align: center;
+}
+
+.referral-rules-section__title {
+  display: block;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
+  font-size: 36rpx;
+  line-height: 1.38;
+  color: #2b241d;
+}
+
+.referral-rules-paragraph {
+  display: block;
+  margin-top: 18rpx;
+  font-size: 28rpx;
+  line-height: 1.9;
+  color: #5f5144;
+}
+
+.referral-rules-step-list,
+.referral-rules-note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 22rpx;
+}
+
+.referral-rules-step {
+  display: flex;
+  gap: 16rpx;
+  align-items: flex-start;
+}
+
+.referral-rules-step__number {
+  flex-shrink: 0;
+  width: 32rpx;
+  height: 32rpx;
+  margin-top: 8rpx;
+  border: 1rpx solid rgba(153, 57, 33, 0.24);
+  border-radius: 999rpx;
+  color: #993921;
+  font-size: 21rpx;
+  line-height: 32rpx;
+  text-align: center;
+}
+
+.referral-rules-step__text,
+.referral-rules-note {
+  flex: 1;
+  min-width: 0;
+  font-size: 27rpx;
+  line-height: 1.82;
+  color: #5f5144;
+}
+
+.referral-rules-note {
+  position: relative;
+  display: block;
+  padding-left: 24rpx;
+}
+
+.referral-rules-note::before {
+  content: "";
+  position: absolute;
+  top: 19rpx;
+  left: 0;
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 999rpx;
+  background: #b8724b;
+}
+
+.referral-rules-actions {
+  margin-top: 54rpx;
+}
+
+.referral-rules-actions__button {
+  width: 100%;
+  height: 82rpx;
+  min-height: 82rpx;
+  border-radius: 999rpx;
+  background: #D15E14;
+  color: #fff9f2;
+  font-size: 30rpx;
+  line-height: 82rpx;
+  box-shadow: none;
+}
+
+.referral-rules-actions__button::after {
+  border: 0;
+}

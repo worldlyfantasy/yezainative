@@ -145,3 +145,34 @@ test("profile share referral shortcut opens the asset page directly when coupons
     ["hide"]
   ]);
 });
+
+test("profile completion prompt keeps manual nickname and avatar draft across refresh", () => {
+  const pageConfig = loadProfilePage();
+  const page = {
+    data: {
+      profilePromptVisible: true,
+      profilePromptDismissed: false,
+      profileNicknameEditing: false,
+      profileSaving: false,
+      profileDraftNickname: "手动昵称",
+      profileDraftAvatarUrl: "http://tmp/avatar.jpg"
+    },
+    setData(nextData) {
+      this.data = Object.assign({}, this.data, nextData);
+    }
+  };
+
+  pageConfig.applyPageData.call(page, {
+    loggedIn: true,
+    user: {
+      nickname: "旅人",
+      avatarUrl: "",
+      profileConfigured: false
+    },
+    shortcuts: []
+  });
+
+  assert.equal(page.data.profilePromptVisible, true);
+  assert.equal(page.data.profileDraftNickname, "手动昵称");
+  assert.equal(page.data.profileDraftAvatarUrl, "http://tmp/avatar.jpg");
+});

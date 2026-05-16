@@ -1,14 +1,36 @@
-<view class="creator-card {{showDivider ? '' : 'creator-card--no-divider'}}" bindtap="handleTap">
-  <view class="creator-card__head">
-    <image class="creator-card__avatar" src="{{creator.avatar}}" mode="aspectFill" lazy-load="{{true}}"></image>
-    <view class="creator-card__meta">
-      <view class="creator-card__title-row">
-        <text class="creator-card__name">{{creator.name}}</text>
-        <view class="creator-card__tags">
-          <text wx:for="{{creator.displayTags}}" wx:key="*this" class="creator-card__tag">{{item}}</text>
+<view class="creator-card {{showDivider ? '' : 'creator-card--no-divider'}} {{variant === 'grid' ? 'creator-card--grid' : ''}}" bindtap="handleTap">
+  <block wx:if="{{variant === 'grid'}}">
+    <view class="creator-card__head">
+      <image class="creator-card__avatar" src="{{creator.avatar}}" mode="aspectFill" lazy-load="{{true}}"></image>
+      <view class="creator-card__meta">
+        <view class="creator-card__title-row">
+          <text class="creator-card__name">{{creator.name}}</text>
+          <view class="creator-card__tags">
+            <block wx:for="{{creator.gridDisplayTags}}" wx:key="*this">
+              <text wx:if="{{index > 0}}" class="creator-card__tag-separator">/</text>
+              <text class="creator-card__tag">{{item}}</text>
+            </block>
+          </view>
         </view>
       </view>
+    </view>
+    <view class="creator-card__stance-wrap">
       <text class="creator-card__stance">{{creator.stance}}</text>
     </view>
-  </view>
+  </block>
+
+  <block wx:else>
+    <view class="creator-card__head">
+      <image class="creator-card__avatar" src="{{creator.avatar}}" mode="aspectFill" lazy-load="{{true}}"></image>
+      <view class="creator-card__meta">
+        <view class="creator-card__title-row">
+          <text class="creator-card__name">{{creator.name}}</text>
+          <view class="creator-card__tags">
+            <text wx:for="{{creator.displayTags}}" wx:key="*this" class="creator-card__tag">{{item}}</text>
+          </view>
+        </view>
+        <text class="creator-card__stance">{{creator.stance}}</text>
+      </view>
+    </view>
+  </block>
 </view>

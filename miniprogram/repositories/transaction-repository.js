@@ -1,4 +1,8 @@
-const { getOrderTabsMeta, filterOrdersByDisplayStatus } = require("../constants/transaction-meta");
+const {
+  getOrderTabsMeta,
+  filterOrdersByDisplayStatus,
+  sortOrdersByTravelPeriodDesc
+} = require("../constants/transaction-meta");
 const cloudTransactionApi = require("../api/cloud/transaction");
 const userSessionStore = require("./local/user-session-store");
 const {
@@ -63,7 +67,9 @@ function getOrders(statusKey) {
   if (!hasActiveUserSession()) {
     return Promise.resolve([]);
   }
-  return invoke("getOrders", mapOrders, ["all"]).then((orders) => filterOrdersByDisplayStatus(orders, statusKey));
+  return invoke("getOrders", mapOrders, ["all"]).then((orders) => {
+    return sortOrdersByTravelPeriodDesc(filterOrdersByDisplayStatus(orders, statusKey));
+  });
 }
 
 function getRecentOrders(limit) {

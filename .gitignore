@@ -1,5 +1,6 @@
 node_modules/
 tmp/
+.tmp/
 
 # macOS
 .DS_Store
@@ -21,4 +22,13 @@ pnpm-debug.log*
 # Local env (if you add secrets later)
 .env
 .env.local
+.env.*
+!.env.example
 .env.*.local
+
+# Editor swap files
+*.sw?
+
+# Local one-off data backfill scripts
+scripts/backfill-service-full-group-size.js
+scripts/backfill-service-group-type.js

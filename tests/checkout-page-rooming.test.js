@@ -391,3 +391,137 @@ test("checkout draft restores traveler and contact but requires agreements again
   assert.equal(page.data.agreedRisk, false);
   assert.equal(page.data.agreedRefund, false);
 });
+
+test("checkout keeps the created order pending when WeChat payment is canceled", async () => {
+  const canceledOrders = [];
+  const toasts = [];
+  const redirects = [];
+  const definition = loadPageDefinition((request, parent, isMain, originalLoad) => {
+    if (request === "../../../repositories/content-repository") {
+      return {
+        getServiceBookingData: async () => buildBookingPayload()
+      };
+    }
+
+    if (request === "../../../repositories/config-repository") {
+      return {
+        getCheckoutPageConfig: async () => buildPageConfig()
+      };
+    }
+
+    if (request === "../../../repositories/transaction-repository") {
+      return {
+        createOrder: async () => null,
+        cancelOrder: async (orderId) => {
+          canceledOrders.push(orderId);
+          return { id: orderId, status: "canceled" };
+        }
+      };
+    }
+
+    if (request === "../../../repositories/payment-repository") {
+      return {
+        payOrderWithWechat: async () => {
+          const error = new Error("requestPayment:fail cancel");
+          error.errMsg = "requestPayment:fail cancel";
+          error.paymentStage = "request";
+          throw error;
+        }
+      };
+    }
+
+    if (request === "../../../api/cloud/user") {
+      return {
+        listTravelerProfiles: async () => []
+      };
+    }
+
+    return originalLoad(request, parent, isMain);
+  });
+
+  const page = createPageInstance(definition);
+  const originalWx = global.wx;
+  global.wx = Object.assign(createWxMock(), {
+    showToast: (payload) => toasts.push(payload),
+    redirectTo: (payload) => redirects.push(payload)
+  });
+
+  try {
+    await page.startOrderPayment({ id: "order-1" });
+  } finally {
+    if (originalWx === undefined) {
+      delete global.wx;
+    } else {
+      global.wx = originalWx;
+    }
+  }
+
+  assert.deepEqual(canceledOrders, []);
+  assert.equal(toasts[0].title, "订单已保留，请在30分钟内完成支付");
+  assert.deepEqual(redirects, [{ url: "/pkg/account/order-detail/index?id=order-1&pay=pending" }]);
+});
+
+test("checkout keeps the order when payment confirmation is still pending", async () => {
+  const canceledOrders = [];
+  const redirects = [];
+  const definition = loadPageDefinition((request, parent, isMain, originalLoad) => {
+    if (request === "../../../repositories/content-repository") {
+      return {
+        getServiceBookingData: async () => buildBookingPayload()
+      };
+    }
+
+    if (request === "../../../repositories/config-repository") {
+      return {
+        getCheckoutPageConfig: async () => buildPageConfig()
+      };
+    }
+
+    if (request === "../../../repositories/transaction-repository") {
+      return {
+        createOrder: async () => null,
+        cancelOrder: async (orderId) => {
+          canceledOrders.push(orderId);
+          return { id: orderId, status: "canceled" };
+        }
+      };
+    }
+
+    if (request === "../../../repositories/payment-repository") {
+      return {
+        payOrderWithWechat: async () => {
+          const error = new Error("query timeout");
+          error.paymentStage = "confirm";
+          throw error;
+        }
+      };
+    }
+
+    if (request === "../../../api/cloud/user") {
+      return {
+        listTravelerProfiles: async () => []
+      };
+    }
+
+    return originalLoad(request, parent, isMain);
+  });
+
+  const page = createPageInstance(definition);
+  const originalWx = global.wx;
+  global.wx = Object.assign(createWxMock(), {
+    redirectTo: (payload) => redirects.push(payload)
+  });
+
+  try {
+    await page.startOrderPayment({ id: "order-2" });
+  } finally {
+    if (originalWx === undefined) {
+      delete global.wx;
+    } else {
+      global.wx = originalWx;
+    }
+  }
+
+  assert.deepEqual(canceledOrders, []);
+  assert.deepEqual(redirects, [{ url: "/pkg/account/order-detail/index?id=order-2&pay=pending" }]);
+});

@@ -117,7 +117,6 @@ const handlers = {
   getServiceDetailPageConfig: () => readConfig("serviceDetailPage"),
   getPaymentResultPageConfig: () => readConfig("paymentResultPage"),
   getOrderDetailPageConfig: () => readConfig("orderDetailPage"),
-  getProfilePageConfig: () => readConfig("profilePage", { cache: false }),
   getFavoritesPageConfig: () => readConfig("favoritesPage"),
   getArticleBridgePageConfig: () => readConfig("articleBridgePage")
 };

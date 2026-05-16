@@ -322,6 +322,199 @@ test("transactionGateway supports compact traveler snapshots for two travelers",
   assert.equal(mapped.travelers[1].source, "manual");
 });
 
+test("transactionGateway detects paid order traveler date overlaps inclusively", () => {
+  const { __test__ } = loadTransactionGatewayModule();
+  const conflict = __test__.findTravelerAvailabilityConflictFromRecords(
+    [
+      {
+        orderNo: "yz_paid_overlap",
+        status: "paid",
+        travelDateStart: "2026-06-10",
+        travelDateEnd: "2026-06-12",
+        travelersJson: JSON.stringify([
+          {
+            n: "阿野",
+            t: "passport",
+            i: "E12345678"
+          }
+        ])
+      },
+      {
+        orderNo: "yz_pending_overlap",
+        status: "pending",
+        travelDateStart: "2026-06-11",
+        travelDateEnd: "2026-06-13",
+        travelersJson: JSON.stringify([
+          {
+            n: "阿青",
+            t: "passport",
+            i: "P99887766"
+          }
+        ])
+      }
+    ],
+    [
+      {
+        name: "阿野",
+        documents: [{ documentType: "passport", documentNumber: "E12345678" }]
+      }
+    ],
+    {
+      dateStart: "2026-06-12",
+      dateEnd: "2026-06-15"
+    }
+  );
+
+  assert.equal(conflict.order.orderNo, "yz_paid_overlap");
+  assert.equal(__test__.hasTravelPeriodOverlap(
+    { dateStart: "2026-06-01", dateEnd: "2026-06-03" },
+    { dateStart: "2026-06-04", dateEnd: "2026-06-06" }
+  ), false);
+});
+
+test("transactionGateway createOrder rejects travelers already booked on overlapping paid trips", async () => {
+  const insertCalls = [];
+  const periodRecord = {
+    _id: "sp_overlap_001",
+    serviceSlug: "overlap-service",
+    serviceName: "重叠校验路线",
+    serviceType: "长途旅行",
+    periodCode: "overlap-2026-06-12",
+    versionName: "端午团",
+    dateStart: "2026-06-12",
+    dateEnd: "2026-06-15",
+    price: 999,
+    remainingSeats: 8,
+    status: "available"
+  };
+
+  const { __test__ } = loadTransactionGatewayModule({
+    wxServerSdk: {
+      DYNAMIC_CURRENT_ENV: "test-env",
+      init() {},
+      database() {
+        return {
+          collection() {
+            return {
+              where() {
+                return this;
+              },
+              skip() {
+                return this;
+              },
+              limit() {
+                return this;
+              },
+              get: async () => ({ data: [] })
+            };
+          }
+        };
+      },
+      getWXContext() {
+        return { OPENID: "test-openid" };
+      }
+    },
+    cloudbaseSdk: {
+      init() {
+        return {
+          rdb() {
+            return {
+              from() {
+                return {
+                  insert: async (payload) => {
+                    insertCalls.push(payload);
+                    return { error: null };
+                  },
+                  update: () => ({
+                    eq: async () => ({ error: null })
+                  }),
+                  delete: () => ({
+                    eq: async () => ({ error: null })
+                  })
+                };
+              }
+            };
+          },
+          models: {
+            TravelOrder: {
+              list: async ({ filter }) => {
+                const status = filter && filter.where && filter.where.status
+                  ? filter.where.status.$eq
+                  : "";
+                return {
+                  data: {
+                    records: status === "paid"
+                      ? [
+                          {
+                            orderNo: "yz_paid_overlap",
+                            status: "paid",
+                            travelDateStart: "2026-06-10",
+                            travelDateEnd: "2026-06-12",
+                            travelersJson: JSON.stringify([
+                              {
+                                n: "阿野",
+                                t: "passport",
+                                i: "E12345678"
+                              }
+                            ])
+                          }
+                        ]
+                      : []
+                  }
+                };
+              }
+            },
+            ServicePeriod: {
+              list: async ({ filter }) => {
+                const where = filter && filter.where ? filter.where : {};
+                const matchesById = !where._id || where._id.$eq === periodRecord._id;
+                const matchesBySlug = !where.serviceSlug || where.serviceSlug.$eq === periodRecord.serviceSlug;
+                const matchesByDate = !where.dateStart || where.dateStart.$eq === periodRecord.dateStart;
+                const matchesByCode = !where.periodCode || where.periodCode.$eq === periodRecord.periodCode;
+
+                return {
+                  data: {
+                    records: matchesById && matchesBySlug && matchesByDate && matchesByCode
+                      ? [Object.assign({}, periodRecord)]
+                      : []
+                  }
+                };
+              },
+              update: async () => {
+                throw new Error("service period seats should not be reserved");
+              }
+            }
+          }
+        };
+      }
+    }
+  });
+
+  await assert.rejects(
+    () => __test__.createOrder({
+      serviceSlug: "overlap-service",
+      travelDateStart: "2026-06-12",
+      peopleCount: 1,
+      contactName: "测试4",
+      contactPhone: "13122276786",
+      emergencyContactName: "紧急联系4",
+      emergencyContactPhone: "13811112222",
+      travelers: [
+        {
+          name: "阿野",
+          documents: [{ documentType: "passport", documentNumber: "E12345678" }],
+          phone: "13800000001",
+          gender: "male",
+          birthday: "1990-01-01"
+        }
+      ]
+    }),
+    /阿野在该时间段已经有下单的旅程，该订单无法提交/
+  );
+  assert.equal(insertCalls.length, 0);
+  assert.equal(periodRecord.remainingSeats, 8);
+});
+
 test("transactionGateway createOrder inserts a generated SQL _id for multi-traveler orders", async () => {
   const insertCalls = [];
   const orderEvents = [];

@@ -1,0 +1,4 @@
+.tmp/cursor-mcp.json -diff
+.env -diff
+.env.* -diff
+.env.example diff

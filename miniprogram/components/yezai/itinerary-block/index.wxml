@@ -28,6 +28,7 @@
           wx:for="{{normalizedDays}}"
           wx:key="key"
           wx:for-item="dayItem"
+          wx:for-index="dayIndex"
           class="itinerary-day-card"
           id="itinerary-day-{{dayItem.key}}"
         >
@@ -36,6 +37,30 @@
               <text class="itinerary-day-card__day">{{dayItem.dayLabel}}</text>
               <text class="itinerary-day-card__title">{{dayItem.title}}</text>
             </view>
+            <scroll-view
+              wx:if="{{dayItem.images && dayItem.images.length}}"
+              class="itinerary-day-card__gallery"
+              scroll-x="true"
+              enable-flex="true"
+              show-scrollbar="{{false}}"
+            >
+              <view class="itinerary-day-card__gallery-row">
+                <image
+                  wx:for="{{dayItem.images}}"
+                  wx:key="*this"
+                  wx:for-item="imageUrl"
+                  wx:for-index="imageIndex"
+                  class="itinerary-day-card__image"
+                  src="{{imageUrl}}"
+                  mode="aspectFill"
+                  lazy-load="{{true}}"
+                  bindload="onDayImageLoad"
+                  data-day-index="{{dayIndex}}"
+                  data-image-index="{{imageIndex}}"
+                  bindtap="onDayImageTap"
+                ></image>
+              </view>
+            </scroll-view>
           </view>
           <view class="itinerary-day-card__modules">
             <view
@@ -46,7 +71,13 @@
             >
               <view class="itinerary-module__head">
                 <view class="itinerary-module__icon itinerary-module__icon--{{module.iconType}}">
-                  <block wx:if="{{module.iconType === 'schedule'}}">
+                  <image
+                    wx:if="{{module.iconImage}}"
+                    class="itinerary-module__icon-image"
+                    src="{{module.iconImage}}"
+                    mode="aspectFit"
+                  ></image>
+                  <block wx:elif="{{module.iconType === 'schedule'}}">
                     <view class="itinerary-icon__sheet"></view>
                     <view class="itinerary-icon__line itinerary-icon__line--a"></view>
                     <view class="itinerary-icon__line itinerary-icon__line--b"></view>

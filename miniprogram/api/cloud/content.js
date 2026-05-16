@@ -54,6 +54,10 @@ function getJourneyPageData() {
   return callContentGateway("getJourneyPageData");
 }
 
+function getCustomJourneyPageData() {
+  return callContentGateway("getCustomJourneyPageData");
+}
+
 function getCreatorsPageData(filters) {
   return callContentGateway("getCreatorsPageData", { filters: filters || {} });
 }
@@ -115,6 +119,7 @@ function getServiceGalleryOriginalData(slug) {
 module.exports = {
   getHomePageData,
   getJourneyPageData,
+  getCustomJourneyPageData,
   getCreatorsPageData,
   getCreatorDetailData,
   getDestinationsPageData,

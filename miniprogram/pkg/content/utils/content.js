@@ -211,7 +211,7 @@ function renderIdeaBodyRichText(body) {
         const fontSize = block.level === 1 ? 24 : block.level === 2 ? 22 : 20;
         const marginBottom = block.level === 1 ? 18 : 16;
 
-        return `<${headingTag} style="display: block; margin: 0 0 ${marginBottom}px; font-family: 'Songti SC', 'STSong', 'SimSun', serif; font-size: ${fontSize}px; line-height: 1.8; font-weight: 500; color: #2b241d;">${renderInlineMarkdown(block.content)}</${headingTag}>`;
+        return `<${headingTag} style="display: block; margin: 0 0 ${marginBottom}px; font-family: 'Songti SC', 'STSong', 'Noto Serif SC', 'Noto Serif CJK SC', 'Source Han Serif SC', 'SimSun', serif; font-size: ${fontSize}px; line-height: 1.8; font-weight: 500; color: #2b241d;">${renderInlineMarkdown(block.content)}</${headingTag}>`;
       }
 
       if (block.type === "quote") {

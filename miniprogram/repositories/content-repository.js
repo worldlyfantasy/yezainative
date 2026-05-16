@@ -177,6 +177,10 @@ function getJourneyPageData() {
   return invoke("getJourneyPageData", mapJourneyPageData, [], { cache: false });
 }
 
+function getCustomJourneyPageData() {
+  return invoke("getCustomJourneyPageData", mapJourneyPageData, [], { cache: false });
+}
+
 function getCreatorsPageData(filters) {
   return invoke("getCreatorsPageData", mapCreatorsPageData, [filters]);
 }
@@ -267,6 +271,7 @@ function getServiceGalleryOriginalData(slug) {
 module.exports = {
   getHomePageData,
   getJourneyPageData,
+  getCustomJourneyPageData,
   getCreatorsPageData,
   getCreatorDetailData,
   getDestinationsPageData,

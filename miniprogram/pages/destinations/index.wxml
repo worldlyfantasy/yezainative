@@ -47,7 +47,7 @@
                   <image
                     wx:if="{{item.icon}}"
                     class="journey-type-panel__icon"
-                    src="{{item.icon}}"
+                    src="{{item.selected ? item.selectedIcon : item.icon}}"
                     mode="aspectFit"
                     lazy-load="{{true}}"
                   ></image>
@@ -96,7 +96,7 @@
                 <image
                   wx:if="{{item.icon}}"
                   class="journey-type-panel__icon"
-                  src="{{item.icon}}"
+                  src="{{item.selected ? item.selectedIcon : item.icon}}"
                   mode="aspectFit"
                   lazy-load="{{true}}"
                 ></image>
@@ -131,6 +131,43 @@
 
     <view class="journey-result-head">
       <text class="journey-result-head__count">{{resultCountText}}</text>
+      <view class="journey-view-switch">
+        <view
+          class="journey-view-switch__item {{journeyViewMode === 'grid' ? 'journey-view-switch__item--active' : ''}}"
+          data-mode="grid"
+          bindtap="onJourneyViewModeTap"
+          hover-class="journey-view-switch__item--pressed"
+        >
+          <view class="journey-view-switch__icon journey-view-switch__icon--grid">
+            <view wx:for="{{[1,2,3,4]}}" wx:key="*this" class="journey-view-switch__grid-cell"></view>
+          </view>
+        </view>
+        <view
+          class="journey-view-switch__item {{journeyViewMode === 'image' ? 'journey-view-switch__item--active' : ''}}"
+          data-mode="image"
+          bindtap="onJourneyViewModeTap"
+          hover-class="journey-view-switch__item--pressed"
+        >
+          <view class="journey-view-switch__icon journey-view-switch__icon--image">
+            <view class="journey-view-switch__image-cover"></view>
+            <view class="journey-view-switch__image-line journey-view-switch__image-line--long"></view>
+            <view class="journey-view-switch__image-line journey-view-switch__image-line--short"></view>
+          </view>
+        </view>
+        <view
+          class="journey-view-switch__item {{journeyViewMode === 'compact' ? 'journey-view-switch__item--active' : ''}}"
+          data-mode="compact"
+          bindtap="onJourneyViewModeTap"
+          hover-class="journey-view-switch__item--pressed"
+        >
+          <view class="journey-view-switch__icon journey-view-switch__icon--compact">
+            <view wx:for="{{[1,2,3]}}" wx:key="*this" class="journey-view-switch__compact-row">
+              <view class="journey-view-switch__compact-thumb"></view>
+              <view class="journey-view-switch__compact-line"></view>
+            </view>
+          </view>
+        </view>
+      </view>
     </view>
 
     <view wx:if="{{errorText}}" class="paper-block page-feedback journey-page__feedback">
@@ -157,14 +194,42 @@
       </view>
     </view>
 
-    <view wx:elif="{{displayJourneys.length}}" class="journey-list">
-      <journey-route-card
-        wx:for="{{displayJourneys}}"
-        wx:key="slug"
-        journey="{{item}}"
-        bind:cardtap="onJourneyTap"
-        bind:departuretap="onJourneyDepartureTap"
-      ></journey-route-card>
+    <view wx:elif="{{displayJourneys.length}}" class="journey-list {{journeyViewMode === 'grid' ? 'journey-list--grid' : ''}}">
+      <view wx:if="{{journeyViewMode === 'grid'}}" class="journey-masonry">
+        <view wx:for="{{displayJourneyColumns}}" wx:for-item="column" wx:key="key" class="journey-masonry__column">
+          <view
+            class="journey-list__card"
+            wx:for="{{column.items}}"
+            wx:for-item="journey"
+            wx:for-index="journeyIndex"
+            wx:key="slug"
+          >
+            <journey-route-card
+              journey="{{journey}}"
+              variant="grid"
+              bind:cardtap="onJourneyTap"
+              bind:departuretap="onJourneyDepartureTap"
+              bind:summarytoggle="onJourneySummaryToggle"
+            ></journey-route-card>
+          </view>
+        </view>
+      </view>
+      <block wx:else>
+        <view
+          class="journey-list__card"
+          wx:for="{{displayJourneys}}"
+          wx:key="slug"
+        >
+          <journey-route-card
+            journey="{{item}}"
+            compact="{{journeyViewMode === 'compact'}}"
+            variant="{{journeyViewMode}}"
+            bind:cardtap="onJourneyTap"
+            bind:departuretap="onJourneyDepartureTap"
+            bind:summarytoggle="onJourneySummaryToggle"
+          ></journey-route-card>
+        </view>
+      </block>
       <view class="journey-list__footer">
         <text wx:if="{{renderedCountText}}" class="journey-list__footer-text">{{renderedCountText}}</text>
         <button
@@ -189,11 +254,21 @@
   <view wx:if="{{isRegionSheetVisible}}" class="journey-date-sheet journey-region-sheet">
     <view class="journey-date-sheet__backdrop" bindtap="closeRegionSheet"></view>
     <view class="journey-date-sheet__panel journey-region-sheet__panel {{isRegionSheetAnimating ? 'journey-date-sheet__panel--active' : ''}}">
-      <view class="journey-date-sheet__header journey-date-sheet__header--compact">
-        <view class="journey-date-sheet__close journey-control" bindtap="closeRegionSheet" hover-class="journey-control--pressed">×</view>
+      <view class="journey-date-sheet__header journey-date-sheet__header--region">
+        <view class="journey-region-tabs">
+          <view
+            wx:for="{{regionScopeTabs}}"
+            wx:key="key"
+            class="journey-region-tabs__item {{item.active ? 'journey-region-tabs__item--active' : ''}}"
+            data-scope="{{item.key}}"
+            bindtap="onRegionScopeTabTap"
+            hover-class="journey-region-tabs__item--pressed"
+          >{{item.label}}</view>
+        </view>
+        <view class="journey-date-sheet__close journey-region-sheet__close journey-control" bindtap="closeRegionSheet" hover-class="journey-control--pressed">×</view>
       </view>
 
-      <scroll-view class="journey-region-sheet__scroll" scroll-x="true" enhanced="{{true}}" show-scrollbar="{{false}}">
+      <scroll-view wx:if="{{regionSheetColumns.length}}" class="journey-region-sheet__scroll" scroll-x="true" enhanced="{{true}}" show-scrollbar="{{false}}">
         <view class="journey-region-sheet__track">
           <view wx:for="{{regionSheetColumns}}" wx:key="index" class="journey-region-sheet__column">
             <view
@@ -220,6 +295,10 @@
           </view>
         </view>
       </scroll-view>
+
+      <view wx:else class="journey-region-sheet__empty">
+        <text class="journey-region-sheet__empty-text">当前筛选下还没有可选区域。</text>
+      </view>
     </view>
   </view>
 

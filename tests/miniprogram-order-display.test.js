@@ -4,7 +4,7 @@ const Module = require("node:module");
 const path = require("node:path");
 
 const transactionMeta = require("../miniprogram/constants/transaction-meta");
-const { EMPTY_TRIP_STATE_IMAGE } = require("../miniprogram/config/profile-page");
+const { CUSTOM_TRIP_ENTRY_IMAGE } = require("../miniprogram/config/profile-page");
 const userServiceModulePath = path.resolve(
   __dirname,
   "../miniprogram/services/user.js"
@@ -137,6 +137,40 @@ test("transaction-meta normalizes order cover, price rows, and display service t
   assert.equal(order.totalPriceText, "¥3280");
 });
 
+test("transaction-meta sorts order cards by travel period descending", () => {
+  const orders = [
+    transactionMeta.buildOrderCard({
+      orderNo: "yz202603260416",
+      status: "canceled",
+      travelPeriod: {
+        dateStart: "2026-04-16",
+        dateEnd: "2026-04-21"
+      }
+    }),
+    transactionMeta.buildOrderCard({
+      orderNo: "yz202603260702",
+      status: "canceled",
+      travelPeriod: {
+        dateStart: "2026-07-02",
+        dateEnd: "2026-07-07"
+      }
+    }),
+    transactionMeta.buildOrderCard({
+      orderNo: "yz202603260417",
+      status: "canceled",
+      travelPeriod: {
+        dateStart: "2026-04-17",
+        dateEnd: "2026-04-22"
+      }
+    })
+  ];
+
+  assert.deepEqual(
+    transactionMeta.sortOrdersByTravelPeriodDesc(orders).map((item) => item.travelPeriod.dateStart),
+    ["2026-07-02", "2026-04-17", "2026-04-16"]
+  );
+});
+
 test("transaction-meta hides rooming preference for one-day routes", () => {
   const order = transactionMeta.buildOrderCard({
     orderNo: "yz202603260889",
@@ -155,7 +189,7 @@ test("transaction-meta hides rooming preference for one-day routes", () => {
   assert.equal(order.showRoomingPreference, false);
 });
 
-test("user service builds active trips for miniapp profile page", async () => {
+test("user service keeps miniapp profile page free of trip display data", async () => {
   const service = loadUserService({
     userRepository: {
       getCurrentUser: async () => ({
@@ -173,72 +207,6 @@ test("user service builds active trips for miniapp profile page", async () => {
       updateProfile: async () => ({}),
       logout: async () => {}
     },
-    transactionRepository: {
-      getRecentOrders: async (limit) => {
-        const orders = [
-          {
-            orderNo: "order-upcoming",
-            status: "paid",
-            serviceSlug: "wuyi-ink-trail",
-            serviceName: "武夷墨迹",
-            serviceType: "长途旅行",
-            cover: "service-cover.jpg",
-            serviceSnapshot: {
-              serviceName: "武夷墨迹",
-              cover: "snapshot-cover.jpg",
-              serviceType: "长途旅行",
-              creatorRoles: ["创作者", "带领者"]
-            },
-            creatorSnapshot: {
-              name: "山野向导",
-              slug: "guide-a",
-              avatar: "guide-a.jpg",
-              stance: "以山路看世界"
-            },
-            travelPeriod: {
-              dateStart: "2026-04-02",
-              dateEnd: "2026-04-04"
-            }
-          },
-          {
-            orderNo: "order-ongoing",
-            status: "traveling",
-            serviceSlug: "songhua-dock",
-            serviceName: "松花泊行",
-            serviceType: "短途旅行",
-            serviceSnapshot: {
-              serviceName: "松花泊行",
-              cover: "ongoing-cover.jpg",
-              serviceType: "短途旅行"
-            },
-            creatorSnapshot: {
-              name: "策划师",
-              slug: "planner-b"
-            },
-            travelPeriod: {
-              dateStart: "2026-03-25",
-              dateEnd: "2026-03-27"
-            }
-          },
-          {
-            orderNo: "order-completed",
-            status: "paid",
-            serviceSlug: "done",
-            travelPeriod: {
-              dateStart: "2026-03-01",
-              dateEnd: "2026-03-03"
-            }
-          }
-        ];
-
-        return orders.slice(0, limit);
-      }
-    },
-    configRepository: {
-      getProfilePageConfig: async () => {
-        throw new Error("profile page image should come from front-end config");
-      }
-    },
     navigation: {
       TOP_LEVEL_ROUTES: {
         profile: "/pages/profile/index"
@@ -251,16 +219,9 @@ test("user service builds active trips for miniapp profile page", async () => {
     const pageData = await service.getMyPageData();
 
     assert.equal(pageData.loggedIn, true);
-    assert.equal(pageData.recentOrders.length, 2);
-    assert.deepEqual(
-      pageData.activeTrips.map((item) => item.orderNo),
-      ["order-upcoming", "order-ongoing"]
-    );
-    assert.equal(pageData.activeTrips[0].tripPhaseLabel, "待出发");
-    assert.equal(pageData.activeTrips[0].creatorRoleText, "创作者 · 带领者");
-    assert.equal(pageData.activeTrips[0].serviceCover, "snapshot-cover.jpg");
-    assert.equal(pageData.activeTrips[1].tripPhaseLabel, "在进行");
-    assert.equal(pageData.activeTrips[1].creatorRoleText, "创作者 · 带领者");
-    assert.equal(pageData.emptyTripStateImage, EMPTY_TRIP_STATE_IMAGE);
+    assert.equal(pageData.customTripEntryImage, CUSTOM_TRIP_ENTRY_IMAGE);
+    assert.equal(Object.hasOwn(pageData, "recentOrders"), false);
+    assert.equal(Object.hasOwn(pageData, "activeTrips"), false);
+    assert.equal(Object.hasOwn(pageData, "emptyTripStateImage"), false);
   });
 });

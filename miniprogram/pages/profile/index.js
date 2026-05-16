@@ -67,6 +67,11 @@ function isPersistentAvatarUrl(value) {
   return false;
 }
 
+function isWechatTempAvatarPath(value) {
+  const raw = String(value || "").trim();
+  return /^wxfile:\/\//.test(raw) || /^https?:\/\/tmp\//.test(raw);
+}
+
 function downloadAvatarToTemp(url) {
   return new Promise((resolve, reject) => {
     const href = String(url || "").trim();
@@ -102,7 +107,7 @@ async function persistAvatarToStableStorage(source) {
   try {
     return await uploadAvatarToCloud(raw);
   } catch (firstError) {
-    if (!/^https?:\/\//.test(raw)) {
+    if (!/^https?:\/\//.test(raw) || isWechatTempAvatarPath(raw)) {
       throw firstError;
     }
   }
@@ -211,6 +216,19 @@ Page({
     const loggedIn = Boolean(pageData && pageData.loggedIn);
     const profileIncomplete = Boolean(loggedIn && user && !user.profileConfigured);
     const profilePromptVisible = Boolean(profileIncomplete && !this.data.profilePromptDismissed);
+    const keepProfileDraft = Boolean(
+      profileIncomplete && (this.data.profilePromptVisible || this.data.profileNicknameEditing || this.data.profileSaving)
+    );
+    const currentDraftNickname = String(this.data.profileDraftNickname || "");
+    const currentDraftAvatarUrl = String(this.data.profileDraftAvatarUrl || "");
+    const nextDraftNickname = profileIncomplete
+      ? keepProfileDraft && currentDraftNickname
+        ? currentDraftNickname
+        : buildProfileDraftNickname(user)
+      : user && user.profileConfigured
+        ? user.nickname
+        : "";
+    const nextDraftAvatarUrl = keepProfileDraft ? currentDraftAvatarUrl : "";
 
     this.setData(
       Object.assign(
@@ -223,11 +241,11 @@ Page({
           profilePromptVisible,
           profilePromptNicknameFocus: false,
           profilePromptKeyboardActive: false,
-          profileSaving: false,
+          profileSaving: Boolean(this.data.profileSaving),
           profileNicknameEditing: false,
           nicknameInputFocus: false,
-          profileDraftNickname: profileIncomplete ? buildProfileDraftNickname(user) : user && user.profileConfigured ? user.nickname : "",
-          profileDraftAvatarUrl: "",
+          profileDraftNickname: nextDraftNickname,
+          profileDraftAvatarUrl: nextDraftAvatarUrl,
           shortcutRows: buildShortcutRows(pageData && pageData.shortcuts)
         }
       )
@@ -533,25 +551,9 @@ Page({
     showOfflineOrderNotice();
   },
 
-  onActiveTripTap(event) {
-    const slug = event.currentTarget.dataset.slug;
-    if (!slug) return;
+  onCustomTripEntryTap() {
     wx.navigateTo({
-      url: `/pkg/explore/service-detail/index?slug=${slug}`
-    });
-  },
-
-  onActiveTripCreatorTap(event) {
-    const slug = event.currentTarget.dataset.slug;
-    if (!slug) return;
-    wx.navigateTo({
-      url: `/pkg/explore/creator-detail/index?slug=${slug}`
-    });
-  },
-
-  onOrderTap(event) {
-    wx.navigateTo({
-      url: `/pkg/account/order-detail/index?id=${event.currentTarget.dataset.id}`
+      url: "/pkg/explore/custom-services/index"
     });
   }
 });

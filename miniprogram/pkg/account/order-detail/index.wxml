@@ -87,14 +87,25 @@
     </view>
   </view>
 
-  <view class="order-actions" wx:if="{{order.status === 'completed'}}">
-    <button
-      wx:if="{{order.status === 'completed'}}"
-      class="primary-button order-actions__button"
-      bindtap="handlePrimary"
-    >
-      {{completedPrimaryText}}
-    </button>
+  <view wx:if="{{order.status === 'pending'}}" class="pending-pay-bar">
+    <view class="pending-pay-bar__countdown">支付剩余时间：{{payCountdownText}}</view>
+    <view class="pending-pay-bar__main">
+      <view class="pending-pay-bar__amount">
+        <text class="pending-pay-bar__price">{{order.payableText}}</text>
+      </view>
+      <button
+        class="outline-button pending-pay-bar__cancel"
+        loading="{{canceling}}"
+        disabled="{{paying || canceling}}"
+        bindtap="cancelPendingOrder"
+      >取消</button>
+      <button
+        class="primary-button pending-pay-bar__pay"
+        loading="{{paying}}"
+        disabled="{{paying || canceling}}"
+        bindtap="continuePay"
+      >支付</button>
+    </view>
   </view>
 </view>
 

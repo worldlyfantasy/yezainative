@@ -74,66 +74,14 @@
       </view>
     </view>
 
-    <view class="section-block profile-trip-group">
-      <view class="section-head profile-section-head">
-        <view class="profile-section-head__body">
-          <text class="section-title">我的旅行</text>
-
-        </view>
+    <view class="section-block profile-custom-entry" bindtap="onCustomTripEntryTap" hover-class="profile-custom-entry--pressing" hover-stay-time="100">
+      <image class="profile-custom-entry__image" src="{{customTripEntryImage}}" mode="aspectFill"></image>
+      <view class="profile-custom-entry__shade"></view>
+      <view class="profile-custom-entry__content">
+        <text class="profile-custom-entry__eyebrow">YEZAI CUSTOM</text>
+        <text class="profile-custom-entry__title">野哉定制</text>
       </view>
-      <view wx:if="{{activeTrips.length}}" class="active-trip-list">
-        <view
-          wx:for="{{activeTrips}}"
-          wx:key="id"
-          class="active-trip-row"
-        >
-          <view
-            class="active-trip-creator"
-            hover-class="is-pressing-card"
-            hover-stay-time="100"
-            data-slug="{{item.creatorSlug}}"
-            bindtap="onActiveTripCreatorTap"
-          >
-            <image class="active-trip-creator__avatar" src="{{item.creatorAvatar}}" mode="aspectFill"></image>
-            <view class="active-trip-creator__info">
-              <text class="active-trip-creator__name">{{item.creatorName}}</text>
-              <text wx:if="{{item.creatorRoleText}}" class="active-trip-creator__role">{{item.creatorRoleText}}</text>
-            </view>
-          </view>
-          <view class="active-trip-connector"></view>
-          <view
-            class="active-trip-card-wrap"
-            hover-class="is-pressing-card"
-            hover-stay-time="100"
-            data-slug="{{item.serviceSlug}}"
-            bindtap="onActiveTripTap"
-          >
-            <image class="active-trip-card__cover" src="{{item.serviceCover}}" mode="aspectFill"></image>
-            <view class="active-trip-card__body">
-              <view class="active-trip-card__top">
-                <text class="active-trip-card__title">{{item.serviceName}}</text>
-                <text class="active-trip-card__phase">{{item.tripPhaseLabel}}</text>
-              </view>
-              <text class="active-trip-card__desc">{{item.tripDateRange}}</text>
-            </view>
-          </view>
-        </view>
-      </view>
-      <view wx:else class="profile-empty-state">
-        <view class="profile-empty-state__visual">
-          <image
-            wx:if="{{emptyTripStateImage}}"
-            class="profile-empty-state__image"
-            src="{{emptyTripStateImage}}"
-            mode="aspectFill"
-          ></image>
-          <view wx:else class="profile-empty-state__image profile-empty-state__image--fallback"></view>
-          <view class="profile-empty-state__shade"></view>
-          <view class="profile-empty-state__copy">
-            <text class="profile-empty-state__eyebrow">当前还没有待出发或正在进行的旅程</text>
-          </view>
-        </view>
-      </view>
+      <text class="profile-custom-entry__arrow">›</text>
     </view>
 
     <view class="profile-contact">

@@ -85,10 +85,29 @@
 .itinerary-day-card__title {
   flex: 1;
   min-width: 0;
-  font-size: 32rpx;
-  line-height: 1.5;
-  font-weight: 600;
-  color: #2b241d;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
+  font-size: 34rpx;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #993921;
+}
+
+.itinerary-day-card__gallery {
+  width: 100%;
+  margin-top: 16rpx;
+  white-space: nowrap;
+}
+
+.itinerary-day-card__gallery-row {
+  display: inline-flex;
+  gap: 16rpx;
+}
+
+.itinerary-day-card__image {
+  width: 500rpx;
+  height: 312rpx;
+  border-radius: 24rpx;
+  flex: 0 0 auto;
 }
 
 .itinerary-day-card__modules {
@@ -140,6 +159,12 @@
 .itinerary-module__icon view {
   position: absolute;
   box-sizing: border-box;
+}
+
+.itinerary-module__icon-image {
+  width: 32rpx;
+  height: 32rpx;
+  display: block;
 }
 
 .itinerary-icon__sheet {

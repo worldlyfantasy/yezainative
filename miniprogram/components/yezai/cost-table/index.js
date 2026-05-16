@@ -18,6 +18,10 @@ Component({
     defaultExpanded: {
       type: Boolean,
       value: false
+    },
+    singleColumn: {
+      type: Boolean,
+      value: false
     }
   },
   data: {

@@ -47,10 +47,9 @@
 }
 
 .service-gallery__topic-row {
-  display: flex;
-  justify-content: flex-end;
+  display: inline-flex;
   gap: 14rpx;
-  min-width: 100%;
+  padding: 0 2rpx;
 }
 
 .service-gallery__topic-chip {
@@ -176,7 +175,7 @@
 
 .creator-quote .creator-card__name {
   flex: 0 0 auto;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 40rpx;
   line-height: 1.45;
   font-weight: 500;
@@ -257,7 +256,7 @@
 .service-info-strip {
   display: flex;
   flex-wrap: wrap;
-  gap: 14rpx 18rpx;
+  gap: 24rpx 18rpx;
   margin-top: 30rpx;
   padding: 18rpx 20rpx;
   border: 1rpx solid rgba(153, 57, 33, 0.08);
@@ -658,11 +657,47 @@
   color: #D15E14;
 }
 
+.period-sheet__people-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+}
+
 .period-sheet__people-control {
   display: inline-flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: 18rpx;
   padding: 10rpx 0 4rpx;
+}
+
+.period-sheet__notice-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 0;
+  gap: 6rpx;
+  padding: 10rpx 0 4rpx;
+  color: #993921;
+}
+
+.period-sheet__notice-link:active {
+  opacity: 0.72;
+}
+
+.period-sheet__notice-link-text {
+  min-width: 0;
+  font-size: 24rpx;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.period-sheet__notice-link-arrow {
+  flex: 0 0 auto;
+  font-size: 24rpx;
+  line-height: 1.45;
 }
 
 .period-sheet__helper {
@@ -801,7 +836,7 @@
 
 .travel-section__title {
   display: block;
-  color: #2b241d;
+  color: #993921;
 }
 
 .travel-section__version-tags {
@@ -850,13 +885,27 @@
   display: block;
 }
 
+.travel-overview__video-shell {
+  width: 100%;
+  height: 420rpx;
+  overflow: hidden;
+  border-radius: 24rpx;
+  background: #1f1b16;
+}
+
+.travel-overview__video {
+  display: block;
+  width: 100%;
+  height: 420rpx;
+}
+
 .travel-overview__subtitle {
   display: block;
   margin-top: 10rpx;
-  font-size: 34rpx;
-  line-height: 1.45;
-  font-weight: 600;
-  color: #2b241d;
+  font-size: 30rpx;
+  line-height: 1.35;
+  font-weight: 500;
+  color: #3f352b;
 }
 
 .travel-overview__body {
@@ -879,11 +928,22 @@
 }
 
 .travel-highlight-card__title {
-  display: block;
-  font-size: 34rpx;
-  line-height: 1.45;
-  font-weight: 600;
-  color: #2b241d;
+  display: flex;
+  align-items: flex-start;
+  gap: 14rpx;
+  font-size: 30rpx;
+  line-height: 1.35;
+  font-weight: 500;
+  color: #3f352b;
+}
+
+.travel-highlight-card__title::before {
+  content: "";
+  flex: 0 0 4rpx;
+  width: 4rpx;
+  height: 28rpx;
+  margin-top: 6rpx;
+  background: rgba(153, 57, 33, 0.42);
 }
 
 .travel-highlight-card__desc {
@@ -927,12 +987,23 @@
 }
 
 .travel-subsection__title {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 14rpx;
   margin-bottom: 16rpx;
   font-size: 30rpx;
-  line-height: 1.6;
-  font-weight: 600;
-  color: #2b241d;
+  line-height: 1.35;
+  font-weight: 500;
+  color: #3f352b;
+}
+
+.travel-subsection__title::before {
+  content: "";
+  flex: 0 0 4rpx;
+  width: 4rpx;
+  height: 28rpx;
+  margin-top: 6rpx;
+  background: rgba(153, 57, 33, 0.42);
 }
 
 .travel-notice-list {
@@ -946,12 +1017,23 @@
 }
 
 .travel-notice__title {
-  display: block;
-  font-size: 28rpx;
-  line-height: 1.6;
+  display: flex;
+  align-items: flex-start;
+  gap: 14rpx;
+  font-size: 30rpx;
+  line-height: 1.35;
   font-weight: 500;
-  color: #2b241d;
+  color: #3f352b;
   margin-bottom: 8rpx;
+}
+
+.travel-notice__title::before {
+  content: "";
+  flex: 0 0 4rpx;
+  width: 4rpx;
+  height: 28rpx;
+  margin-top: 6rpx;
+  background: rgba(153, 57, 33, 0.42);
 }
 
 .travel-notice__body {
@@ -973,7 +1055,7 @@
 .service-creator__name {
   display: block;
   margin-top: 16rpx;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 36rpx;
   font-weight: 500;
   color: #2b241d;
@@ -1030,23 +1112,34 @@
   padding: 0 92rpx 16rpx 32rpx;
 }
 
-.media-sheet__tabs {
-  display: flex;
-  gap: 16rpx;
+.media-sheet__tabs-scroll {
   flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.media-sheet__tabs {
+  display: inline-flex;
+  gap: 16rpx;
+  padding: 0 4rpx 4rpx 0;
 }
 
 .media-sheet__tab {
+  flex: 0 0 auto;
+  max-width: 280rpx;
   padding: 10rpx 26rpx;
   border-radius: 999rpx;
   font-size: 26rpx;
   background: rgba(255, 249, 242, 0.58);
   color: #6a5a4b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .media-sheet__tab--active {
   background: rgba(255, 249, 242, 0.96);
-  color: #2b241d;
+  color: #993921;
   font-weight: 500;
 }
 

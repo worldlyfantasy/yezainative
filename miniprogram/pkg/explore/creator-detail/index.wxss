@@ -63,7 +63,7 @@
 }
 
 .compare-block__title {
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 30rpx;
   font-weight: 500;
   color: #2b241d;
@@ -111,7 +111,7 @@
   position: absolute;
   top: 12rpx;
   left: 18rpx;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 52rpx;
   line-height: 1;
   color: rgba(153, 57, 33, 0.2);
@@ -162,7 +162,7 @@
 
 .creator-story-item__title {
   display: block;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 36rpx;
   font-weight: 500;
   line-height: 1.4;

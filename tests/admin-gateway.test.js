@@ -954,6 +954,12 @@ test("listServicePeriods retries transient SQL timeouts before failing the page"
   assert.equal(result.data.items[0].periodCode, "wuyi-20260405");
   assert.equal(result.data.items[0].soldCount, 4);
   assert.equal(servicePeriodQueryCount, 2);
+  const soldCountSql = gateway.__mocks__.sqlCalls.find((item) =>
+    item.sql.includes("SUM(COALESCE(`peopleCountInt`, `peopleCount`, 0)) AS `soldCount`")
+  );
+  assert.ok(soldCountSql);
+  assert.match(soldCountSql.sql, /IN \('paid', 'traveling', 'completed'\)/);
+  assert.doesNotMatch(soldCountSql.sql, /<> 'canceled'/);
 });
 
 test("listServicePeriods keeps loading when optional order aggregation SQL fails", async () => {
@@ -1614,7 +1620,7 @@ test("saveIdea allows wechat mode without excerptBody", async () => {
         wechatArticleTitle: "",
         readMoreText: "阅读全文"
       },
-      { uid: "admin-1" }
+      { uid: "admin-1", permissions: ["ideas:read", "ideas:write"] }
     )
   );
 });
@@ -1680,7 +1686,7 @@ test("saveIdea still requires excerptBody for hybrid mode", async () => {
           wechatArticleTitle: "",
           readMoreText: "阅读全文"
         },
-        { uid: "admin-1" }
+        { uid: "admin-1", permissions: ["ideas:read", "ideas:write"] }
       ),
     /混合模式必须填写小程序导读/
   );
@@ -1745,7 +1751,7 @@ test("saveIdea maps legacy idea themes into the new fixed theme set", async () =
       wechatArticleTitle: "",
       readMoreText: "阅读全文"
     },
-    { uid: "admin-1" }
+    { uid: "admin-1", permissions: ["ideas:read", "ideas:write"] }
   );
 
   const ideaUpdate = __mocks__.collectionUpdates.find((item) => item.name === "ideas" && item.id === "idea-doc-1");
@@ -1813,6 +1819,274 @@ test("saveService requires creatorMessage", async () => {
   );
 });
 
+test("service draft saves multiple cloud drafts and keeps version history", async () => {
+  const { __test__, __mocks__ } = loadAdminGatewayModule({
+    collectionData: {
+      creators: [
+        {
+          id: "creator-1",
+          slug: "creator-1",
+          name: "创作者一"
+        }
+      ],
+      service_drafts: [],
+      service_draft_versions: []
+    }
+  });
+  const creatorAdmin = {
+    uid: "creator-user-1",
+    accountType: "creator_portal",
+    boundCreatorId: "creator-1",
+    permissions: ["services:read", "services:write:owned"]
+  };
+
+  const firstDraft = await __test__.saveServiceDraft(
+    {
+      values: {
+        name: "第一条草稿",
+        tags: ["文化"]
+      }
+    },
+    creatorAdmin
+  );
+  const secondDraft = await __test__.saveServiceDraft(
+    {
+      values: {
+        name: "第二条草稿",
+        tags: ["山野"]
+      }
+    },
+    creatorAdmin
+  );
+  const autosavedFirstDraft = await __test__.saveServiceDraft(
+    {
+      draftId: firstDraft.draftId,
+      values: {
+        name: "第一条草稿自动保存",
+        tags: ["文化"]
+      },
+      reason: "autosave"
+    },
+    creatorAdmin
+  );
+  assert.equal(__mocks__.collectionAdds.filter((item) => item.name === "service_draft_versions").length, 0);
+
+  const updatedFirstDraft = await __test__.saveServiceDraft(
+    {
+      draftId: firstDraft.draftId,
+      values: {
+        name: "第一条草稿更新",
+        tags: ["文化"]
+      },
+      reason: "manual-save"
+    },
+    creatorAdmin
+  );
+  assert.equal(__mocks__.collectionAdds.filter((item) => item.name === "service_draft_versions").length, 0);
+
+  const restorePointDraft = await __test__.saveServiceDraft(
+    {
+      draftId: firstDraft.draftId,
+      values: {
+        name: "第一条草稿恢复点",
+        tags: ["文化"]
+      },
+      reason: "restore-point"
+    },
+    creatorAdmin
+  );
+
+  assert.notEqual(firstDraft.draftId, secondDraft.draftId);
+  assert.equal(autosavedFirstDraft.version, 2);
+  assert.equal(updatedFirstDraft.version, 3);
+  assert.equal(restorePointDraft.version, 4);
+  assert.equal(restorePointDraft.title, "第一条草稿恢复点");
+  assert.equal(__mocks__.collectionAdds.filter((item) => item.name === "service_draft_versions").length, 1);
+  assert.equal(
+    __mocks__.collectionAdds.find((item) => item.name === "service_draft_versions").data.title,
+    "第一条草稿恢复点"
+  );
+
+  const drafts = await __test__.listServiceDrafts({ status: "active" }, creatorAdmin);
+  assert.deepEqual(
+    drafts.map((item) => item.title).sort(),
+    ["第一条草稿恢复点", "第二条草稿"]
+  );
+});
+
+test("service draft delete is recoverable from trash", async () => {
+  const { __test__ } = loadAdminGatewayModule({
+    collectionData: {
+      creators: [
+        {
+          id: "creator-1",
+          slug: "creator-1",
+          name: "创作者一"
+        }
+      ],
+      service_drafts: [
+        {
+          _id: "draft-1",
+          ownerUserId: "creator-user-1",
+          ownerCreatorId: "creator-1",
+          title: "可恢复草稿",
+          values: {
+            name: "可恢复草稿"
+          },
+          status: "active",
+          version: 1,
+          createdBy: "creator-user-1",
+          updatedAt: 100
+        }
+      ],
+      service_draft_versions: []
+    }
+  });
+  const creatorAdmin = {
+    uid: "creator-user-1",
+    accountType: "creator_portal",
+    boundCreatorId: "creator-1",
+    permissions: ["services:read", "services:write:owned"]
+  };
+
+  const deleted = await __test__.deleteServiceDraft({ draftId: "draft-1" }, creatorAdmin);
+  assert.equal(deleted.status, "deleted");
+
+  const trash = await __test__.listServiceDrafts({ status: "deleted" }, creatorAdmin);
+  assert.equal(trash.length, 1);
+  assert.equal(trash[0].draftId, "draft-1");
+
+  const restored = await __test__.restoreServiceDraft({ draftId: "draft-1" }, creatorAdmin);
+  assert.equal(restored.status, "active");
+});
+
+test("service draft prunes restore points by reason quotas", async () => {
+  const versionRows = [
+    ...Array.from({ length: 6 }, (_, index) => ({
+      _id: `manual-${index + 1}`,
+      draftId: "draft-1",
+      ownerUserId: "creator-user-1",
+      ownerCreatorId: "creator-1",
+      title: `手动恢复点 ${index + 1}`,
+      values: { name: `手动恢复点 ${index + 1}` },
+      version: index + 1,
+      reason: "restore-point",
+      createdAt: 1000 + index
+    })),
+    ...Array.from({ length: 4 }, (_, index) => ({
+      _id: `auto-${index + 1}`,
+      draftId: "draft-1",
+      ownerUserId: "creator-user-1",
+      ownerCreatorId: "creator-1",
+      title: `自动保护点 ${index + 1}`,
+      values: { name: `自动保护点 ${index + 1}` },
+      version: 10 + index,
+      reason: "autosave",
+      createdAt: 2000 + index
+    })),
+    ...Array.from({ length: 6 }, (_, index) => ({
+      _id: `critical-${index + 1}`,
+      draftId: "draft-1",
+      ownerUserId: "creator-user-1",
+      ownerCreatorId: "creator-1",
+      title: `关键恢复点 ${index + 1}`,
+      values: { name: `关键恢复点 ${index + 1}` },
+      version: 20 + index,
+      reason: ["before-delete", "before-publish", "restore-version"][index % 3],
+      createdAt: 3000 + index
+    }))
+  ];
+  const { __test__, __mocks__ } = loadAdminGatewayModule({
+    collectionData: {
+      creators: [
+        {
+          id: "creator-1",
+          slug: "creator-1",
+          name: "创作者一"
+        }
+      ],
+      service_drafts: [
+        {
+          _id: "draft-1",
+          ownerUserId: "creator-user-1",
+          ownerCreatorId: "creator-1",
+          title: "当前草稿",
+          values: {
+            name: "当前草稿"
+          },
+          status: "active",
+          version: 30,
+          createdBy: "creator-user-1",
+          updatedAt: 100
+        }
+      ],
+      service_draft_versions: versionRows
+    }
+  });
+  const creatorAdmin = {
+    uid: "creator-user-1",
+    accountType: "creator_portal",
+    boundCreatorId: "creator-1",
+    permissions: ["services:read", "services:write:owned"]
+  };
+
+  await __test__.saveServiceDraft(
+    {
+      draftId: "draft-1",
+      values: {
+        name: "当前草稿恢复点"
+      },
+      reason: "restore-point"
+    },
+    creatorAdmin
+  );
+
+  const remainingVersions = versionRows.filter((item) => !__mocks__.removedDocIds.includes(item._id));
+  const countReason = (predicate) => remainingVersions.filter((item) => predicate(item.reason)).length;
+
+  assert.equal(remainingVersions.length, 10);
+  assert.ok(countReason((reason) => reason === "restore-point" || reason === "manual-save") <= 5);
+  assert.ok(countReason((reason) => reason === "autosave") <= 3);
+  assert.ok(countReason((reason) => ["before-delete", "before-publish", "restore-version"].includes(reason)) <= 5);
+  assert.equal(__mocks__.removedDocIds.length, 7);
+});
+
+test("service draft rejects cloud records with only lightweight defaults", async () => {
+  const { __test__ } = loadAdminGatewayModule({
+    collectionData: {
+      creators: [
+        {
+          id: "creator-1",
+          slug: "creator-1",
+          name: "创作者一"
+        }
+      ],
+      service_drafts: [],
+      service_draft_versions: []
+    }
+  });
+  const creatorAdmin = {
+    uid: "creator-user-1",
+    accountType: "creator_portal",
+    boundCreatorId: "creator-1",
+    permissions: ["services:read", "services:write:owned"]
+  };
+
+  await assert.rejects(
+    () => __test__.saveServiceDraft(
+      {
+        values: {
+          type: "长途旅行",
+          tags: ["乡土", "文化"]
+        },
+        reason: "autosave"
+      },
+      creatorAdmin
+    ),
+    /路线草稿内容太少/
+  );
+});
+
 test("saveService clears route-level consult qr and keeps system-config strategy", async () => {
   const { __test__, __mocks__ } = loadAdminGatewayModule({
     collectionData: {
@@ -1858,7 +2132,21 @@ test("saveService clears route-level consult qr and keeps system-config strategy
             },
             highlights: [],
             itinerary: {
-              days: []
+              days: [
+                {
+                  day: 1,
+                  key: "day-1",
+                  title: "集合日",
+                  images: ["cloud://test-env.bucket/content/services/songhua-dock/itinerary/day-1/a.jpg"],
+                  modules: [
+                    {
+                      type: "schedule",
+                      title: "当日行程",
+                      content: "集合说明"
+                    }
+                  ]
+                }
+              ]
             },
             itineraryVersions: [],
             costs: {
@@ -1893,13 +2181,53 @@ test("saveService clears route-level consult qr and keeps system-config strategy
       travelDetail: {
         overview: {
           coverImage: "cloud://overview.jpg",
+          channelsVideo: {
+            feedId: "feed-001",
+            feedToken: "feed-token-001",
+            finderUserName: "sph-demo"
+          },
           whyJoinText: "从江风和码头开始重新进入这座城市。",
           suitableTitle: "这段旅程适合谁",
           suitableText: "适合想慢下来观察城市纹理的人。"
         },
         itinerary: {
-          days: []
+          days: [
+            {
+              day: 1,
+              key: "day-1",
+              title: "集合日",
+              images: ["cloud://test-env.bucket/content/services/songhua-dock/itinerary/day-1/a.jpg"],
+              modules: [
+                {
+                  type: "schedule",
+                  title: "当日行程",
+                  content: "集合说明"
+                }
+              ]
+            }
+          ]
         },
+        itineraryVersions: [
+          {
+            key: "version-1",
+            versionName: "轻量版",
+            days: [
+              {
+                day: 1,
+                key: "day-1",
+                title: "轻量集合日",
+                images: ["cloud://test-env.bucket/content/services/songhua-dock/itinerary/version-1/day-1/a.jpg"],
+                modules: [
+                  {
+                    type: "schedule",
+                    title: "当日行程",
+                    content: "轻量集合说明"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
         costs: {
           include: [],
           exclude: [],
@@ -1914,6 +2242,17 @@ test("saveService clears route-level consult qr and keeps system-config strategy
   const serviceUpdate = __mocks__.collectionUpdates.find((item) => item.name === "services" && item.id === "service-doc-1");
   assert.ok(serviceUpdate);
   assert.equal(serviceUpdate.data.travelDetail.consultWeChatQr, "");
+  assert.deepEqual(serviceUpdate.data.travelDetail.itinerary.days[0].images, [
+    "cloud://test-env.bucket/content/services/songhua-dock/itinerary/day-1/a.jpg"
+  ]);
+  assert.deepEqual(serviceUpdate.data.travelDetail.itineraryVersions[0].days[0].images, [
+    "cloud://test-env.bucket/content/services/songhua-dock/itinerary/version-1/day-1/a.jpg"
+  ]);
+  assert.deepEqual(serviceUpdate.data.travelDetail.overview.channelsVideo, {
+    feedId: "feed-001",
+    feedToken: "feed-token-001",
+    finderUserName: "sph-demo"
+  });
 });
 
 test("deleteUser removes a user when no travel orders are linked", async () => {
@@ -2011,6 +2350,8 @@ test("listOrders filters by exact userId while keeping keyword search within tha
               status: "paid",
               versionName: "山谷夜步4日",
               peopleCountInt: 2,
+              amountDec: 3980,
+              payableDec: 3980,
               createdAtTs: 1770000000000,
               updatedAt: 1770000001000
             },
@@ -2023,6 +2364,8 @@ test("listOrders filters by exact userId while keeping keyword search within tha
               status: "pending",
               versionName: "山谷夜步4日",
               peopleCountInt: 1,
+              amountDec: 3980,
+              payableDec: 3980,
               createdAtTs: 1770000002000,
               updatedAt: 1770000003000
             }
@@ -2228,6 +2571,8 @@ test("listOrders returns paged results when page arguments are provided", async 
               status: "paid",
               versionName: "山谷夜步4日",
               peopleCountInt: 2,
+              amountDec: 3980,
+              payableDec: 3980,
               createdAtTs: 1770000000000,
               updatedAt: 1770000001000
             },
@@ -2240,6 +2585,8 @@ test("listOrders returns paged results when page arguments are provided", async 
               status: "pending",
               versionName: "山谷夜步4日",
               peopleCountInt: 1,
+              amountDec: 3980,
+              payableDec: 3980,
               createdAtTs: 1770000002000,
               updatedAt: 1770000003000
             }
@@ -2262,12 +2609,20 @@ test("listOrders returns paged results when page arguments are provided", async 
         orderNo: "yz202603280001",
         serviceSlug: "miao-night-walk",
         serviceName: "山谷夜步",
+        servicePeriodCode: "",
         travelDateStart: "2026-04-26",
         status: "paid",
         versionName: "山谷夜步4日",
         userId: "user-1",
         userNickname: "海森",
         peopleCount: 2,
+        amount: 3980,
+        payable: 3980,
+        payExpireAtTs: 1770001800000,
+        priceAdjustmentAmount: 0,
+        priceAdjustmentReason: "",
+        priceAdjustedAtTs: 0,
+        priceAdjustedBy: "",
         updatedAtTs: 1770000001000
       }
     ],
@@ -2275,6 +2630,72 @@ test("listOrders returns paged results when page arguments are provided", async 
     page: 2,
     pageSize: 1
   });
+});
+
+test("adjustOrderPrice updates a pending order payable amount", async () => {
+  let orderRow = {
+    orderNo: "yz202603280003",
+    userOpenid: "openid-1",
+    serviceSlug: "miao-night-walk",
+    serviceName: "山谷夜步",
+    servicePeriodCode: "P1",
+    travelDateStart: "2026-04-26",
+    travelDateEnd: "2026-04-29",
+    status: "pending",
+    versionName: "山谷夜步4日",
+    peopleCountInt: 1,
+    amountDec: 3980,
+    discountDec: 0,
+    payableDec: 3980,
+    createdAtTs: Date.now(),
+    updatedAt: Date.now(),
+    travelersJson: "[]",
+    creatorSnapshotJson: "{}",
+    serviceSnapshotJson: "{}"
+  };
+  const sqlCalls = [];
+  const { __test__ } = loadAdminGatewayModule({
+    collectionData: {
+      users: [
+        { _id: "user-1", openid: "openid-1", nickname: "海森" }
+      ],
+      services: [],
+      creators: []
+    },
+    runSQL: async (sql, params) => {
+      sqlCalls.push({ sql, params });
+
+      if (/^UPDATE `TravelOrder`/.test(sql)) {
+        orderRow = {
+          ...orderRow,
+          payable: params.payable,
+          payableDec: params.payable,
+          priceAdjustmentAmount: params.priceAdjustmentAmount,
+          priceAdjustmentReason: params.priceAdjustmentReason,
+          priceAdjustedAtTs: params.priceAdjustedAtTs,
+          priceAdjustedBy: params.priceAdjustedBy,
+          updatedAt: params.updatedAt
+        };
+        return { data: { executeResultList: [] } };
+      }
+
+      return {
+        data: {
+          executeResultList: [orderRow]
+        }
+      };
+    }
+  });
+
+  const result = await __test__.adjustOrderPrice(
+    { orderNo: "yz202603280003", payable: 3680, reason: "客服协商改价" },
+    { permissions: ["ops:read"], uid: "admin-1" }
+  );
+
+  assert.equal(result.payable, 3680);
+  assert.equal(result.priceAdjustmentAmount, -300);
+  assert.equal(result.priceAdjustmentReason, "客服协商改价");
+  assert.equal(sqlCalls.some((call) => /^UPDATE `TravelOrder`/.test(call.sql)), true);
 });
 
 test("creator portal listOrders only returns orders for the bound creator", async () => {
@@ -3240,6 +3661,7 @@ test("listTravelers matches related orders for legacy traveler snapshots without
             serviceSlug: "wuyi-ink-trail",
             serviceName: "武夷墨迹",
             servicePeriodCode: "WY20260420",
+            versionName: "古道静心4日",
             status: "paid",
             travelDateStart: "2026-04-20",
             travelDateEnd: "2026-04-22",
@@ -3269,6 +3691,241 @@ test("listTravelers matches related orders for legacy traveler snapshots without
   assert.equal(result.items[0].relatedOrderCount, 1);
   assert.equal(result.items[0].lastRelatedOrderNo, "yz202604100002");
   assert.equal(result.items[0].lastRelatedOrderStatus, "paid");
+});
+
+test("listTravelers filters by service period using sold orders only", async () => {
+  const { __test__ } = loadAdminGatewayModule({
+    collectionData: {
+      users: [
+        { _id: "user-1", openid: "openid-1", nickname: "海森" }
+      ],
+      user_travelers: [
+        {
+          _id: "traveler_doc_1",
+          travelerId: "profile_1",
+          profileId: "profile_1",
+          userId: "user-1",
+          userOpenid: "openid-1",
+          name: "阿野",
+          phone: "13800000000",
+          documents: [{ documentType: "passport", documentNumber: "E12345678" }],
+          status: "active",
+          source: "traveler_profile",
+          updatedAt: 1775786401000
+        },
+        {
+          _id: "traveler_doc_2",
+          travelerId: "profile_2",
+          profileId: "profile_2",
+          userId: "user-1",
+          userOpenid: "openid-1",
+          name: "阿青",
+          phone: "13900000000",
+          documents: [{ documentType: "passport", documentNumber: "P99887766" }],
+          status: "active",
+          source: "traveler_profile",
+          updatedAt: 1775786402000
+        },
+        {
+          _id: "traveler_doc_3",
+          travelerId: "profile_3",
+          profileId: "profile_3",
+          userId: "user-1",
+          userOpenid: "openid-1",
+          name: "阿山",
+          phone: "13700000000",
+          documents: [{ documentType: "passport", documentNumber: "S11223344" }],
+          status: "active",
+          source: "traveler_profile",
+          updatedAt: 1775786403000
+        }
+      ]
+    },
+    runSQL: async () => ({
+      data: {
+        executeResultList: [
+          {
+            orderNo: "sold-order",
+            userOpenid: "openid-1",
+            serviceSlug: "wuyi-ink-trail",
+            serviceName: "武夷墨迹",
+            servicePeriodCode: "WY20260420",
+            versionName: "古道静心4日",
+            status: "paid",
+            travelersJson: JSON.stringify([{ pid: "profile_1", rid: "traveler_doc_1", src: "traveler_profile", n: "阿野" }]),
+            createdAtTs: 1775786400000,
+            updatedAt: 1775786403000
+          },
+          {
+            orderNo: "pending-order",
+            userOpenid: "openid-1",
+            serviceSlug: "wuyi-ink-trail",
+            serviceName: "武夷墨迹",
+            servicePeriodCode: "WY20260420",
+            status: "pending",
+            travelersJson: JSON.stringify([{ pid: "profile_2", rid: "traveler_doc_2", src: "traveler_profile", n: "阿青" }]),
+            createdAtTs: 1775786401000,
+            updatedAt: 1775786404000
+          },
+          {
+            orderNo: "other-period-order",
+            userOpenid: "openid-1",
+            serviceSlug: "wuyi-ink-trail",
+            serviceName: "武夷墨迹",
+            servicePeriodCode: "WY20260501",
+            status: "paid",
+            travelersJson: JSON.stringify([{ pid: "profile_3", rid: "traveler_doc_3", src: "traveler_profile", n: "阿山" }]),
+            createdAtTs: 1775786402000,
+            updatedAt: 1775786405000
+          }
+        ]
+      }
+    })
+  });
+
+  const result = await __test__.listTravelers({
+    servicePeriodCode: "WY20260420",
+    page: 1,
+    pageSize: 10
+  });
+
+  assert.equal(result.total, 1);
+  assert.equal(result.items[0].travelerRecordId, "traveler_doc_1");
+  assert.equal(result.items[0].lastRelatedOrderNo, "sold-order");
+});
+
+test("listServicePeriodTravelerExportRows exports full traveler snapshots for sold period orders", async () => {
+  const { __test__ } = loadAdminGatewayModule({
+    collectionData: {
+      users: [
+        { _id: "user-1", openid: "openid-1", nickname: "海森" }
+      ]
+    },
+    runSQL: async (sql) => {
+      if (sql.includes("FROM `ServicePeriod`")) {
+        return {
+          data: {
+            executeResultList: [
+              {
+                periodCode: "WY20260420",
+                serviceSlug: "wuyi-ink-trail",
+                serviceName: "武夷墨迹",
+                versionName: "古道静心4日",
+                durationDays: 4,
+                dateStart: "2026-04-20",
+                dateEnd: "2026-04-23",
+                price: 3999,
+                minGroup: 4,
+                remainingSeats: 6,
+                status: "confirmed",
+                updatedAt: 1775786400000
+              }
+            ]
+          }
+        };
+      }
+
+      return {
+        data: {
+          executeResultList: [
+            {
+              orderNo: "sold-order",
+              userOpenid: "openid-1",
+              serviceSlug: "wuyi-ink-trail",
+              serviceName: "武夷墨迹",
+              serviceType: "长途旅行",
+              servicePeriodCode: "WY20260420",
+              versionName: "古道静心4日",
+              status: "paid",
+              travelDateStart: "2026-04-20",
+              travelDateEnd: "2026-04-23",
+              orderContactName: "联系人",
+              orderContactPhone: "13600000000",
+              emergencyContactName: "紧急联系人",
+              emergencyContactPhone: "13900000000",
+              roomingMode: "withRoommate",
+              roommateName: "阿山",
+              roomType: "king",
+              singleRoomPriceDec: 0,
+              singleRoomStatus: "",
+              singleRoomNotice: "",
+              allergyNotes: "花生过敏",
+              note: "订单备注",
+              travelersJson: JSON.stringify([
+                {
+                  pid: "profile_1",
+                  rid: "traveler_doc_1",
+                  src: "traveler_profile",
+                  n: "阿野",
+                  p: "13800000000",
+                  w: "wechat-a",
+                  e: "a@example.com",
+                  g: "男",
+                  b: "1990-01-01",
+                  t: "passport",
+                  i: "E12345678",
+                  o: "素食"
+                }
+              ]),
+              createdAtTs: 1775786400000,
+              updatedAt: 1775786403000
+            }
+          ]
+        }
+      };
+    }
+  });
+
+  const result = await __test__.listServicePeriodTravelerExportRows({
+    servicePeriodCode: "WY20260420"
+  });
+
+  assert.equal(result.period.periodCode, "WY20260420");
+  assert.equal(result.items.length, 1);
+  assert.deepEqual(result.items[0], {
+    orderNo: "sold-order",
+    orderStatus: "paid",
+    serviceSlug: "wuyi-ink-trail",
+    serviceName: "武夷墨迹",
+    serviceType: "长途旅行",
+    servicePeriodCode: "WY20260420",
+    versionName: "古道静心4日",
+    travelDateStart: "2026-04-20",
+    travelDateEnd: "2026-04-23",
+    userId: "user-1",
+    userOpenid: "openid-1",
+    userNickname: "海森",
+    orderContactName: "联系人",
+    orderContactPhone: "13600000000",
+    emergencyContactName: "紧急联系人",
+    emergencyContactPhone: "13900000000",
+    roomingMode: "withRoommate",
+    roommateName: "阿山",
+    roomType: "king",
+    singleRoomPrice: 0,
+    singleRoomStatus: "",
+    singleRoomNotice: "",
+    allergyNotes: "花生过敏",
+    orderNote: "订单备注",
+    travelerIndex: 1,
+    travelerRecordId: "traveler_doc_1",
+    profileId: "profile_1",
+    name: "阿野",
+    phone: "13800000000",
+    wechat: "wechat-a",
+    email: "a@example.com",
+    gender: "男",
+    birthday: "1990-01-01",
+    documentType: "passport",
+    documentNumber: "E12345678",
+    documents: [
+      {
+        documentType: "passport",
+        documentNumber: "E12345678"
+      }
+    ],
+    note: "素食"
+  });
 });
 
 test("listTravelers does not match legacy traveler snapshots by name only", async () => {
@@ -3376,6 +4033,7 @@ test("getTravelerDetail returns full traveler info and related orders", async ()
             serviceSlug: "wuyi-ink-trail",
             serviceName: "武夷墨迹",
             servicePeriodCode: "WY20260420",
+            versionName: "古道静心4日",
             status: "paid",
             travelDateStart: "2026-04-20",
             travelDateEnd: "2026-04-22",

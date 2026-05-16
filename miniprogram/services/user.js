@@ -1,13 +1,6 @@
 const { getCurrentUser, getSessionSnapshot, login, updateProfile, logout, activateSession } = require("../repositories/user-repository");
-const { getRecentOrders } = require("../repositories/transaction-repository");
-const { buildTripDateRange, getTripPhaseKey } = require("../constants/transaction-meta");
-const { getServiceCreatorRoles, getServiceCreatorRoleText } = require("./service-roles");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("./navigation");
-const { EMPTY_TRIP_STATE_IMAGE } = require("../config/profile-page");
-
-function isPlainObject(value) {
-  return Boolean(value) && Object.prototype.toString.call(value) === "[object Object]";
-}
+const { CUSTOM_TRIP_ENTRY_IMAGE } = require("../config/profile-page");
 
 function buildProfileShortcuts(user) {
   return [
@@ -46,62 +39,15 @@ function buildProfileShortcuts(user) {
   ];
 }
 
-const TRIP_PHASE_LABELS = {
-  upcoming: "待出发",
-  ongoing: "在进行",
-  completed: "已完成"
-};
-
-function getOrderServiceSnapshot(order) {
-  return isPlainObject(order && order.serviceSnapshot) ? order.serviceSnapshot : {};
-}
-
-function getOrderCreatorSnapshot(order) {
-  return isPlainObject(order && order.creatorSnapshot) ? order.creatorSnapshot : {};
-}
-
-function buildActiveTrips(orders) {
-  return orders
-    .filter((order) => order.status === "paid" || order.status === "traveling")
-    .map((order) => {
-      const serviceSnapshot = getOrderServiceSnapshot(order);
-      const creatorSnapshot = getOrderCreatorSnapshot(order);
-      const tripPhaseKey = getTripPhaseKey(order);
-      const creatorRoleSource = {
-        type: serviceSnapshot.serviceType || order.serviceType || "",
-        creatorRoles: Array.isArray(serviceSnapshot.creatorRoles) ? serviceSnapshot.creatorRoles : []
-      };
-
-      return Object.assign({}, order, {
-        serviceSlug: order.serviceSlug,
-        tripDateRange: buildTripDateRange(order),
-        tripPhaseKey,
-        tripPhaseLabel: TRIP_PHASE_LABELS[tripPhaseKey] || TRIP_PHASE_LABELS.upcoming,
-        serviceName: serviceSnapshot.serviceName || order.serviceName || "",
-        serviceCover: serviceSnapshot.cover || order.cover || "",
-        creatorName: creatorSnapshot.name || order.creatorName || "野哉创作者",
-        creatorSlug: creatorSnapshot.slug || "",
-        creatorAvatar: creatorSnapshot.avatar || "",
-        creatorRoles: getServiceCreatorRoles(creatorRoleSource),
-        creatorRoleText: getServiceCreatorRoleText(creatorRoleSource),
-        creatorStance: creatorSnapshot.stance || ""
-      });
-    })
-    .filter((order) => order.tripPhaseKey === "upcoming" || order.tripPhaseKey === "ongoing");
-}
-
 async function getMyPageData() {
   const user = await getCurrentUser();
   const loggedIn = Boolean(user);
-  const recentOrderCandidates = loggedIn ? await getRecentOrders(8) : [];
 
   return {
     loggedIn,
     user,
     shortcuts: buildProfileShortcuts(user),
-    recentOrders: recentOrderCandidates.slice(0, 2),
-    activeTrips: loggedIn ? buildActiveTrips(recentOrderCandidates) : [],
-    emptyTripStateImage: EMPTY_TRIP_STATE_IMAGE
+    customTripEntryImage: CUSTOM_TRIP_ENTRY_IMAGE
   };
 }
 
@@ -112,9 +58,7 @@ function getMyPageInitialState() {
     loggedIn: snapshot.loggedIn,
     user: snapshot.user,
     shortcuts: buildProfileShortcuts(snapshot.user),
-    recentOrders: [],
-    activeTrips: [],
-    emptyTripStateImage: EMPTY_TRIP_STATE_IMAGE
+    customTripEntryImage: CUSTOM_TRIP_ENTRY_IMAGE
   };
 }
 

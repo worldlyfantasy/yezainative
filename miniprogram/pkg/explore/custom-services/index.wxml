@@ -1,0 +1,86 @@
+<view class="custom-services-page">
+  <view class="page-shell custom-services-page__shell">
+    <view class="custom-services-head">
+      <text class="page-eyebrow custom-services-head__eyebrow">YEZAI CUSTOM</text>
+      <text class="custom-services-head__title">野哉定制</text>
+    </view>
+
+    <view class="custom-intro-card">
+      <text
+        wx:for="{{introParagraphs}}"
+        wx:key="*this"
+        class="custom-intro-card__text"
+      >{{item}}</text>
+
+      <view class="custom-intro-card__consult">
+        <view class="custom-intro-card__copy">
+          <text class="custom-intro-card__label">准备好以下信息后发送给小野即可</text>
+          <view class="custom-intro-card__list">
+            <text
+              wx:for="{{prepareItems}}"
+              wx:key="*this"
+              class="custom-intro-card__item"
+            >- {{item}}</text>
+          </view>
+        </view>
+        <view wx:if="{{consultWeChatQr}}" class="custom-intro-card__qr-wrap" bindtap="onConsultQrTap">
+          <image class="custom-intro-card__qr" src="{{consultWeChatQr}}" mode="aspectFit" show-menu-by-longpress="{{true}}"></image>
+          <text class="custom-intro-card__qr-caption">扫码咨询小野</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="custom-tab-bar">
+      <button
+        wx:for="{{customTabs}}"
+        wx:key="key"
+        class="custom-tab-bar__item {{item.key === activeCustomTab ? 'custom-tab-bar__item--active' : ''}}"
+        data-tab="{{item.key}}"
+        bindtap="onCustomTabTap"
+      >{{item.label}}</button>
+    </view>
+
+    <view wx:if="{{activeCustomTab === 'flow'}}" class="custom-flow-section">
+      <image class="custom-flow-section__image" src="images/custom-travel-flow.jpg" mode="widthFix" show-menu-by-longpress="{{true}}"></image>
+    </view>
+
+    <view wx:else class="custom-examples-section">
+      <view wx:if="{{errorText}}" class="paper-block page-feedback custom-services-page__feedback">
+        <text class="page-feedback__title">加载失败</text>
+        <text class="page-feedback__desc">{{errorText}}</text>
+        <button class="primary-button custom-services-page__feedback-button" bindtap="retryLoadCustomJourneys">重新加载</button>
+      </view>
+
+      <view wx:elif="{{loading}}" class="custom-services-loading">
+        <view wx:for="{{[1,2]}}" wx:key="*this" class="custom-services-loading__card">
+          <view class="custom-services-loading__cover"></view>
+          <view class="custom-services-loading__line custom-services-loading__line--title"></view>
+          <view class="custom-services-loading__line"></view>
+        </view>
+      </view>
+
+      <view wx:elif="{{displayJourneys.length}}" class="custom-services-list">
+        <journey-route-card
+          wx:for="{{displayJourneys}}"
+          wx:key="slug"
+          journey="{{item}}"
+          custom-example="{{true}}"
+          bind:cardtap="onJourneyTap"
+          bind:departuretap="onJourneyDepartureTap"
+        ></journey-route-card>
+        <view class="custom-services-list__footer">
+          <button
+            wx:if="{{hasMoreJourneys}}"
+            class="outline-button custom-services-list__footer-button"
+            bindtap="onLoadMoreTap"
+          >继续加载</button>
+        </view>
+      </view>
+
+      <view wx:else class="custom-services-empty">
+        <text class="custom-services-empty__title">暂时没有示例路线</text>
+        <text class="custom-services-empty__desc">在后台“运营配置 / customJourneyPage”选择路线后，这里会展示示例路线。</text>
+      </view>
+    </view>
+  </view>
+</view>

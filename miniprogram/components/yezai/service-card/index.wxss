@@ -71,7 +71,7 @@
 }
 
 .service-card__name {
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 40rpx;
   line-height: 1.55;
   font-weight: 500;

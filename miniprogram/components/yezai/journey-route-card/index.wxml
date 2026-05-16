@@ -1,17 +1,30 @@
-<view class="journey-route-card {{compact ? 'journey-route-card--compact' : ''}}" bindtap="handleTap">
+<view class="journey-route-card {{compact ? 'journey-route-card--compact' : ''}} {{variant === 'grid' ? 'journey-route-card--grid' : ''}} {{customExample ? 'journey-route-card--custom-example' : ''}}" bindtap="handleTap">
   <block wx:if="{{compact}}">
     <image wx:if="{{journey.cover}}" class="journey-route-card__thumb" src="{{journey.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
     <view wx:else class="journey-route-card__thumb journey-route-card__thumb--empty"></view>
     <view class="journey-route-card__compact-body">
       <view class="journey-route-card__compact-head">
         <text class="journey-route-card__compact-title">{{journey.name}}</text>
+        <view wx:if="{{journey.displayStatusTags && journey.displayStatusTags.length}}" class="journey-route-card__compact-badges">
+          <view
+            wx:for="{{journey.displayStatusTags}}"
+            wx:key="key"
+            class="journey-route-card__badge journey-route-card__badge--compact journey-route-card__badge--{{item.theme}}"
+          >{{item.label}}</view>
+        </view>
         <view
-          wx:if="{{journey.displayStatusText}}"
+          wx:elif="{{journey.displayStatusText}}"
           class="journey-route-card__badge journey-route-card__badge--compact journey-route-card__badge--{{journey.displayStatusTheme}}"
         >{{journey.displayStatusText}}</view>
       </view>
       <view class="journey-route-card__compact-foot">
-        <text class="journey-route-card__compact-meta">创作者 {{journey.creatorName || '野哉'}}</text>
+        <view class="journey-route-card__compact-meta-group">
+          <text class="journey-route-card__compact-meta">创作者 {{journey.creatorName || '野哉'}}</text>
+          <text
+            wx:if="{{journey.displayDepartureDatesText || journey.displayDateText || journey.isCustomGroup}}"
+            class="journey-route-card__compact-date"
+          >{{journey.isCustomGroup ? '定制方式' : '最近出发'}} {{journey.displayDepartureDatesText || journey.displayDateText}}</text>
+        </view>
         <view class="journey-route-card__compact-foot-right">
           <text class="journey-route-card__compact-price">{{journey.priceText}}</text>
           <text class="journey-route-card__compact-arrow">›</text>
@@ -23,11 +36,18 @@
   <block wx:else>
     <view class="journey-route-card__plate">
       <view class="journey-route-card__cover-shell">
-        <image wx:if="{{journey.cover}}" class="journey-route-card__cover" src="{{journey.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
+        <image wx:if="{{journey.cover}}" class="journey-route-card__cover" src="{{journey.cover}}" mode="widthFix" lazy-load="{{true}}"></image>
         <view wx:else class="journey-route-card__cover journey-route-card__cover--empty"></view>
-        <view class="journey-route-card__cover-badges">
+        <view wx:if="{{!customExample}}" class="journey-route-card__cover-badges">
+          <block wx:if="{{journey.displayStatusTags && journey.displayStatusTags.length}}">
+            <view
+              wx:for="{{journey.displayStatusTags}}"
+              wx:key="key"
+              class="journey-route-card__badge journey-route-card__badge--{{item.theme}}"
+            >{{item.label}}</view>
+          </block>
           <view
-            wx:if="{{journey.displayStatusText}}"
+            wx:if="{{(!journey.displayStatusTags || !journey.displayStatusTags.length) && journey.displayStatusText}}"
             class="journey-route-card__badge journey-route-card__badge--{{journey.displayStatusTheme}}"
           >{{journey.displayStatusText}}</view>
         </view>
@@ -43,32 +63,55 @@
       <view class="journey-route-card__body">
         <text class="journey-route-card__title">{{journey.name}}</text>
         <text class="journey-route-card__meta">创作者 {{journey.creatorName || '野哉'}}</text>
-        <text wx:if="{{journey.summary}}" class="journey-route-card__summary">{{journey.summary}}</text>
+        <text
+          wx:if="{{journey.summary}}"
+          class="journey-route-card__summary {{variant === 'image' && journey.summaryExpanded ? 'journey-route-card__summary--expanded' : ''}}"
+        >{{journey.summary}}</text>
+        <text
+          wx:if="{{variant === 'image' && journey.summary}}"
+          class="journey-route-card__summary-measurer"
+        >{{journey.summary}}</text>
+        <text
+          wx:if="{{variant === 'image' && journey.summary}}"
+          class="journey-route-card__summary-line-probe"
+        >野</text>
+        <view
+          wx:if="{{variant === 'image' && summaryOverflow}}"
+          class="journey-route-card__summary-toggle"
+          catchtap="handleSummaryToggle"
+          hover-class="journey-route-card__summary-toggle--pressed"
+        >{{journey.summaryExpanded ? '收起' : '展开'}}</view>
         <view class="journey-route-card__foot">
-          <view
-            class="journey-route-card__departure"
-            data-action="departure"
-            data-departure-date="{{journey.displayPeriod.dateStart}}"
-            mark:action="departure"
-            mark:departureDate="{{journey.displayPeriod.dateStart}}"
-            hover-class="journey-route-card__departure--pressed"
-          >
-            <text
-              class="journey-route-card__departure-label"
+          <block wx:if="{{customExample}}">
+            <text class="journey-route-card__custom-action">咨询定制</text>
+            <text class="journey-route-card__price journey-route-card__price--custom-example">{{journey.priceText}}</text>
+          </block>
+          <block wx:else>
+            <view
+              class="journey-route-card__departure"
               data-action="departure"
               data-departure-date="{{journey.displayPeriod.dateStart}}"
               mark:action="departure"
               mark:departureDate="{{journey.displayPeriod.dateStart}}"
-            >最近出发</text>
-            <text
-              class="journey-route-card__departure-date"
-              data-action="departure"
-              data-departure-date="{{journey.displayPeriod.dateStart}}"
-              mark:action="departure"
-              mark:departureDate="{{journey.displayPeriod.dateStart}}"
-            >{{journey.displayDepartureDatesText || journey.displayDateText}}</text>
-          </view>
-          <text class="journey-route-card__price">{{journey.priceText}}</text>
+              hover-class="journey-route-card__departure--pressed"
+            >
+              <text
+                class="journey-route-card__departure-label"
+                data-action="departure"
+                data-departure-date="{{journey.displayPeriod.dateStart}}"
+                mark:action="departure"
+                mark:departureDate="{{journey.displayPeriod.dateStart}}"
+              >{{journey.isCustomGroup ? '定制方式' : '最近出发'}}</text>
+              <text
+                class="journey-route-card__departure-date"
+                data-action="departure"
+                data-departure-date="{{journey.displayPeriod.dateStart}}"
+                mark:action="departure"
+                mark:departureDate="{{journey.displayPeriod.dateStart}}"
+              >{{variant === 'grid' ? (journey.displayPrimaryDepartureDateText || journey.displayDateText) : (journey.displayDepartureDatesText || journey.displayDateText)}}</text>
+            </view>
+            <text class="journey-route-card__price">{{journey.priceText}}</text>
+          </block>
         </view>
       </view>
     </view>

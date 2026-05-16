@@ -9,7 +9,7 @@ const { isFavorited, toggleFavorite } = require("../../../repositories/transacti
 const { getCurrentUser } = require("../../../services/user");
 const { goTopLevel, setPendingJourneyFilter, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../utils/favorite-notice");
-const { isAuditMode, pickAuditText } = require("../../../utils/audit");
+const { isAuditMode } = require("../../../utils/audit");
 const {
   getExceededOrderPeopleLimitMessage,
   getInsufficientSeatsMessage,
@@ -76,6 +76,17 @@ function buildPeriodVersionOptions(periods) {
   return Object.keys(optionMap).map((key) => optionMap[key]);
 }
 
+function formatRefundRuleText(item) {
+  const label = String(item && item.days || "").trim();
+  const content = String(item && item.percent || "").trim();
+
+  if (label && content) {
+    return `${label}，${content}`;
+  }
+
+  return label || content;
+}
+
 function hasMultiplePeriodVersions(periods) {
   return buildPeriodVersionOptions(periods).length > 1;
 }
@@ -139,11 +150,14 @@ function buildCostTableGroups(costs) {
     },
     {
       key: "refundRules",
-      title: pickAuditText("退订规则", "变更说明"),
-      rows: (costs.refundRules || []).map((item) => ({
-        label: item.days,
-        content: item.percent
-      }))
+      title: "退订规则",
+      singleColumn: true,
+      rows: (costs.refundRules || [])
+        .map((item) => ({
+          label: "",
+          content: formatRefundRuleText(item)
+        }))
+        .filter((item) => item.content)
     }
   ].filter((group) => group.rows.length);
 }
@@ -152,6 +166,7 @@ function buildTravelDetailState(travelDetail, preferredVersionName) {
   if (!travelDetail) {
     return {
       travelDetail: null,
+      overviewChannelsVideo: null,
       itineraryVersions: [],
       activeItineraryVersionKey: "",
       activeItineraryVersionName: "",
@@ -165,11 +180,16 @@ function buildTravelDetailState(travelDetail, preferredVersionName) {
     ? travelDetail.sections.filter((item) => item && item.key && item.anchorId)
     : [];
   const itineraryState = resolveItineraryVersionState(travelDetail, preferredVersionName);
+  const overviewChannelsVideo = normalizeOverviewChannelsVideo(travelDetail.overview && travelDetail.overview.channelsVideo);
 
   return {
     travelDetail: Object.assign({}, travelDetail, {
-      sections
+      sections,
+      overview: Object.assign({}, travelDetail.overview || {}, {
+        channelsVideo: overviewChannelsVideo
+      })
     }),
+    overviewChannelsVideo,
     itineraryVersions: itineraryState.itineraryVersions,
     activeItineraryVersionKey: itineraryState.activeItineraryVersionKey,
     activeItineraryVersionName: itineraryState.activeItineraryVersionName,
@@ -179,7 +199,33 @@ function buildTravelDetailState(travelDetail, preferredVersionName) {
   };
 }
 
-function formatFullGroupSize(period) {
+function normalizeOverviewChannelsVideo(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const feedToken = String(source.feedToken || "").trim();
+  const finderUserName = String(source.finderUserName || "").trim();
+  const feedId = String(source.feedId || "").trim();
+  const canUseChannelVideo = typeof wx !== "undefined" && typeof wx.canIUse === "function"
+    ? wx.canIUse("channel-video")
+    : false;
+
+  if (!canUseChannelVideo || (!feedToken && !(finderUserName && feedId))) {
+    return null;
+  }
+
+  return {
+    feedToken,
+    finderUserName,
+    feedId,
+    autoplay: Boolean(source.autoplay) && !feedToken
+  };
+}
+
+function formatFullGroupSize(service, period) {
+  const routeFullGroupSize = Number(service && service.fullGroupSize);
+  if (Number.isFinite(routeFullGroupSize) && routeFullGroupSize > 0) {
+    return `${Math.trunc(routeFullGroupSize)}人`;
+  }
+
   const totalSeats = Number(period && period.totalSeats);
   return Number.isFinite(totalSeats) && totalSeats > 0 ? `${totalSeats}人` : "待确认";
 }
@@ -187,6 +233,7 @@ function formatFullGroupSize(period) {
 function buildServiceMetaCards(durationLabel, options) {
   const canJumpToItinerary = !(options && options.disableDurationAction);
   const selectedPeriod = options && options.selectedPeriod;
+  const service = options && options.service;
   const travelDetail = options && options.travelDetail;
   return [
     {
@@ -198,7 +245,7 @@ function buildServiceMetaCards(durationLabel, options) {
     {
       key: "fullGroupSize",
       label: "满团人数",
-      value: formatFullGroupSize(selectedPeriod),
+      value: formatFullGroupSize(service, selectedPeriod),
       clickable: false
     },
     {
@@ -284,6 +331,13 @@ function buildGalleryCounterText(label, total) {
   return `1/${count}`;
 }
 
+function getMediaTabAnchor(index) {
+  const safeIndex = Number(index);
+  return Number.isFinite(safeIndex) && safeIndex >= 0
+    ? `media-tab-${Math.floor(safeIndex)}`
+    : "";
+}
+
 function buildGalleryPreviewState(photoGallery, heroCover, mediaTabs, activeIndex, hasGalleryGroups, photoTotal) {
   const normalizedTabs = normalizeMediaTabs(mediaTabs, hasGalleryGroups);
   const galleryTabs = hasGalleryGroups ? normalizedTabs : [];
@@ -329,6 +383,7 @@ Page({
     serviceRouteTags: [],
     serviceMetaCards: [],
     travelDetail: null,
+    overviewChannelsVideo: null,
     itineraryVersions: [],
     activeItineraryVersionKey: "",
     activeItineraryVersionName: "",
@@ -373,6 +428,7 @@ Page({
     galleryOriginalLoaded: false,
     galleryOriginalLoading: false,
     activeMediaTabIndex: 0,
+    mediaSheetTabIntoView: getMediaTabAnchor(0),
     mediaSheetVisible: false,
     mediaSheetAnimating: false,
     consultSheetVisible: false,
@@ -448,7 +504,10 @@ Page({
       const summaryDetailState = buildTravelDetailState(null, "");
       const summaryMetaCards = buildServiceMetaCards(
         calcDurationLabel(payload, summaryDetailState.travelDetail),
-        { disableDurationAction: true }
+        {
+          disableDurationAction: true,
+          service: originalService
+        }
       );
       const galleryPreviewState = buildGalleryPreviewState(
         payload.photoGallery,
@@ -592,6 +651,7 @@ Page({
         calcDurationLabel({ groupPeriods: this.data.groupPeriods }, this.data.travelDetail),
         {
           disableDurationAction: !this.data.travelDetail,
+          service: this.data.service,
           selectedPeriod,
           travelDetail: this.data.travelDetail
         }
@@ -639,6 +699,7 @@ Page({
           {
             creatorQuoteText,
             travelDetail: detailState.travelDetail,
+            overviewChannelsVideo: detailState.overviewChannelsVideo,
             itineraryVersions: detailState.itineraryVersions,
             activeItineraryVersionKey: detailState.activeItineraryVersionKey,
             activeItineraryVersionName: detailState.activeItineraryVersionName,
@@ -655,6 +716,7 @@ Page({
               calcDurationLabel({ groupPeriods }, detailState.travelDetail),
               {
                 selectedPeriod,
+                service,
                 travelDetail: detailState.travelDetail
               }
             )
@@ -883,6 +945,10 @@ Page({
   },
 
   onOverviewImageTap() {
+    if (this.data.overviewChannelsVideo) {
+      return;
+    }
+
     const overview = this.data.travelDetail && this.data.travelDetail.overview;
     const coverImage = overview && overview.coverImage ? String(overview.coverImage).trim() : "";
     if (!coverImage) {
@@ -890,6 +956,14 @@ Page({
     }
 
     this.previewTravelDetailImages([coverImage], 0);
+  },
+
+  onOverviewChannelsVideoError(error) {
+    console.warn("Overview channels video failed", error);
+    wx.showToast({
+      title: "视频暂时无法播放",
+      icon: "none"
+    });
   },
 
   onHighlightImageTap(event) {
@@ -904,6 +978,11 @@ Page({
     }
 
     this.previewTravelDetailImages(highlight.images, imageIndex);
+  },
+
+  onItineraryImageTap(event) {
+    const detail = event.detail || {};
+    this.previewTravelDetailImages(detail.images, Number(detail.imageIndex));
   },
 
   goBack() {
@@ -1110,6 +1189,30 @@ Page({
     setTimeout(() => {
       this.setData({ periodSheetVisible: false });
     }, 260);
+  },
+
+  onOrderNoticeHintTap() {
+    const hasNoticesSection = Boolean(
+      this.data.travelDetail &&
+      (this.data.travelDetail.sections || []).some((item) => item.key === "notices")
+    );
+
+    if (!hasNoticesSection) {
+      wx.showToast({
+        title: "出行须知暂未加载",
+        icon: "none"
+      });
+      return;
+    }
+
+    this.closePeriodSheet();
+    setTimeout(() => {
+      this.onSectionTabTap({
+        detail: {
+          key: "notices"
+        }
+      });
+    }, 280);
   },
 
   onSelectPeriodVersion(event) {
@@ -1347,6 +1450,7 @@ Page({
             hasStructuredGallery,
             activeGalleryTabIndex: galleryPreviewState.activeGalleryTabIndex,
             activeMediaTabIndex: galleryPreviewState.activeGalleryTabIndex,
+            mediaSheetTabIntoView: getMediaTabAnchor(galleryPreviewState.activeGalleryTabIndex),
             currentGalleryLabel: galleryPreviewState.currentGalleryLabel,
             currentGalleryTotal: galleryPreviewState.currentGalleryTotal,
             galleryCounterText: galleryPreviewState.galleryCounterText,
@@ -1440,7 +1544,8 @@ Page({
     this.setData(
       {
         mediaSheetVisible: true,
-        mediaSheetAnimating: false
+        mediaSheetAnimating: false,
+        mediaSheetTabIntoView: getMediaTabAnchor(this.data.activeMediaTabIndex)
       },
       () => {
         setTimeout(() => {
@@ -1472,7 +1577,8 @@ Page({
     const index = Number(event.currentTarget.dataset.index);
     if (!Number.isNaN(index)) {
       this.setData({
-        activeMediaTabIndex: index
+        activeMediaTabIndex: index,
+        mediaSheetTabIntoView: getMediaTabAnchor(index)
       });
     }
   },
@@ -1499,6 +1605,7 @@ Page({
       galleryTabs: galleryPreviewState.galleryTabs,
       activeGalleryTabIndex: galleryPreviewState.activeGalleryTabIndex,
       activeMediaTabIndex: galleryPreviewState.activeGalleryTabIndex,
+      mediaSheetTabIntoView: getMediaTabAnchor(galleryPreviewState.activeGalleryTabIndex),
       currentGalleryLabel: galleryPreviewState.currentGalleryLabel,
       currentGalleryTotal: galleryPreviewState.currentGalleryTotal,
       galleryCounterText: galleryPreviewState.galleryCounterText,

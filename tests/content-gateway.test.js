@@ -3,6 +3,24 @@ const assert = require("node:assert/strict");
 const Module = require("node:module");
 const path = require("node:path");
 
+const RealDate = Date;
+const FIXED_NOW = new RealDate("2026-03-01T00:00:00.000Z");
+
+global.Date = class FixedDate extends RealDate {
+  constructor(...args) {
+    if (args.length) {
+      super(...args);
+      return;
+    }
+
+    super(FIXED_NOW.getTime());
+  }
+
+  static now() {
+    return FIXED_NOW.getTime();
+  }
+};
+
 const gatewayModulePath = path.resolve(
   __dirname,
   "../cloudfunctions/contentGateway/index.js"
@@ -136,6 +154,65 @@ function loadContentGatewayModule(options = {}) {
     Module._load = originalLoad;
   }
 }
+
+test("contentGateway service booking sold count excludes unpaid pending orders", async () => {
+  const sqlCalls = [];
+  const gateway = loadContentGatewayModule({
+    collections: {
+      services: {
+        bySlug: [
+          {
+            slug: "route-a",
+            name: "测试路线",
+            status: "active",
+            destinationSlugs: []
+          }
+        ]
+      }
+    },
+    runSQL: async (sql) => {
+      sqlCalls.push(String(sql));
+
+      if (String(sql).includes("FROM `ServicePeriod`")) {
+        return {
+          data: {
+            executeResultList: [
+              {
+                serviceSlug: "route-a",
+                periodCode: "P1",
+                dateStart: "2099-04-01",
+                dateEnd: "2099-04-02",
+                price: 100,
+                minGroup: 1,
+                remainingSeats: 4,
+                status: "available"
+              }
+            ]
+          }
+        };
+      }
+
+      return {
+        data: {
+          executeResultList: []
+        }
+      };
+    }
+  });
+
+  const result = await gateway.main({
+    action: "getServiceBookingData",
+    payload: {
+      slug: "route-a"
+    }
+  });
+
+  assert.equal(result.ok, true);
+  const soldCountSql = sqlCalls.find((sql) => sql.includes("FROM `TravelOrder`"));
+  assert.ok(soldCountSql);
+  assert.match(soldCountSql, /IN \('paid', 'traveling', 'completed'\)/);
+  assert.doesNotMatch(soldCountSql, /<> 'canceled'/);
+});
 
 test("contentGateway hides inactive idea detail even if cached list still contains it", async () => {
   const gateway = loadContentGatewayModule({
@@ -343,6 +420,153 @@ test("contentGateway falls back to legacy NoSQL groupPeriods when SQL periods ar
   assert.equal(result.data.featuredServicesByTab.featured[0].durationTag, "4天");
 });
 
+test("contentGateway separates regular and custom service groups", async () => {
+  const gateway = loadContentGatewayModule({
+    collections: {
+      creators: {
+        list: [{ id: "creator-1", slug: "guide-a", name: "领队A" }]
+      },
+      destinations: {
+        list: [{ slug: "qinghai-lake", name: "青海湖畔", regionCode: "cn_tibetan" }]
+      },
+      services: {
+        list: [
+          {
+            id: "service-regular",
+            slug: "regular-loop",
+            name: "常规环线",
+            creatorId: "creator-1",
+            destinationSlugs: ["qinghai-lake"],
+            groupType: "regular",
+            tags: ["山野"],
+            groupPeriods: [
+              {
+                periodCode: "REG-20260501",
+                dateStart: "2026-05-01",
+                dateEnd: "2026-05-05",
+                price: 3980,
+                status: "available"
+              }
+            ]
+          },
+          {
+            id: "service-custom",
+            slug: "custom-loop",
+            name: "定制环线",
+            creatorId: "creator-1",
+            destinationSlugs: ["qinghai-lake"],
+            groupType: "custom",
+            tags: ["山野"]
+          },
+          {
+            id: "service-custom-period",
+            slug: "custom-period-loop",
+            name: "有团期定制环线",
+            creatorId: "creator-1",
+            destinationSlugs: ["qinghai-lake"],
+            groupType: "custom",
+            tags: ["山野"],
+            groupPeriods: [
+              {
+                periodCode: "CUS-20260515",
+                dateStart: "2026-05-15",
+                dateEnd: "2026-05-19",
+                price: 4980,
+                status: "available"
+              }
+            ]
+          },
+          {
+            id: "service-custom-expired",
+            slug: "custom-expired-loop",
+            name: "已过期定制环线",
+            creatorId: "creator-1",
+            destinationSlugs: ["qinghai-lake"],
+            groupType: "custom",
+            tags: ["山野"],
+            groupPeriods: [
+              {
+                periodCode: "CUS-20260215",
+                dateStart: "2026-02-15",
+                dateEnd: "2026-02-19",
+                price: 4980,
+                status: "available"
+              }
+            ]
+          },
+          {
+            id: "service-regular-expired",
+            slug: "regular-expired-loop",
+            name: "已过期常规环线",
+            creatorId: "creator-1",
+            destinationSlugs: ["qinghai-lake"],
+            groupType: "regular",
+            tags: ["山野"],
+            groupPeriods: [
+              {
+                periodCode: "REG-20260215",
+                dateStart: "2026-02-15",
+                dateEnd: "2026-02-19",
+                price: 3980,
+                status: "available"
+              }
+            ]
+          },
+          {
+            id: "service-legacy",
+            slug: "legacy-loop",
+            name: "旧数据环线",
+            creatorId: "creator-1",
+            destinationSlugs: ["qinghai-lake"],
+            tags: ["户外"],
+            groupPeriods: [
+              {
+                periodCode: "LEG-20260501",
+                dateStart: "2026-06-01",
+                dateEnd: "2026-06-05",
+                price: 4280,
+                status: "available"
+              }
+            ]
+          }
+        ]
+      },
+      app_configs: {
+        list: [
+          {
+            key: "customJourneyPage",
+            value: {
+              exampleServiceSlugs: ["custom-loop", "custom-expired-loop", "custom-period-loop"]
+            }
+          }
+        ]
+      }
+    },
+    runSQL: async () => ({
+      data: {
+        executeResultList: []
+      }
+    })
+  });
+
+  const [regularResult, customResult] = await Promise.all([
+    gateway.main({
+      action: "getJourneyPageData",
+      payload: {}
+    }),
+    gateway.main({
+      action: "getCustomJourneyPageData",
+      payload: {}
+    })
+  ]);
+
+  assert.equal(regularResult.ok, true);
+  assert.deepEqual(regularResult.data.journeys.map((item) => item.slug), ["regular-loop", "custom-period-loop", "legacy-loop"]);
+  assert.equal(customResult.ok, true);
+  assert.deepEqual(customResult.data.journeys.map((item) => item.slug), ["custom-loop", "custom-expired-loop", "custom-period-loop"]);
+  assert.equal(customResult.data.journeys[0].displayStatusText, "支持定制");
+});
+
 test("contentGateway includes single room fields in booking periods", async () => {
   const gateway = loadContentGatewayModule({
     collections: {
@@ -422,7 +646,7 @@ test("contentGateway filters creator regions by existing routes and sorts region
       },
       services: {
         list: [
-          { slug: "xj-near", name: "南疆近线", creatorId: "creator-a", destinationSlugs: ["nanjiang-dune"], tags: ["山野"] },
+          { slug: "xj-near", name: "南疆近线", creatorId: "creator-a", destinationSlugs: ["nanjiang-dune"], tags: ["山野"], cover: "xj-near-cover" },
           { slug: "xj-soldout", name: "南疆满位线", creatorId: "creator-b", destinationSlugs: ["nanjiang-dune"], tags: ["山野"] },
           { slug: "tibet-route", name: "藏区路线", creatorId: "creator-c", destinationSlugs: ["qinghai-lake"], tags: ["文化"] },
           { slug: "xj-far", name: "南疆远线", creatorId: "creator-d", destinationSlugs: ["nanjiang-dune"], tags: ["山野"] }

@@ -13,12 +13,22 @@
 }
 
 .cost-table__title {
-  display: block;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
-  font-size: 40rpx;
-  line-height: 1.45;
-  font-weight: 600;
-  color: #2b241d;
+  display: flex;
+  align-items: flex-start;
+  gap: 14rpx;
+  font-size: 30rpx;
+  line-height: 1.35;
+  font-weight: 500;
+  color: #3f352b;
+}
+
+.cost-table__title::before {
+  content: "";
+  flex: 0 0 4rpx;
+  width: 4rpx;
+  height: 28rpx;
+  margin-top: 6rpx;
+  background: rgba(153, 57, 33, 0.42);
 }
 
 .cost-table__arrow {
@@ -71,10 +81,14 @@
   flex: 1;
 }
 
+.cost-table__cell--full {
+  padding: 22rpx 24rpx;
+}
+
 .cost-table__label {
   font-size: 28rpx;
   line-height: 1.55;
-  font-weight: 600;
+  font-weight: 400;
   color: #2b241d;
   text-align: center;
 }

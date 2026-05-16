@@ -11,6 +11,7 @@ const {
   STATUS_FILTER_OPTIONS,
   buildMonthKey,
   buildRouteTypeIconUrl,
+  buildRouteTypeSelectedIconUrl,
   buildRouteTypeWordmarkUrl,
   formatCalendarMonth,
   formatJourneyDate,
@@ -28,12 +29,20 @@ const {
 
 const WEEKDAY_LABELS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const UPCOMING_WINDOW_DAYS = 14;
-const VALID_STATUS_FILTERS = new Set(["all", "confirmed", "available"]);
+const JOURNEY_STATUS_FILTER_OPTIONS = STATUS_FILTER_OPTIONS.filter((item) => item.key !== "available");
+const VALID_STATUS_FILTERS = new Set(JOURNEY_STATUS_FILTER_OPTIONS.map((item) => item.key));
 const BOOKABLE_STATUS_SET = new Set(["confirmed", "available"]);
 const FLOATING_FILTER_SCROLL_EPSILON = 1;
 const FLOATING_FILTER_TRIGGER_OFFSET = 8;
 const INITIAL_JOURNEY_RENDER_COUNT = 6;
 const JOURNEY_RENDER_BATCH_SIZE = 6;
+const JOURNEY_VIEW_MODE_STORAGE_KEY = "yezaiJourneyViewMode";
+const VALID_JOURNEY_VIEW_MODES = new Set(["image", "grid", "compact"]);
+const REGION_SCOPE_TABS = [
+  { key: "domestic", label: "国内" },
+  { key: "international", label: "国际" }
+];
+const VALID_REGION_SCOPES = new Set(REGION_SCOPE_TABS.map((item) => item.key));
 
 function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -122,8 +131,62 @@ function normalizeStatusFilter(status) {
   return VALID_STATUS_FILTERS.has(normalized) ? normalized : "all";
 }
 
+function normalizeJourneyViewMode(mode) {
+  const normalized = normalizeText(mode);
+  return VALID_JOURNEY_VIEW_MODES.has(normalized) ? normalized : "grid";
+}
+
+function getStoredJourneyViewMode() {
+  if (typeof wx === "undefined" || typeof wx.getStorageSync !== "function") {
+    return "grid";
+  }
+
+  try {
+    return normalizeJourneyViewMode(wx.getStorageSync(JOURNEY_VIEW_MODE_STORAGE_KEY));
+  } catch (error) {
+    return "grid";
+  }
+}
+
+function setStoredJourneyViewMode(mode) {
+  if (typeof wx === "undefined" || typeof wx.setStorageSync !== "function") {
+    return;
+  }
+
+  try {
+    wx.setStorageSync(JOURNEY_VIEW_MODE_STORAGE_KEY, mode);
+  } catch (error) {
+    console.warn("Failed to persist journey view mode", error);
+  }
+}
+
 function isBookableStatus(status) {
   return BOOKABLE_STATUS_SET.has(normalizeText(status));
+}
+
+function buildDisplayStatusTags(status, fallbackText) {
+  const normalizedStatus = normalizeText(status);
+  const fallback = normalizeText(fallbackText);
+
+  if (normalizedStatus === "confirmed") {
+    return [
+      Object.assign({ key: "confirmed" }, getStatusMeta("confirmed"))
+    ];
+  }
+
+  if (normalizedStatus === "available") {
+    return [];
+  }
+
+  const statusMeta = getStatusMeta(normalizedStatus);
+  const text = fallback || statusMeta.label;
+  return text ? [
+    {
+      key: normalizedStatus || "available",
+      label: text,
+      theme: statusMeta.theme
+    }
+  ] : [];
 }
 
 function buildRouteTypeShortLabel(label) {
@@ -152,12 +215,30 @@ function buildRegionCountText(count, available) {
   return `${safeCount} 条旅程`;
 }
 
-function buildRegionSheetColumns(regionOptions) {
-  const columns = [];
-  const source = Array.isArray(regionOptions) ? regionOptions : [];
+function normalizeRegionScope(scope) {
+  const normalized = normalizeText(scope);
+  return VALID_REGION_SCOPES.has(normalized) ? normalized : "domestic";
+}
 
-  for (let index = 0; index < source.length; index += 3) {
-    columns.push(source.slice(index, index + 3));
+function getRegionScopeByCode(regionCode) {
+  return normalizeText(regionCode).startsWith("intl_") ? "international" : "domestic";
+}
+
+function buildRegionScopeTabs(activeScope) {
+  const normalizedActiveScope = normalizeRegionScope(activeScope);
+  return REGION_SCOPE_TABS.map((item) => Object.assign({}, item, {
+    active: item.key === normalizedActiveScope
+  }));
+}
+
+function buildRegionSheetColumns(regionOptions, regionScope) {
+  const columns = [];
+  const activeRegionScope = normalizeRegionScope(regionScope);
+  const source = (Array.isArray(regionOptions) ? regionOptions : [])
+    .filter((item) => getRegionScopeByCode(item && item.value) === activeRegionScope);
+
+  for (let index = 0; index < source.length; index += 2) {
+    columns.push(source.slice(index, index + 2));
   }
 
   return columns;
@@ -243,7 +324,7 @@ function buildCalendarWeeks(monthKey, markedDateSet, selectedDate) {
 }
 
 function buildStatusOptions(selectedStatus) {
-  return STATUS_FILTER_OPTIONS.map((item) => Object.assign({}, item, {
+  return JOURNEY_STATUS_FILTER_OPTIONS.map((item) => Object.assign({}, item, {
     active: item.key === selectedStatus
   }));
 }
@@ -299,7 +380,12 @@ Page({
     resultCountText: "",
     renderedCountText: "",
     displayJourneys: [],
+    displayJourneyColumns: [
+      { key: "left", items: [] },
+      { key: "right", items: [] }
+    ],
     hasMoreJourneys: false,
+    journeyViewMode: "grid",
     isDateSheetVisible: false,
     isDateSheetAnimating: false,
     isRegionSheetVisible: false,
@@ -315,6 +401,8 @@ Page({
     sheetEmptyTitle: "",
     sheetEmptyDesc: "",
     sheetHintText: "",
+    regionScopeTabs: buildRegionScopeTabs("domestic"),
+    activeRegionScope: "domestic",
     regionSheetColumns: [],
     hasMarkedDates: false,
     showFloatingFilters: false,
@@ -333,6 +421,10 @@ Page({
     this.regionOptions = [];
     this.lastScrollTop = 0;
     this.filterStackTop = 0;
+    this.expandedJourneySummaryMap = {};
+    this.setData({
+      journeyViewMode: getStoredJourneyViewMode()
+    });
     await this.loadJourneyData();
   },
 
@@ -550,25 +642,42 @@ Page({
   decorateJourneyForDisplay(journey, displayPeriod, options) {
     const settings = options || {};
     const statusMeta = getStatusMeta(displayPeriod && displayPeriod.status);
+    const displayStatus = displayPeriod && displayPeriod.status ? displayPeriod.status : "";
+    const rawDisplayStatusText = displayPeriod && displayPeriod.statusText ? displayPeriod.statusText : statusMeta.label;
+    const displayStatusTags = buildDisplayStatusTags(displayStatus, rawDisplayStatusText);
+    const displayStatusText = normalizeText(displayStatus) === "available" ? "" : rawDisplayStatusText;
     const exactPrice = settings.exactPrice === true;
+    const periodPriceText = formatPriceValue(displayPeriod && displayPeriod.price);
     const priceText = exactPrice
-      ? (formatPriceValue(displayPeriod && displayPeriod.price) || journey.priceLabel || "")
-      : (journey.priceLabel || (formatPriceValue(displayPeriod && displayPeriod.price) ? `${formatPriceValue(displayPeriod && displayPeriod.price)} 起` : ""));
+      ? (periodPriceText || journey.priceLabel || "")
+      : (periodPriceText ? `${periodPriceText} 起` : journey.priceLabel || "");
+    const slug = journey && journey.slug ? journey.slug : "";
+    const summary = journey && journey.summary ? journey.summary : "";
+    const expandedSummaryMap = this.expandedJourneySummaryMap || {};
 
     return {
-      slug: journey && journey.slug ? journey.slug : "",
+      slug,
       name: journey && journey.name ? journey.name : "",
       cover: journey && journey.cover ? journey.cover : "",
-      summary: journey && journey.summary ? journey.summary : "",
+      summary,
+      summaryExpandable: summary.length > 50 || summary.includes("\n"),
+      summaryExpanded: Boolean(slug && expandedSummaryMap[slug]),
       creatorName: journey && journey.creatorName ? journey.creatorName : "",
       primaryRouteTypeWordmark: journey && journey.primaryRouteTypeWordmark ? journey.primaryRouteTypeWordmark : "",
+      isCustomGroup: Boolean(journey && journey.isCustomGroup),
       priceText,
       displayPeriod,
-      displayStatus: displayPeriod && displayPeriod.status ? displayPeriod.status : "",
-      displayStatusText: displayPeriod && displayPeriod.statusText ? displayPeriod.statusText : statusMeta.label,
+      displayStatus,
+      displayStatusText,
       displayStatusTheme: statusMeta.theme,
-      displayDateText: formatJourneyDate(displayPeriod && displayPeriod.dateStart),
+      displayStatusTags,
+      displayDateText: journey && journey.isCustomGroup
+        ? normalizeText(journey.displayDateLabel) || "按需求定制"
+        : formatJourneyDate(displayPeriod && displayPeriod.dateStart),
       displayDepartureDatesText: settings.departureDatesText || formatMonthDay(displayPeriod && displayPeriod.dateStart),
+      displayPrimaryDepartureDateText: journey && journey.isCustomGroup
+        ? normalizeText(journey.displayDateLabel) || "按需求定制"
+        : formatMonthDay(displayPeriod && displayPeriod.dateStart),
       displayDurationLabel: normalizeText(displayPeriod && displayPeriod.durationLabel) || journey.durationTag || "",
       displayVersionLabel: normalizeText(displayPeriod && displayPeriod.versionName)
     };
@@ -643,15 +752,24 @@ Page({
     const availableRouteTypeSet = this.buildAvailableRouteTypeSet(filters);
     const routeTypeOrder = this.routeTypeOrder || [];
 
-    return routeTypeOrder.map((tag) => ({
+    return routeTypeOrder.map((tag, index) => ({
         key: tag,
         value: tag,
         label: buildRouteTypeDisplayLabel(tag),
         icon: buildRouteTypeIconUrl(tag),
+        selectedIcon: buildRouteTypeSelectedIconUrl(tag),
         shortLabel: buildRouteTypeShortLabel(tag),
         available: availableRouteTypeSet.has(tag),
-        selected: tag === filters.routeType
-      }));
+        selected: tag === filters.routeType,
+        sortIndex: index
+      }))
+      .sort((left, right) => {
+        if (left.available !== right.available) {
+          return left.available ? -1 : 1;
+        }
+
+        return left.sortIndex - right.sortIndex;
+      });
   },
 
   buildAvailableRegionCountMap(filters) {
@@ -724,7 +842,7 @@ Page({
     }
 
     if (filters.status && filters.status !== "all") {
-      const statusOption = STATUS_FILTER_OPTIONS.find((item) => item.key === filters.status);
+      const statusOption = JOURNEY_STATUS_FILTER_OPTIONS.find((item) => item.key === filters.status);
       if (statusOption) {
         chips.push({
           key: "status",
@@ -786,8 +904,13 @@ Page({
   },
 
   buildRegionSheetState(filters, visibleRegionOptions) {
+    const activeRegionScope = filters && filters.destinationRegionCode
+      ? getRegionScopeByCode(filters.destinationRegionCode)
+      : normalizeRegionScope(this.data.activeRegionScope);
     return {
-      regionSheetColumns: buildRegionSheetColumns(visibleRegionOptions)
+      activeRegionScope,
+      regionScopeTabs: buildRegionScopeTabs(activeRegionScope),
+      regionSheetColumns: buildRegionSheetColumns(visibleRegionOptions, activeRegionScope)
     };
   },
 
@@ -900,12 +1023,27 @@ Page({
     return `已显示 ${safeVisible}/${safeTotal} 条旅程`;
   },
 
+  buildJourneyColumns(journeys) {
+    const columns = [
+      { key: "left", items: [] },
+      { key: "right", items: [] }
+    ];
+
+    (Array.isArray(journeys) ? journeys : []).forEach((journey, index) => {
+      columns[index % 2].items.push(journey);
+    });
+
+    return columns;
+  },
+
   updateVisibleJourneys(nextCount) {
     const sourceJourneys = Array.isArray(this.filteredJourneys) ? this.filteredJourneys : [];
     const visibleCount = Math.min(Math.max(0, Number(nextCount) || 0), sourceJourneys.length);
+    const displayJourneys = sourceJourneys.slice(0, visibleCount);
 
     this.setData({
-      displayJourneys: sourceJourneys.slice(0, visibleCount),
+      displayJourneys,
+      displayJourneyColumns: this.buildJourneyColumns(displayJourneys),
       hasMoreJourneys: visibleCount < sourceJourneys.length,
       renderedCountText: this.buildRenderedCountText(sourceJourneys.length, visibleCount)
     });
@@ -917,6 +1055,34 @@ Page({
     }
 
     this.updateVisibleJourneys(this.getNextJourneyRenderCount(this.data.displayJourneys.length));
+  },
+
+  onJourneySummaryToggle(event) {
+    const detail = event && event.detail ? event.detail : {};
+    const slug = normalizeText(detail.slug);
+    if (!slug) {
+      return;
+    }
+
+    if (!this.expandedJourneySummaryMap) {
+      this.expandedJourneySummaryMap = {};
+    }
+
+    this.expandedJourneySummaryMap[slug] = Boolean(detail.expanded);
+    const displayJourneys = (this.data.displayJourneys || []).map((journey) => {
+      if (!journey || journey.slug !== slug) {
+        return journey;
+      }
+
+      return Object.assign({}, journey, {
+        summaryExpanded: Boolean(detail.expanded)
+      });
+    });
+
+    this.setData({
+      displayJourneys,
+      displayJourneyColumns: this.buildJourneyColumns(displayJourneys)
+    });
   },
 
   applyJourneyFilters(patch) {
@@ -941,6 +1107,7 @@ Page({
         visibleRegionOptions,
         selectedFilterChips,
         displayJourneys: initialDisplayJourneys,
+        displayJourneyColumns: this.buildJourneyColumns(initialDisplayJourneys),
         hasMoreJourneys: initialDisplayJourneys.length < filteredJourneys.length,
         statusOptions: buildStatusOptions(filters.status),
         resultCountText: `共 ${filteredJourneys.length} 条符合条件的旅程`,
@@ -1148,6 +1315,20 @@ Page({
     this.loadMoreJourneys();
   },
 
+  onJourneyViewModeTap(event) {
+    const mode = normalizeJourneyViewMode(event && event.currentTarget && event.currentTarget.dataset
+      ? event.currentTarget.dataset.mode
+      : "");
+    if (mode === this.data.journeyViewMode) {
+      return;
+    }
+
+    setStoredJourneyViewMode(mode);
+    this.setData({
+      journeyViewMode: mode
+    });
+  },
+
   getShareImageUrl() {
     const displayJourneys = this.data.displayJourneys || [];
     const allJourneys = this.allJourneys || [];
@@ -1200,13 +1381,19 @@ Page({
       return;
     }
 
+    const activeRegionScope = this.data.selectedDestinationRegionCode
+      ? getRegionScopeByCode(this.data.selectedDestinationRegionCode)
+      : normalizeRegionScope(this.data.activeRegionScope);
     this.setData(
       {
         isDateSheetVisible: false,
         isDateSheetAnimating: false,
         isRegionSheetVisible: true,
         isRegionSheetAnimating: false,
-        showFloatingFilters: false
+        showFloatingFilters: false,
+        activeRegionScope,
+        regionScopeTabs: buildRegionScopeTabs(activeRegionScope),
+        regionSheetColumns: buildRegionSheetColumns(this.data.visibleRegionOptions, activeRegionScope)
       },
       () => {
         setTimeout(() => {
@@ -1231,6 +1418,19 @@ Page({
         isRegionSheetVisible: false
       });
     }, 240);
+  },
+
+  onRegionScopeTabTap(event) {
+    const activeRegionScope = normalizeRegionScope(event.currentTarget.dataset.scope);
+    if (activeRegionScope === this.data.activeRegionScope) {
+      return;
+    }
+
+    this.setData({
+      activeRegionScope,
+      regionScopeTabs: buildRegionScopeTabs(activeRegionScope),
+      regionSheetColumns: buildRegionSheetColumns(this.data.visibleRegionOptions, activeRegionScope)
+    });
   },
 
   onRegionTap(event) {

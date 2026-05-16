@@ -65,10 +65,6 @@ function getOrderDetailPageConfig() {
   return callConfigGateway("getOrderDetailPageConfig");
 }
 
-function getProfilePageConfig() {
-  return callConfigGateway("getProfilePageConfig");
-}
-
 function getFavoritesPageConfig() {
   return callConfigGateway("getFavoritesPageConfig");
 }
@@ -83,7 +79,6 @@ module.exports = {
   getServiceDetailPageConfig,
   getPaymentResultPageConfig,
   getOrderDetailPageConfig,
-  getProfilePageConfig,
   getFavoritesPageConfig,
   getArticleBridgePageConfig
 };

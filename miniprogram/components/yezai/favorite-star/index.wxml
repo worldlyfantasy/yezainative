@@ -4,10 +4,11 @@
     class="favorite-star__button {{favorited ? 'favorite-star__button--active' : ''}}"
     bindtap="handleToggle"
   >
-    <view class="favorite-star__leaf {{favorited ? 'favorite-star__leaf--active' : ''}}">
-      <view class="favorite-star__leaf-shape"></view>
-      <view class="favorite-star__leaf-vein"></view>
-    </view>
+    <image
+      class="favorite-star__icon"
+      src="{{favorited ? '/images/icons/favorite-collect-active.svg' : '/images/icons/favorite-collect.svg'}}"
+      mode="aspectFit"
+    />
   </view>
 
   <view

@@ -55,6 +55,14 @@ const MODULE_TITLE_TYPE_MAP = {
   "温馨提示": "tips"
 };
 
+const MODULE_ICON_IMAGE_MAP = {
+  schedule: "/images/itinerary/itinerary-schedule.png",
+  transport: "/images/itinerary/itinerary-transport.png",
+  meals: "/images/itinerary/itinerary-meals.png",
+  accommodation: "/images/itinerary/itinerary-accommodation.png",
+  tips: "/images/itinerary/itinerary-tips.png"
+};
+
 const MODULE_TYPE_ALIASES = {
   meal: "meals",
   note: "tips",
@@ -84,9 +92,51 @@ function normalizeModule(module, dayKey, index) {
   return Object.assign({}, module, {
     key: module.key || `${dayKey}-module-${index + 1}`,
     displayTitle: module.title || meta.title || "行程信息",
+    iconImage: MODULE_ICON_IMAGE_MAP[meta.icon || normalizedType] || "",
     iconType: meta.icon || normalizedType || "default",
     type: normalizedType
   });
+}
+
+function normalizeImageSource(value) {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+
+  if (!value || typeof value !== "object") {
+    return "";
+  }
+
+  return String(
+    value.detail ||
+    value.original ||
+    value.url ||
+    value.src ||
+    value.image ||
+    value.coverImage ||
+    value.cover ||
+    value.fileID ||
+    value.cloudFileID ||
+    value.path ||
+    ""
+  ).trim();
+}
+
+function normalizeDayImages(day) {
+  const source =
+    Array.isArray(day.images) && day.images.length
+      ? day.images
+      : Array.isArray(day.dayImages) && day.dayImages.length
+        ? day.dayImages
+        : Array.isArray(day.photos) && day.photos.length
+          ? day.photos
+          : Array.isArray(day.gallery) && day.gallery.length
+            ? day.gallery
+            : day.image || day.coverImage
+              ? [day.image || day.coverImage]
+              : [];
+
+  return source.map(normalizeImageSource).filter(Boolean);
 }
 
 function normalizeDay(day, index) {
@@ -96,6 +146,7 @@ function normalizeDay(day, index) {
   return Object.assign({}, day, {
     key,
     dayLabel: `D${dayNumber}`,
+    images: normalizeDayImages(day),
     modules: modules.map((module, moduleIndex) => normalizeModule(module, key, moduleIndex))
   });
 }
@@ -199,6 +250,26 @@ Component({
       if (activeKey !== this.data.activeDayKey) {
         this.setData({ activeDayKey: activeKey });
       }
+    },
+
+    onDayImageLoad() {
+      this.measureDayOffsets();
+      this.triggerEvent("mediaload");
+    },
+
+    onDayImageTap(event) {
+      const dayIndex = Number(event.currentTarget.dataset.dayIndex);
+      const imageIndex = Number(event.currentTarget.dataset.imageIndex);
+      const dayItem = Number.isFinite(dayIndex) ? this.data.normalizedDays[dayIndex] : null;
+      const images = dayItem && Array.isArray(dayItem.images) ? dayItem.images : [];
+      if (!images.length) {
+        return;
+      }
+
+      this.triggerEvent("imagetap", {
+        images,
+        imageIndex: Number.isFinite(imageIndex) ? imageIndex : 0
+      });
     }
   }
 });

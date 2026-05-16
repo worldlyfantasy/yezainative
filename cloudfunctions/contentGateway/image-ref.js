@@ -13,6 +13,18 @@ function pickFirstString(candidates) {
   return "";
 }
 
+function normalizePublicImageUrl(value) {
+  const normalized = pickFirstString([value]);
+  if (!normalized) {
+    return "";
+  }
+
+  return normalized.replace(
+    "https://7965-yezai-3gr73wd48057512e-1407224025.tcb.qcloud.la/",
+    "https://7965-yezai-3gr73wd48057512e-10f17b581-1407224025.tcb.qcloud.la/"
+  );
+}
+
 function isCloudFileId(value) {
   return /^cloud:\/\/[^/]+\.[^/]+\/.+$/.test(pickFirstString([value]));
 }
@@ -35,12 +47,12 @@ function buildPublicUrlFromCloudFileId(value) {
 
 function getImageAsset(value) {
   if (typeof value === "string") {
-    const normalized = value.trim();
-    const resolved = isCloudFileId(normalized)
-      ? (buildPublicUrlFromCloudFileId(normalized) || normalized)
-      : normalized;
-    return normalized
-      ? {
+  const normalized = value.trim();
+  const resolved = isCloudFileId(normalized)
+    ? (buildPublicUrlFromCloudFileId(normalized) || normalized)
+    : normalizePublicImageUrl(normalized);
+  return normalized
+    ? {
           original: resolved,
           card: "",
           detail: ""
@@ -75,13 +87,13 @@ function getImageAsset(value) {
   ]);
   const resolvedOriginal = isCloudFileId(original)
     ? (buildPublicUrlFromCloudFileId(original) || original)
-    : original;
+    : normalizePublicImageUrl(original);
   const resolvedCard = isCloudFileId(card)
     ? (buildPublicUrlFromCloudFileId(card) || card)
-    : card;
+    : normalizePublicImageUrl(card);
   const resolvedDetail = isCloudFileId(detail)
     ? (buildPublicUrlFromCloudFileId(detail) || detail)
-    : detail;
+    : normalizePublicImageUrl(detail);
 
   if (!resolvedOriginal && !resolvedCard && !resolvedDetail) {
     return null;
@@ -208,10 +220,56 @@ function normalizeTravelDetail(travelDetail) {
       })
     : travelDetail.highlights;
 
+  const normalizeItineraryDay = (day) => {
+    if (!isPlainObject(day)) {
+      return day;
+    }
+
+    const imageSource =
+      Array.isArray(day.images) && day.images.length
+        ? day.images
+        : Array.isArray(day.dayImages) && day.dayImages.length
+          ? day.dayImages
+          : Array.isArray(day.photos) && day.photos.length
+            ? day.photos
+            : Array.isArray(day.gallery) && day.gallery.length
+              ? day.gallery
+              : day.image || day.coverImage;
+    return Object.assign({}, day, {
+      images: normalizeImageList(imageSource, "detail"),
+      imagesCard: normalizeImageList(imageSource, "card")
+    });
+  };
+
+  const normalizeItinerary = (itinerary) => {
+    if (!isPlainObject(itinerary) || !Array.isArray(itinerary.days)) {
+      return itinerary;
+    }
+
+    return Object.assign({}, itinerary, {
+      days: itinerary.days.map(normalizeItineraryDay)
+    });
+  };
+
+  const itineraryVersions = Array.isArray(travelDetail.itineraryVersions)
+    ? travelDetail.itineraryVersions.map((version) => {
+        if (!isPlainObject(version)) {
+          return version;
+        }
+
+        return Object.assign({}, version, {
+          days: Array.isArray(version.days) ? version.days.map(normalizeItineraryDay) : version.days,
+          itinerary: normalizeItinerary(version.itinerary)
+        });
+      })
+    : travelDetail.itineraryVersions;
+
   return Object.assign({}, travelDetail, {
     consultWeChatQr: normalizeImageRef(travelDetail.consultWeChatQr, "detail"),
     overview,
-    highlights
+    highlights,
+    itinerary: normalizeItinerary(travelDetail.itinerary),
+    itineraryVersions
   });
 }
 

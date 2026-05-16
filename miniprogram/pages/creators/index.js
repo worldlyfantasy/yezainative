@@ -2,6 +2,7 @@ const { getCreatorsPageData } = require("../../repositories/content-repository")
 const {
   ROUTE_TYPE_ORDER,
   buildRouteTypeIconUrl,
+  buildRouteTypeSelectedIconUrl,
   normalizeRouteTypeLabel
 } = require("../../constants/journey");
 const {
@@ -14,6 +15,15 @@ const {
   createShareTimeline
 } = require("../../utils/share");
 const MAX_CREATOR_TAGS = 3;
+const MAX_GRID_CREATOR_TAGS = 2;
+const CREATOR_VIEW_MODE_STORAGE_KEY = "yezaiCreatorViewMode";
+const STYLE_SHEET_SELECTION_FEEDBACK_DELAY_MS = 110;
+const VALID_CREATOR_VIEW_MODES = new Set(["card", "grid"]);
+const REGION_SCOPE_TABS = [
+  { key: "domestic", label: "国内" },
+  { key: "international", label: "国际" }
+];
+const VALID_REGION_SCOPES = new Set(REGION_SCOPE_TABS.map((item) => item.key));
 
 function ensureArray(value) {
   return Array.isArray(value) ? value : [];
@@ -23,9 +33,58 @@ function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalizeCreatorViewMode(mode) {
+  const normalized = normalizeText(mode);
+  return VALID_CREATOR_VIEW_MODES.has(normalized) ? normalized : "grid";
+}
+
+function getStoredCreatorViewMode() {
+  if (typeof wx === "undefined" || typeof wx.getStorageSync !== "function") {
+    return "grid";
+  }
+
+  try {
+    return normalizeCreatorViewMode(wx.getStorageSync(CREATOR_VIEW_MODE_STORAGE_KEY));
+  } catch (error) {
+    return "grid";
+  }
+}
+
+function setStoredCreatorViewMode(mode) {
+  if (typeof wx === "undefined" || typeof wx.setStorageSync !== "function") {
+    return;
+  }
+
+  try {
+    wx.setStorageSync(CREATOR_VIEW_MODE_STORAGE_KEY, mode);
+  } catch (error) {
+    console.warn("Failed to persist creator view mode", error);
+  }
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function formatCreatorCountText(count) {
   const safeCount = Math.max(0, Number(count) || 0);
   return `${safeCount} 位创作者`;
+}
+
+function normalizeRegionScope(scope) {
+  const normalized = normalizeText(scope);
+  return VALID_REGION_SCOPES.has(normalized) ? normalized : "domestic";
+}
+
+function getRegionScopeByCode(regionCode) {
+  return normalizeText(regionCode).startsWith("intl_") ? "international" : "domestic";
+}
+
+function buildRegionScopeTabs(activeScope) {
+  const normalizedActiveScope = normalizeRegionScope(activeScope);
+  return REGION_SCOPE_TABS.map((item) => Object.assign({}, item, {
+    active: item.key === normalizedActiveScope
+  }));
 }
 
 function splitIntoColumns(list, size) {
@@ -42,7 +101,8 @@ function splitIntoColumns(list, size) {
 
 function decorateCreator(creator) {
   return Object.assign({}, creator, {
-    displayTags: ensureArray(creator && creator.tags).slice(0, MAX_CREATOR_TAGS)
+    displayTags: ensureArray(creator && creator.tags).slice(0, MAX_CREATOR_TAGS),
+    gridDisplayTags: ensureArray(creator && creator.tags).slice(0, MAX_GRID_CREATOR_TAGS)
   });
 }
 
@@ -59,12 +119,16 @@ Page({
     styleOptions: [{ label: "全部", value: "" }],
     styleLabels: ["全部"],
     creators: [],
+    creatorViewMode: "grid",
     routeTriggerDots: [1, 2, 3, 4],
     selectedRegionCode: "",
     selectedRegionLabel: "",
     selectedStyle: "",
+    selectedStyleIcon: "",
     selectedStyleLabel: "",
     visibleStyleOptions: [],
+    regionScopeTabs: buildRegionScopeTabs("domestic"),
+    activeRegionScope: "domestic",
     regionSheetColumns: [],
     isStyleSheetVisible: false,
     isStyleSheetAnimating: false,
@@ -77,7 +141,8 @@ Page({
 
     this.setData({
       loading: true,
-      errorText: ""
+      errorText: "",
+      creatorViewMode: getStoredCreatorViewMode()
     });
 
     try {
@@ -126,6 +191,7 @@ Page({
       value: tag,
       label: tag,
       icon: buildRouteTypeIconUrl(tag),
+      selectedIcon: buildRouteTypeSelectedIconUrl(tag),
       available: availableSet.has(tag),
       selected: tag === normalizedSelectedStyle
     }));
@@ -135,9 +201,11 @@ Page({
       .concat(styleCards.filter((item) => !item.available));
   },
 
-  buildRegionSheetColumns(regionOptions, selectedRegionCode) {
+  buildRegionSheetColumns(regionOptions, selectedRegionCode, regionScope) {
+    const activeRegionScope = normalizeRegionScope(regionScope);
     const regionCards = ensureArray(regionOptions)
       .filter((item) => normalizeText(item && item.value))
+      .filter((item) => getRegionScopeByCode(item && item.value) === activeRegionScope)
       .map((item) => {
         const value = normalizeText(item && item.value);
         const count = Math.max(0, Number(item && item.count) || 0);
@@ -153,7 +221,7 @@ Page({
         };
       });
 
-    return splitIntoColumns(regionCards, 3);
+    return splitIntoColumns(regionCards, 2);
   },
 
   buildFilterState(payload, filters) {
@@ -161,14 +229,20 @@ Page({
     const normalizedRegionCode = this.normalizeSelectedValue(payload && payload.regionOptions, filters && filters.regionCode);
     const selectedStyleLabel = normalizedStyle || "";
     const selectedRegionLabel = getDestinationRegionLabel(normalizedRegionCode);
+    const activeRegionScope = normalizedRegionCode
+      ? getRegionScopeByCode(normalizedRegionCode)
+      : normalizeRegionScope(this.data.activeRegionScope);
 
     return {
       selectedStyle: normalizedStyle,
+      selectedStyleIcon: normalizedStyle ? buildRouteTypeIconUrl(normalizedStyle) : "",
       selectedStyleLabel,
       selectedRegionCode: normalizedRegionCode,
       selectedRegionLabel,
       visibleStyleOptions: this.buildStyleSheetOptions(payload && payload.styleOptions, normalizedStyle),
-      regionSheetColumns: this.buildRegionSheetColumns(payload && payload.regionOptions, normalizedRegionCode)
+      activeRegionScope,
+      regionScopeTabs: buildRegionScopeTabs(activeRegionScope),
+      regionSheetColumns: this.buildRegionSheetColumns(payload && payload.regionOptions, normalizedRegionCode, activeRegionScope)
     };
   },
 
@@ -205,6 +279,20 @@ Page({
         errorText: "筛选结果加载失败，请稍后重试。"
       });
     }
+  },
+
+  onCreatorViewModeTap(event) {
+    const mode = normalizeCreatorViewMode(event && event.currentTarget && event.currentTarget.dataset
+      ? event.currentTarget.dataset.mode
+      : "");
+    if (mode === this.data.creatorViewMode) {
+      return;
+    }
+
+    setStoredCreatorViewMode(mode);
+    this.setData({
+      creatorViewMode: mode
+    });
   },
 
   getShareImageUrl() {
@@ -308,12 +396,18 @@ Page({
       return;
     }
 
+    const activeRegionScope = this.data.selectedRegionCode
+      ? getRegionScopeByCode(this.data.selectedRegionCode)
+      : normalizeRegionScope(this.data.activeRegionScope);
     this.setData(
       {
         isStyleSheetVisible: false,
         isStyleSheetAnimating: false,
         isRegionSheetVisible: true,
-        isRegionSheetAnimating: false
+        isRegionSheetAnimating: false,
+        activeRegionScope,
+        regionScopeTabs: buildRegionScopeTabs(activeRegionScope),
+        regionSheetColumns: this.buildRegionSheetColumns(this.data.regionOptions, this.data.selectedRegionCode, activeRegionScope)
       },
       () => {
         setTimeout(() => {
@@ -340,6 +434,19 @@ Page({
     }, 240);
   },
 
+  onRegionScopeTabTap(event) {
+    const activeRegionScope = normalizeRegionScope(event.currentTarget.dataset.scope);
+    if (activeRegionScope === this.data.activeRegionScope) {
+      return;
+    }
+
+    this.setData({
+      activeRegionScope,
+      regionScopeTabs: buildRegionScopeTabs(activeRegionScope),
+      regionSheetColumns: this.buildRegionSheetColumns(this.data.regionOptions, this.data.selectedRegionCode, activeRegionScope)
+    });
+  },
+
   async onStyleTap(event) {
     const style = normalizeRouteTypeLabel(event.currentTarget.dataset.value);
     const styleOption = (this.data.visibleStyleOptions || []).find((item) => item && item.value === style);
@@ -347,8 +454,19 @@ Page({
       return;
     }
 
+    const nextStyle = style === this.data.selectedStyle ? "" : style;
+    this.setData({
+      selectedStyle: nextStyle,
+      selectedStyleIcon: nextStyle ? buildRouteTypeIconUrl(nextStyle) : "",
+      selectedStyleLabel: nextStyle,
+      visibleStyleOptions: (this.data.visibleStyleOptions || []).map((item) => Object.assign({}, item, {
+        selected: item && item.value === nextStyle
+      }))
+    });
+
+    await wait(STYLE_SHEET_SELECTION_FEEDBACK_DELAY_MS);
     await this.applyFilters({
-      style: style === this.data.selectedStyle ? "" : style
+      style: nextStyle
     });
     this.closeStyleSheet();
   },

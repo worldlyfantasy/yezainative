@@ -1,0 +1,282 @@
+.custom-services-page {
+  min-height: 100vh;
+  padding-bottom: calc(64rpx + env(safe-area-inset-bottom));
+}
+
+.custom-services-page__shell {
+  padding-top: 30rpx;
+}
+
+.custom-services-head {
+  padding: 8rpx 0 0;
+}
+
+.custom-services-head__eyebrow {
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+.custom-services-head__title {
+  display: block;
+  font-family: "Yezai Songti Fixed", "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
+  font-size: 58rpx;
+  line-height: 1.25;
+  font-weight: 500;
+  color: #2b241d;
+}
+
+.custom-intro-card {
+  margin-top: 30rpx;
+  padding: 34rpx 30rpx 32rpx;
+  border-radius: 30rpx;
+  background: rgba(255, 250, 242, 0.7);
+  box-shadow: inset 0 0 0 1rpx rgba(153, 57, 33, 0.08), 0 18rpx 50rpx rgba(83, 62, 35, 0.08);
+}
+
+.custom-intro-card__text {
+  display: block;
+  font-size: 29rpx;
+  line-height: 1.9;
+  color: #4f453b;
+}
+
+.custom-intro-card__text + .custom-intro-card__text {
+  margin-top: 18rpx;
+}
+
+.custom-intro-card__consult {
+  display: flex;
+  align-items: flex-start;
+  gap: 24rpx;
+  margin-top: 30rpx;
+  padding-top: 28rpx;
+  border-top: 1rpx solid rgba(153, 57, 33, 0.12);
+}
+
+.custom-intro-card__copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.custom-intro-card__label {
+  display: block;
+  font-size: 27rpx;
+  line-height: 1.7;
+  font-weight: 600;
+  color: #3a2c23;
+}
+
+.custom-intro-card__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  margin-top: 18rpx;
+}
+
+.custom-intro-card__item {
+  display: block;
+  font-size: 25rpx;
+  line-height: 1.65;
+  color: #6a5a4b;
+}
+
+.custom-intro-card__qr-wrap {
+  width: 190rpx;
+  flex: 0 0 190rpx;
+  padding: 14rpx 14rpx 12rpx;
+  border-radius: 22rpx;
+  background: #fffaf2;
+  box-shadow: 0 12rpx 30rpx rgba(83, 62, 35, 0.1);
+  text-align: center;
+}
+
+.custom-intro-card__qr {
+  display: block;
+  width: 162rpx;
+  height: 162rpx;
+  border-radius: 14rpx;
+  background: #f5ecd8;
+}
+
+.custom-intro-card__qr-caption {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  line-height: 1.4;
+  color: #993921;
+}
+
+.custom-tab-bar {
+  display: flex;
+  align-items: center;
+  margin-top: 34rpx;
+  padding: 8rpx;
+  overflow: hidden;
+  border-radius: 999rpx;
+  background: rgba(255, 250, 242, 0.62);
+  box-shadow: inset 0 0 0 1rpx rgba(153, 57, 33, 0.1);
+}
+
+.custom-tab-bar__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  height: 72rpx;
+  margin: 0;
+  padding: 0;
+  border-radius: 999rpx;
+  font-size: 27rpx;
+  line-height: 1;
+  font-weight: 600;
+  color: #7a6a58;
+}
+
+.custom-tab-bar__item + .custom-tab-bar__item {
+  margin-left: 8rpx;
+}
+
+.custom-tab-bar__item::after {
+  border: none;
+}
+
+.custom-tab-bar__item--active {
+  background: #993921;
+  color: #fffaf2;
+  box-shadow: 0 12rpx 26rpx rgba(153, 57, 33, 0.2);
+}
+
+.custom-flow-section {
+  margin-top: 28rpx;
+  overflow: hidden;
+  border-radius: 30rpx;
+  background: rgba(255, 250, 242, 0.72);
+  box-shadow: 0 18rpx 56rpx rgba(83, 62, 35, 0.1);
+}
+
+.custom-flow-section__image {
+  display: block;
+  width: 100%;
+}
+
+.custom-services-section-head {
+  margin-top: 28rpx;
+  padding: 0 4rpx;
+}
+
+.custom-services-section-head__count {
+  display: block;
+  margin-top: -10rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #7a6a58;
+}
+
+.custom-services-page__feedback {
+  margin-top: 28rpx;
+}
+
+.custom-services-page__feedback-button::after,
+.custom-services-list__footer-button::after {
+  border: none;
+}
+
+.custom-services-page__feedback-button {
+  margin-top: 24rpx;
+}
+
+.custom-services-loading,
+.custom-services-list {
+  display: flex;
+  flex-direction: column;
+  gap: 30rpx;
+  margin-top: 28rpx;
+}
+
+@media (max-width: 360px) {
+  .custom-intro-card__consult {
+    flex-direction: column;
+  }
+
+  .custom-intro-card__qr-wrap {
+    width: 210rpx;
+    flex-basis: auto;
+  }
+
+  .custom-intro-card__qr {
+    width: 182rpx;
+    height: 182rpx;
+  }
+}
+
+.custom-services-loading__card {
+  overflow: hidden;
+  border-radius: 36rpx;
+  padding: 18rpx 18rpx 30rpx;
+  background: rgba(252, 246, 233, 0.82);
+}
+
+.custom-services-loading__cover {
+  width: 100%;
+  padding-top: 82%;
+  border-radius: 30rpx;
+  background: linear-gradient(90deg, rgba(226, 211, 181, 0.64), rgba(255, 250, 242, 0.78), rgba(226, 211, 181, 0.64));
+}
+
+.custom-services-loading__line {
+  height: 28rpx;
+  margin: 22rpx 22rpx 0;
+  border-radius: 999rpx;
+  background: rgba(211, 190, 158, 0.46);
+}
+
+.custom-services-loading__line--title {
+  width: 52%;
+  height: 36rpx;
+  margin-top: 28rpx;
+}
+
+.custom-services-list__footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18rpx;
+  padding: 4rpx 0 20rpx;
+}
+
+.custom-services-list__footer-text {
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #7a6a58;
+}
+
+.custom-services-list__footer-button {
+  min-width: 240rpx;
+}
+
+.custom-services-empty {
+  margin-top: 36rpx;
+  padding: 54rpx 38rpx;
+  border-radius: 32rpx;
+  background: rgba(255, 250, 242, 0.72);
+  box-shadow: inset 0 0 0 1rpx rgba(153, 57, 33, 0.08);
+  text-align: center;
+}
+
+.custom-services-empty__title {
+  display: block;
+  font-family: "Yezai Songti Fixed", "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
+  font-size: 38rpx;
+  line-height: 1.4;
+  color: #2b241d;
+}
+
+.custom-services-empty__desc {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #6a5a4b;
+}

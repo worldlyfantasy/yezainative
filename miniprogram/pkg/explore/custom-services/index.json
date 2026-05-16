@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "野哉定制",
+  "usingComponents": {
+    "journey-route-card": "/components/yezai/journey-route-card/index"
+  }
+}

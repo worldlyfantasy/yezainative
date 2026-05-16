@@ -10,6 +10,10 @@ Component({
     showDivider: {
       type: Boolean,
       value: true
+    },
+    variant: {
+      type: String,
+      value: "card"
     }
   },
   methods: {

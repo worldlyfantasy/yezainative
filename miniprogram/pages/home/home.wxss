@@ -106,7 +106,7 @@
   position: absolute;
   top: 116rpx;
   left: 58rpx;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Yezai Songti Fixed", "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 120rpx;
   line-height: 1;
   font-weight: 700;
@@ -135,7 +135,7 @@
 .hero__title {
   margin-top: 18rpx;
   max-width: 560rpx;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 68rpx;
   line-height: 1.52;
   font-weight: 500;
@@ -254,7 +254,7 @@
 .trip-card__title {
   flex: 1;
   min-width: 0;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 32rpx;
   font-weight: 500;
   line-height: 1.22;
@@ -342,7 +342,7 @@
 
 /* 首页文案字体统一：标题 Songti，说明使用小程序稳定的无衬线字体。 */
 .home-page .creator-card__name {
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
 }
 
 .home-page .creator-card__stance {
@@ -352,7 +352,7 @@
 }
 
 .home-page .idea-card__title {
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
 }
 
 .home-page .idea-card__summary {

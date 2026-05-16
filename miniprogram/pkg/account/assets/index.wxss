@@ -7,8 +7,42 @@
 }
 
 .assets-title {
+  font-family: "Yezai Songti Fixed", "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 48rpx;
   line-height: 1.16;
+}
+
+.assets-rule-link {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  margin-top: 18rpx;
+  padding: 12rpx 0;
+}
+
+.assets-rule-link__mark {
+  width: 10rpx;
+  height: 10rpx;
+  margin-right: 14rpx;
+  border-radius: 999rpx;
+  background: #D15E14;
+  box-shadow: 0 0 0 8rpx rgba(209, 94, 20, 0.1);
+  flex-shrink: 0;
+}
+
+.assets-rule-link__text {
+  min-width: 0;
+  font-size: 32rpx;
+  line-height: 1.5;
+  font-weight: 600;
+  color: #993921;
+}
+
+.assets-rule-link__arrow {
+  margin-left: 10rpx;
+  font-size: 34rpx;
+  line-height: 1;
+  color: #993921;
 }
 
 .assets-page .section-block {
@@ -327,7 +361,7 @@
 }
 
 .assets-coupon-card__amount {
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 54rpx;
   line-height: 0.95;
   font-weight: 700;
@@ -389,7 +423,7 @@
 .assets-list-card__amount {
   display: block;
   margin-top: 18rpx;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 46rpx;
   line-height: 1.1;
   color: #2b241d;
@@ -441,7 +475,7 @@
 }
 
 .assets-reward-card__amount {
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 54rpx;
   line-height: 0.95;
   font-weight: 700;
@@ -605,7 +639,7 @@
   z-index: 3;
   display: block;
   margin-top: 10rpx;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 40rpx;
   line-height: 1.42;
   color: #2b241d;
@@ -707,7 +741,7 @@
 }
 
 .reward-gift-card__amount {
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 50rpx;
   line-height: 0.95;
   font-weight: 700;

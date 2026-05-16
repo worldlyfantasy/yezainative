@@ -13,6 +13,7 @@
 }
 
 .share-referral-hero__title {
+  font-family: "Yezai Songti Fixed", "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 56rpx;
 }
 
@@ -56,7 +57,7 @@
 .share-referral-status-card__title {
   display: block;
   margin-top: 14rpx;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Yezai Songti Fixed", "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 42rpx;
   line-height: 1.42;
   color: #2b241d;
@@ -88,7 +89,7 @@
 .share-referral-award-intro {
   display: block;
   margin: -18rpx 0 46rpx;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 34rpx;
   line-height: 1.72;
   letter-spacing: 1rpx;
@@ -137,7 +138,7 @@
 }
 
 .share-referral-award-card__amount {
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 54rpx;
   line-height: 0.95;
   font-weight: 700;
@@ -146,7 +147,7 @@
 .share-referral-award-card__title {
   display: block;
   margin-top: 12rpx;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 27rpx;
   line-height: 1.45;
   color: #2b241d;
@@ -189,7 +190,7 @@
 
 .share-referral-reason-card__title {
   display: block;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 34rpx;
   line-height: 1.42;
   color: #2b241d;
@@ -293,7 +294,7 @@
   z-index: 3;
   display: block;
   margin-top: 8rpx;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 40rpx;
   line-height: 1.44;
   color: #2b241d;

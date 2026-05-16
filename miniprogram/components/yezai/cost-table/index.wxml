@@ -10,10 +10,10 @@
         wx:key="index"
         class="cost-table__row {{index === rows.length - 1 ? 'cost-table__row--last' : ''}}"
       >
-        <view class="cost-table__cell cost-table__cell--label">
+        <view wx:if="{{!singleColumn}}" class="cost-table__cell cost-table__cell--label">
           <text class="cost-table__label">{{item.label}}</text>
         </view>
-        <view class="cost-table__cell cost-table__cell--content">
+        <view class="cost-table__cell cost-table__cell--content {{singleColumn ? 'cost-table__cell--full' : ''}}">
           <text class="cost-table__content">{{item.content}}</text>
         </view>
       </view>

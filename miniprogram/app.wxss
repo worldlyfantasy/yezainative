@@ -7,7 +7,7 @@ page {
 }
 
 .title {
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   letter-spacing: 0.02em;
 }
 
@@ -45,7 +45,7 @@ button::after {
 
 .page-title {
   display: block;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 60rpx;
   line-height: 1.45;
   font-weight: 500;
@@ -96,7 +96,7 @@ button::after {
 
 .section-title {
   display: block;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 44rpx;
   line-height: 1.5;
   font-weight: 500;
@@ -297,7 +297,7 @@ button::after {
 
 .page-feedback__title {
   display: block;
-  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 34rpx;
   line-height: 1.5;
   color: #2b241d;

@@ -22,7 +22,7 @@
         </view>
         <view class="share-referral-award-list">
           <view wx:for="{{resultView.couponCards}}" wx:key="couponType" class="share-referral-award-card">
-            <image class="share-referral-award-card__bg" src="/images/coupons/coupon-bg-active.png" mode="aspectFit"></image>
+            <image class="share-referral-award-card__bg" src="images/coupon-bg-active.png" mode="aspectFit"></image>
             <view class="share-referral-award-card__content">
               <view class="share-referral-award-card__value">
                 <text class="share-referral-award-card__currency">¥</text>

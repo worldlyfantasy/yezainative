@@ -55,29 +55,7 @@ const STATUS_PRIORITY = {
   closed: 3
 };
 
-const ROUTE_TYPE_ICON_MAP = {
-  "山野": "/images/journey-types/shan-ye.svg",
-  "城市": "/images/journey-types/cheng-shi.svg",
-  "乡土": "/images/journey-types/xiang-tu.svg",
-  "户外": "/images/journey-types/hu-wai.svg",
-  "研学": "/images/journey-types/yan-xue.svg",
-  "文化": "/images/journey-types/wen-hua.svg",
-  "内在成长": "/images/journey-types/nei-zai-cheng-zhang.svg",
-  "家庭": "/images/journey-types/jia-ting.svg",
-  "特殊节庆": "/images/journey-types/te-shu-jie-qing.svg"
-};
-
-const ROUTE_TYPE_WORDMARK_MAP = {
-  "山野": "/images/route-type-wordmark/shan-ye.svg",
-  "城市": "/images/route-type-wordmark/cheng-shi.svg",
-  "乡土": "/images/route-type-wordmark/xiang-tu.svg",
-  "户外": "/images/route-type-wordmark/hu-wai.svg",
-  "研学": "/images/route-type-wordmark/yan-xue.svg",
-  "文化": "/images/route-type-wordmark/wen-hua.svg",
-  "内在成长": "/images/route-type-wordmark/nei-zai-cheng-zhang.svg",
-  "家庭": "/images/route-type-wordmark/jia-ting.svg",
-  "特殊节庆": "/images/route-type-wordmark/te-shu-jie-qing.svg"
-};
+const ROUTE_TYPE_ICON_BASE = "/images/icons/journey-types";
 
 function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -94,20 +72,29 @@ function normalizeRouteTypeLabel(label) {
 
 function buildRouteTypeIconUrl(label) {
   const normalized = normalizeRouteTypeLabel(label);
-  if (!normalized) {
+  if (!ROUTE_TYPE_ORDER.includes(normalized)) {
     return "";
   }
 
-  return ROUTE_TYPE_ICON_MAP[normalized] || "";
+  return `${ROUTE_TYPE_ICON_BASE}/${normalized}2.svg`;
+}
+
+function buildRouteTypeSelectedIconUrl(label) {
+  const normalized = normalizeRouteTypeLabel(label);
+  if (!ROUTE_TYPE_ORDER.includes(normalized)) {
+    return "";
+  }
+
+  return `${ROUTE_TYPE_ICON_BASE}/${normalized}3.svg`;
 }
 
 function buildRouteTypeWordmarkUrl(label) {
   const normalized = normalizeRouteTypeLabel(label);
-  if (!normalized) {
+  if (!ROUTE_TYPE_ORDER.includes(normalized)) {
     return "";
   }
 
-  return ROUTE_TYPE_WORDMARK_MAP[normalized] || "";
+  return `${ROUTE_TYPE_ICON_BASE}/${normalized}1.svg`;
 }
 
 function getStatusMeta(status) {
@@ -159,6 +146,7 @@ module.exports = {
   STATUS_FILTER_OPTIONS,
   buildMonthKey,
   buildRouteTypeIconUrl,
+  buildRouteTypeSelectedIconUrl,
   buildRouteTypeWordmarkUrl,
   formatCalendarMonth,
   formatJourneyDate,

@@ -5,7 +5,6 @@ const {
   mapServiceDetailPageConfig,
   mapPaymentResultPageConfig,
   mapOrderDetailPageConfig,
-  mapProfilePageConfig,
   mapFavoritesPageConfig,
   mapArticleBridgePageConfig
 } = require("../mappers/config");
@@ -75,12 +74,6 @@ function getOrderDetailPageConfig() {
   return invoke("getOrderDetailPageConfig", mapOrderDetailPageConfig);
 }
 
-function getProfilePageConfig() {
-  return invoke("getProfilePageConfig", mapProfilePageConfig, {
-    cache: false
-  });
-}
-
 function getFavoritesPageConfig() {
   return invoke("getFavoritesPageConfig", mapFavoritesPageConfig);
 }
@@ -95,7 +88,6 @@ module.exports = {
   getServiceDetailPageConfig,
   getPaymentResultPageConfig,
   getOrderDetailPageConfig,
-  getProfilePageConfig,
   getFavoritesPageConfig,
   getArticleBridgePageConfig
 };

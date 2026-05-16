@@ -1,0 +1,102 @@
+<view class="page-shell referral-rules-page">
+  <view class="referral-rules-header">
+    <text class="page-eyebrow">野哉分享家</text>
+    <text class="page-title referral-rules-title">活动规则说明</text>
+    <text class="referral-rules-summary">邀请新用户扫码或填写你的备用码注册野哉，TA 可获得合计 150 元新人优惠券；TA 首次报名并完成出行后，你可获得 100 元现金奖励。</text>
+  </view>
+
+  <view class="referral-rules-quick-card">
+    <view class="referral-rules-quick-card__item">
+      <text class="referral-rules-quick-card__value">¥150</text>
+      <text class="referral-rules-quick-card__label">新人优惠券</text>
+    </view>
+    <view class="referral-rules-quick-card__divider"></view>
+    <view class="referral-rules-quick-card__item">
+      <text class="referral-rules-quick-card__value">¥100</text>
+      <text class="referral-rules-quick-card__label">分享现金奖励</text>
+    </view>
+  </view>
+
+  <view class="referral-rules-section">
+    <text class="referral-rules-section__index">一</text>
+    <text class="referral-rules-section__title">怎么参与？</text>
+    <view class="referral-rules-step-list">
+      <view class="referral-rules-step">
+        <text class="referral-rules-step__number">1</text>
+        <text class="referral-rules-step__text">进入「我的 - 野哉分享家」</text>
+      </view>
+      <view class="referral-rules-step">
+        <text class="referral-rules-step__number">2</text>
+        <text class="referral-rules-step__text">保存或转发你的专属二维码，也可复制备用码</text>
+      </view>
+      <view class="referral-rules-step">
+        <text class="referral-rules-step__number">3</text>
+        <text class="referral-rules-step__text">邀请新用户扫码，或填写你的备用码</text>
+      </view>
+      <view class="referral-rules-step">
+        <text class="referral-rules-step__number">4</text>
+        <text class="referral-rules-step__text">新用户完成注册并领取新人优惠</text>
+      </view>
+      <view class="referral-rules-step">
+        <text class="referral-rules-step__number">5</text>
+        <text class="referral-rules-step__text">新用户首次报名并完成出行后，你获得现金奖励</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="referral-rules-section">
+    <text class="referral-rules-section__index">二</text>
+    <text class="referral-rules-section__title">新用户可以获得什么？</text>
+    <text class="referral-rules-paragraph">通过你的二维码或备用码注册野哉，可获得合计 150 元新人优惠券，包含 100 元新人券和 50 元分享家加赠券。</text>
+    <view class="referral-rules-note-list">
+      <text class="referral-rules-note">优惠券仅限 1000 元及以上路线使用。</text>
+      <text class="referral-rules-note">优惠券有效期为领券后 2 年。</text>
+      <text class="referral-rules-note">100 元新人券与 50 元分享家加赠券可同单叠加使用。其他优惠券按平台常规规则执行。</text>
+      <text class="referral-rules-note">未通过二维码或备用码注册的新用户，可获得 100 元新人优惠券。</text>
+    </view>
+  </view>
+
+  <view class="referral-rules-section">
+    <text class="referral-rules-section__index">三</text>
+    <text class="referral-rules-section__title">分享家可以获得什么？</text>
+    <text class="referral-rules-paragraph">当你邀请的新用户在野哉首次报名并完成出行后，你可获得 100 元现金奖励。奖励会先进入待发放状态，出行完成并符合规则后统一发放。</text>
+  </view>
+
+  <view class="referral-rules-section">
+    <text class="referral-rules-section__index">四</text>
+    <text class="referral-rules-section__title">奖励什么时候发放？</text>
+    <text class="referral-rules-paragraph">现金奖励按月统一发放。每月 20 日，野哉将统一发放上个月已完成出行且符合规则的奖励。</text>
+    <view class="referral-rules-note-list">
+      <text class="referral-rules-note">请提前完善收款信息。</text>
+      <text class="referral-rules-note">未完善收款信息的用户，可能无法进入当月打款批次。</text>
+    </view>
+  </view>
+
+  <view class="referral-rules-section">
+    <text class="referral-rules-section__index">五</text>
+    <text class="referral-rules-section__title">什么算新用户？</text>
+    <text class="referral-rules-paragraph">新用户指从未在野哉完成过旅行的用户。如果用户曾报名但后续取消或退款，且从未完成过野哉旅行，仍可按新用户参与活动。</text>
+  </view>
+
+  <view class="referral-rules-section">
+    <text class="referral-rules-section__index">六</text>
+    <text class="referral-rules-section__title">哪些情况不计入奖励？</text>
+    <view class="referral-rules-note-list">
+      <text class="referral-rules-note">新用户未通过你的二维码注册，也未填写你的备用码</text>
+      <text class="referral-rules-note">新用户不符合活动的新用户条件</text>
+      <text class="referral-rules-note">被邀请用户未完成出行，包括未报名、报名后取消、退款等情况</text>
+      <text class="referral-rules-note">自己扫描自己的二维码或填写自己的备用码</text>
+      <text class="referral-rules-note">同一新用户重复参与分享家活动</text>
+    </view>
+  </view>
+
+  <view class="referral-rules-section">
+    <text class="referral-rules-section__index">七</text>
+    <text class="referral-rules-section__title">其他说明</text>
+    <text class="referral-rules-paragraph">活动参与结果以小程序页面展示为准。如遇特殊情况，可联系野哉客服协助处理。</text>
+  </view>
+
+  <view class="referral-rules-actions">
+    <button class="primary-button referral-rules-actions__button" bindtap="goBack">返回活动页面</button>
+  </view>
+</view>

@@ -23,6 +23,10 @@ function cloneData(value) {
 
 function createWxMock() {
   return {
+    getStorageSync() {
+      return "";
+    },
+    setStorageSync() {},
     showToast() {},
     navigateTo() {}
   };
@@ -103,6 +107,9 @@ test("creators page keeps full tags for filtering and only exposes three display
               id: "creator-a",
               slug: "a",
               name: "阿野",
+              avatar: "avatar-a.jpg",
+              cardCover: "cover-a.jpg",
+              locationText: "藏区・青海湖",
               stance: "和地方一起走路",
               tags: ["山野", "户外", "文化", "研学"]
             }
@@ -133,10 +140,115 @@ test("creators page keeps full tags for filtering and only exposes three display
   await page.onLoad({});
 
   assert.deepEqual(page.data.creators[0].tags, ["山野", "户外", "文化", "研学"]);
+  assert.equal(page.data.creators[0].cardCover, "cover-a.jpg");
+  assert.equal(page.data.creators[0].locationText, "藏区・青海湖");
   assert.deepEqual(page.data.creators[0].displayTags, ["山野", "户外", "文化"]);
+  assert.deepEqual(page.data.creators[0].gridDisplayTags, ["山野", "户外"]);
+  assert.equal(page.data.creatorViewMode, "grid");
   assert.equal(page.data.visibleStyleOptions.length, 9);
   assert.deepEqual(page.data.visibleStyleOptions.slice(0, 2).map((item) => item.value), ["山野", "城市"]);
   assert.equal(page.data.regionSheetColumns[0][0].countText, "2 位创作者");
+});
+
+test("creators page switches between card and grid view modes", () => {
+  const definition = loadPageDefinition(creatorsPageModulePath, (request, parent, isMain, originalLoad) => {
+    if (request === "../../repositories/content-repository") {
+      return {
+        getCreatorsPageData: async () => ({
+          regionOptions: [],
+          regionLabels: [],
+          styleOptions: [],
+          styleLabels: [],
+          creators: []
+        })
+      };
+    }
+
+    if (request === "../../utils/share") {
+      return {
+        enablePageShareMenus() {},
+        createAddToFavorites() {
+          return {};
+        },
+        createShareAppMessage() {
+          return {};
+        },
+        createShareTimeline() {
+          return {};
+        }
+      };
+    }
+
+    return originalLoad(request, parent, isMain);
+  });
+  const page = createPageInstance(definition);
+
+  assert.equal(page.data.creatorViewMode, "grid");
+  page.onCreatorViewModeTap({
+    currentTarget: {
+      dataset: {
+        mode: "card"
+      }
+    }
+  });
+  assert.equal(page.data.creatorViewMode, "card");
+});
+
+test("creators page splits region sheet between domestic and international tabs", async () => {
+  const definition = loadPageDefinition(creatorsPageModulePath, (request, parent, isMain, originalLoad) => {
+    if (request === "../../repositories/content-repository") {
+      return {
+        getCreatorsPageData: async () => ({
+          regionOptions: [
+            { label: "全部", value: "" },
+            { label: "藏区", value: "cn_tibetan", count: 2, image: "" },
+            { label: "新疆", value: "cn_xinjiang", count: 1, image: "" },
+            { label: "西北", value: "cn_great_northwest", count: 1, image: "" },
+            { label: "欧洲", value: "intl_europe", count: 1, image: "" }
+          ],
+          regionLabels: ["全部", "藏区", "欧洲"],
+          styleOptions: [],
+          styleLabels: [],
+          creators: []
+        })
+      };
+    }
+
+    if (request === "../../utils/share") {
+      return {
+        enablePageShareMenus() {},
+        createAddToFavorites() {
+          return {};
+        },
+        createShareAppMessage() {
+          return {};
+        },
+        createShareTimeline() {
+          return {};
+        }
+      };
+    }
+
+    return originalLoad(request, parent, isMain);
+  });
+  const page = createPageInstance(definition);
+
+  await page.onLoad({});
+
+  assert.equal(page.data.activeRegionScope, "domestic");
+  assert.deepEqual(page.data.regionSheetColumns.map((column) => column.length), [2, 1]);
+  assert.deepEqual(page.data.regionSheetColumns.flat().map((item) => item.value), ["cn_tibetan", "cn_xinjiang", "cn_great_northwest"]);
+
+  page.onRegionScopeTabTap({
+    currentTarget: {
+      dataset: {
+        scope: "international"
+      }
+    }
+  });
+
+  assert.equal(page.data.activeRegionScope, "international");
+  assert.deepEqual(page.data.regionSheetColumns.flat().map((item) => item.value), ["intl_europe"]);
 });
 
 test("creator detail page limits visible creator tags to three", async () => {

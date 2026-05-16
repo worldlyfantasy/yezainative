@@ -14,6 +14,9 @@ function cloneData(value) {
 
 function createWxMock() {
   return {
+    canIUse(schema) {
+      return schema === "channel-video";
+    },
     createSelectorQuery() {
       return {
         selectViewport() {
@@ -101,7 +104,7 @@ function createPageInstance(definition) {
   return instance;
 }
 
-test("service detail prefers creatorMessage over overview and summary", async () => {
+test("service detail keeps creatorMessage and channels video state", async () => {
   const definition = loadPageDefinition((request, parent, isMain, originalLoad) => {
     if (request === "../../../repositories/content-repository") {
       return {
@@ -129,7 +132,12 @@ test("service detail prefers creatorMessage over overview and summary", async ()
           travelDetail: {
             sections: [],
             overview: {
-              whyJoinText: "这是概况区首段，不应该覆盖创作者的话。"
+              whyJoinText: "这是概况区首段，不应该覆盖创作者的话。",
+              channelsVideo: {
+                feedId: "export/demo-feed",
+                feedToken: "",
+                finderUserName: "sph-demo"
+              }
             },
             itinerary: {
               days: []
@@ -274,8 +282,25 @@ test("service detail prefers creatorMessage over overview and summary", async ()
   });
 
   const page = createPageInstance(definition);
-  await page.onLoad({ slug: "ridge-journal" });
-  await new Promise((resolve) => setImmediate(resolve));
+  const originalWx = global.wx;
+  global.wx = createWxMock();
+  try {
+    await page.onLoad({ slug: "ridge-journal" });
+    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
+  } finally {
+    if (originalWx === undefined) {
+      delete global.wx;
+    } else {
+      global.wx = originalWx;
+    }
+  }
 
   assert.equal(page.data.creatorQuoteText, "这是创作者的话");
+  assert.deepEqual(page.data.overviewChannelsVideo, {
+    feedToken: "",
+    finderUserName: "sph-demo",
+    feedId: "export/demo-feed",
+    autoplay: false
+  });
 });

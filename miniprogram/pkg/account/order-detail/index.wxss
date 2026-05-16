@@ -168,6 +168,52 @@
   flex: 1;
 }
 
+.pending-pay-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1800;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: #fffaf4;
+  box-shadow: 0 -10rpx 32rpx rgba(84, 57, 31, 0.12);
+}
+
+.pending-pay-bar__countdown {
+  padding: 16rpx 32rpx;
+  font-size: 26rpx;
+  line-height: 1.4;
+  text-align: center;
+  color: #b32828;
+  background: #fff0dc;
+}
+
+.pending-pay-bar__main {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  padding: 18rpx 24rpx;
+}
+
+.pending-pay-bar__amount {
+  flex: 1;
+  min-width: 0;
+}
+
+.pending-pay-bar__price {
+  font-size: 36rpx;
+  line-height: 1.2;
+  font-weight: 600;
+  color: #b32828;
+}
+
+.pending-pay-bar__cancel,
+.pending-pay-bar__pay {
+  min-width: 168rpx;
+  min-height: 76rpx;
+  font-size: 28rpx;
+}
+
 .consult-sheet {
   position: fixed;
   inset: 0;

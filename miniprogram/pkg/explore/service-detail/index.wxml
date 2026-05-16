@@ -196,8 +196,31 @@
           <text class="section-title travel-section__title">{{sectionItem.title}}</text>
         </view>
         <view class="travel-overview">
+          <view wx:if="{{overviewChannelsVideo}}" class="travel-overview__video-shell">
+            <channel-video
+              wx:if="{{overviewChannelsVideo.feedToken}}"
+              class="travel-overview__video"
+              feed-token="{{overviewChannelsVideo.feedToken}}"
+              autoplay="{{false}}"
+              loop="{{false}}"
+              muted="{{false}}"
+              object-fit="cover"
+              binderror="onOverviewChannelsVideoError"
+            ></channel-video>
+            <channel-video
+              wx:elif="{{overviewChannelsVideo.finderUserName && overviewChannelsVideo.feedId}}"
+              class="travel-overview__video"
+              finder-user-name="{{overviewChannelsVideo.finderUserName}}"
+              feed-id="{{overviewChannelsVideo.feedId}}"
+              autoplay="{{overviewChannelsVideo.autoplay}}"
+              loop="{{false}}"
+              muted="{{false}}"
+              object-fit="cover"
+              binderror="onOverviewChannelsVideoError"
+            ></channel-video>
+          </view>
           <image
-            wx:if="{{travelDetail.overview && travelDetail.overview.coverImage}}"
+            wx:elif="{{travelDetail.overview && travelDetail.overview.coverImage}}"
             class="travel-overview__image"
             src="{{travelDetail.overview.coverImage}}"
             mode="aspectFill"
@@ -271,7 +294,11 @@
             >{{item.versionName}}</text>
           </view>
         </view>
-        <itinerary-block itinerary="{{displayItinerary}}"></itinerary-block>
+        <itinerary-block
+          itinerary="{{displayItinerary}}"
+          bind:mediaload="onTravelDetailMediaLoad"
+          bind:imagetap="onItineraryImageTap"
+        ></itinerary-block>
       </view>
 
       <view wx:if="{{sectionItem.key === 'notices'}}" id="{{sectionItem.anchorId}}" class="travel-section">
@@ -279,15 +306,15 @@
           <text class="section-title travel-section__title">{{sectionItem.title}}</text>
         </view>
         <view class="travel-cost-stack">
-          <!-- 抵达交通 -->
-          <block wx:for="{{travelDetail.notices}}" wx:key="key">
-            <cost-table
-              wx:if="{{item.key === 'traffic'}}"
-              default-expanded="{{true}}"
-              title="抵达交通"
-              content="{{item.content}}"
-            ></cost-table>
-          </block>
+          <!-- 出行须知 -->
+          <cost-table
+            wx:for="{{travelDetail.notices}}"
+            wx:key="key"
+            wx:if="{{item.title || item.content}}"
+            default-expanded="{{true}}"
+            title="{{item.key === 'traffic' ? '抵达交通' : (item.title || '出行须知')}}"
+            content="{{item.content}}"
+          ></cost-table>
 
           <!-- 费用包含 -->
           <cost-table
@@ -309,12 +336,13 @@
             rows="{{item.rows}}"
           ></cost-table>
 
-          <!-- 变更说明 -->
+          <!-- 退订规则 -->
           <cost-table
             wx:for="{{costTableGroups}}"
             wx:key="key"
             wx:if="{{item.key === 'refundRules'}}"
             default-expanded="{{true}}"
+            single-column="{{item.singleColumn}}"
             title="{{item.title}}"
             rows="{{item.rows}}"
           ></cost-table>
@@ -384,10 +412,16 @@
         </view>
         <view class="period-sheet__section">
           <text class="period-sheet__label">出行人数</text>
-          <view class="period-sheet__people-control">
-            <button class="stepper__button" bindtap="decreaseSheetPeople">-</button>
-            <text class="stepper__value">{{periodSheetPeople}}</text>
-            <button class="stepper__button" bindtap="increaseSheetPeople">+</button>
+          <view class="period-sheet__people-row">
+            <view class="period-sheet__people-control">
+              <button class="stepper__button" bindtap="decreaseSheetPeople">-</button>
+              <text class="stepper__value">{{periodSheetPeople}}</text>
+              <button class="stepper__button" bindtap="increaseSheetPeople">+</button>
+            </view>
+            <view class="period-sheet__notice-link" bindtap="onOrderNoticeHintTap">
+              <text class="period-sheet__notice-link-text">下单前查看出行须知</text>
+              <text class="period-sheet__notice-link-arrow">></text>
+            </view>
           </view>
           <text wx:if="{{periodSheetPeopleLimitText}}" class="period-sheet__helper">{{periodSheetPeopleLimitText}}</text>
         </view>
@@ -411,17 +445,27 @@
     <view class="media-sheet__panel {{mediaSheetAnimating ? 'media-sheet__panel--active' : ''}}">
       <view class="media-sheet__handle"></view>
       <view class="media-sheet__header">
-        <view class="media-sheet__tabs">
-          <view
-            wx:for="{{mediaTabs}}"
-            wx:key="key"
-            class="media-sheet__tab {{index === activeMediaTabIndex ? 'media-sheet__tab--active' : ''}}"
-            data-index="{{index}}"
-            bindtap="onMediaTabChange"
-          >
-            {{item.label}}
+        <scroll-view
+          class="media-sheet__tabs-scroll"
+          scroll-x="true"
+          enable-flex="true"
+          show-scrollbar="{{false}}"
+          scroll-with-animation="{{true}}"
+          scroll-into-view="{{mediaSheetTabIntoView}}"
+        >
+          <view class="media-sheet__tabs">
+            <view
+              wx:for="{{mediaTabs}}"
+              wx:key="key"
+              id="media-tab-{{index}}"
+              class="media-sheet__tab {{index === activeMediaTabIndex ? 'media-sheet__tab--active' : ''}}"
+              data-index="{{index}}"
+              bindtap="onMediaTabChange"
+            >
+              {{item.label}}
+            </view>
           </view>
-        </view>
+        </scroll-view>
         <view class="sheet-close media-sheet__close" bindtap="closeMediaSheet">⌄</view>
       </view>
       <scroll-view class="media-sheet__body" scroll-y="true">

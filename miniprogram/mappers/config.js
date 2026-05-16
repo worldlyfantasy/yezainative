@@ -81,16 +81,6 @@ function mapOrderDetailPageConfig(payload) {
   };
 }
 
-function mapProfilePageConfig(payload) {
-  const source = ensureObject(payload);
-  return {
-    emptyTripStateImage: normalizeImageRef(
-      source.emptyTripStateImage || source.emptyStateImage || "",
-      "detail"
-    )
-  };
-}
-
 function mapFavoritesPageConfig(payload) {
   const source = ensureObject(payload);
   return {
@@ -116,7 +106,6 @@ module.exports = {
   mapServiceDetailPageConfig,
   mapPaymentResultPageConfig,
   mapOrderDetailPageConfig,
-  mapProfilePageConfig,
   mapFavoritesPageConfig,
   mapArticleBridgePageConfig
 };

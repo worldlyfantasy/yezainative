@@ -5,6 +5,9 @@ const defaultConfigs = {
     featuredDestinationSlugs: [],
     featuredIdeaSlugs: []
   },
+  customJourneyPage: {
+    exampleServiceSlugs: []
+  },
   howItWorksPage: {
     flows: [
       { title: "发现", description: "浏览创作者与目的地，阅读他们的田野背景与边界说明。" },
@@ -47,7 +50,7 @@ const defaultConfigs = {
     consultCardDesc: "扫码添加，咨询更多行程信息",
     consultFollowupNote: "报名确认后，将为您同步带领者信息与行前准备",
     timelineTitleText: "确认节奏",
-    refundTitleText: "变更说明",
+    refundTitleText: "退订规则",
     serviceNoticeTitle: "报名说明",
     serviceNoticeBody: "当前页面展示行程信息与报名入口，提交后将由平台进一步确认。"
   },
@@ -64,10 +67,6 @@ const defaultConfigs = {
     payableLabelText: "参考金额",
     pendingPrimaryText: "确认报名",
     completedPrimaryText: "再次报名"
-  },
-  profilePage: {
-    emptyTripStateImage:
-      "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/野哉-新媒体尺寸-小红书.jpg"
   },
   favoritesPage: {
     loginHint: "登录后可查看和管理你收藏的人物、行程与故事。"

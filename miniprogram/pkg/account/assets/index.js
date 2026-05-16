@@ -17,12 +17,12 @@ function buildTabSections(coupons, rewards) {
 function getCouponBackgroundImage(status) {
   const normalizedStatus = String(status || "").trim().toLowerCase();
   if (normalizedStatus === "used") {
-    return "/images/coupons/coupon-bg-used.png";
+    return "images/coupon-bg-used.png";
   }
   if (normalizedStatus === "expired" || normalizedStatus === "revoked") {
-    return "/images/coupons/coupon-bg-expired.png";
+    return "images/coupon-bg-expired.png";
   }
-  return "/images/coupons/coupon-bg-active.png";
+  return "images/coupon-bg-active.png";
 }
 
 function getCouponStackUsageText(item) {
@@ -44,12 +44,12 @@ function getRewardVisualStatus(status) {
 function getRewardBackgroundImage(status) {
   const visualStatus = getRewardVisualStatus(status);
   if (visualStatus === "paid") {
-    return "/images/rewards/reward-bg-paid.png";
+    return "images/reward-bg-paid.png";
   }
   if (visualStatus === "failed") {
-    return "/images/rewards/reward-bg-failed.png";
+    return "images/reward-bg-failed.png";
   }
-  return "/images/rewards/reward-bg-pending.png";
+  return "images/reward-bg-pending.png";
 }
 
 function getRewardDisplayStatusLabel(status) {
@@ -513,6 +513,12 @@ Page({
   jumpToPayoutAccountPage() {
     wx.navigateTo({
       url: "/pkg/account/payout-account/index"
+    });
+  },
+
+  openReferralRules() {
+    wx.navigateTo({
+      url: "/pkg/account/share-referral-rules/index"
     });
   },
 

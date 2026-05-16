@@ -30,6 +30,21 @@
         ".git",
         ".DS_Store"
       ]
+    },
+    {
+      "name": "paymentGateway",
+      "runtime": "Nodejs18.15",
+      "timeout": 20,
+      "memorySize": 256,
+      "installDependency": true,
+      "ignore": [
+        "node_modules",
+        "node_modules/**",
+        "node_modules/**/*",
+        "**/node_modules/**",
+        ".git",
+        ".DS_Store"
+      ]
     }
   ]
 }

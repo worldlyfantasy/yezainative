@@ -28,6 +28,7 @@ const MODEL_QUERY_BATCH_SIZE = 100;
 const SERVICE_PERIOD_UPDATE_RETRY_LIMIT = 5;
 const ORDER_STATUS_UPDATE_RETRY_LIMIT = 3;
 const MAX_ORDER_PEOPLE_COUNT = 2;
+const ORDER_PAYMENT_EXPIRE_MS = 30 * 60 * 1000;
 const ORDER_MODEL_NAME = "TravelOrder";
 const SERVICE_PERIOD_MODEL_NAME = "ServicePeriod";
 const ENABLE_CLIENT_PAY_ORDER = process.env.ENABLE_CLIENT_PAY_ORDER === "true";
@@ -923,6 +924,150 @@ function normalizeTravelPeriod(period) {
   };
 }
 
+function normalizeDateOnlyText(value) {
+  const text = String(value || "").trim();
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(text);
+  return match ? match[1] : "";
+}
+
+function hasTravelPeriodOverlap(left, right) {
+  const leftStart = normalizeDateOnlyText(left && left.dateStart);
+  const leftEnd = normalizeDateOnlyText((left && left.dateEnd) || leftStart);
+  const rightStart = normalizeDateOnlyText(right && right.dateStart);
+  const rightEnd = normalizeDateOnlyText((right && right.dateEnd) || rightStart);
+
+  if (!leftStart || !leftEnd || !rightStart || !rightEnd) {
+    return false;
+  }
+
+  return leftStart <= rightEnd && rightStart <= leftEnd;
+}
+
+function normalizeTravelerDocumentNumber(value) {
+  return String(value || "").replace(/\s+/g, "").toUpperCase();
+}
+
+function getTravelerAvailabilityKeys(traveler) {
+  const source = traveler && typeof traveler === "object" ? traveler : {};
+  const documents = Array.isArray(source.documents) && source.documents.length
+    ? source.documents
+    : [
+        {
+          documentType: source.documentType || source.t,
+          documentNumber: source.documentNumber || source.idCard || source.idNo || source.i
+        }
+      ];
+
+  const keys = new Set();
+  documents.forEach((document) => {
+    const documentNumber = normalizeTravelerDocumentNumber(
+      document && (document.documentNumber || document.idCard || document.idNo || document.i)
+    );
+    if (!documentNumber) {
+      return;
+    }
+
+    const documentType = normalizeText(document && (document.documentType || document.t));
+    if (documentType) {
+      keys.add(`${documentType}:${documentNumber}`);
+    }
+    keys.add(documentNumber);
+  });
+
+  return keys;
+}
+
+function getOrderTravelersForAvailability(record) {
+  const travelers = normalizeTravelers(parseJsonText(record && record.travelersJson, []), null);
+  const legacyTravelerIdCard = normalizeTravelerDocumentNumber(record && record.travelerIdCard);
+  if (!legacyTravelerIdCard) {
+    return travelers;
+  }
+
+  return travelers.concat(normalizeTravelers([], {
+    name: record && (record.travelerName || record.orderContactName),
+    idCard: legacyTravelerIdCard,
+    phone: record && (record.travelerPhone || record.orderContactPhone)
+  }));
+}
+
+function findTravelerAvailabilityConflictFromRecords(records, travelers, targetTravelPeriod) {
+  const targetTravelers = Array.isArray(travelers) ? travelers : [];
+  const targetEntries = targetTravelers
+    .map((traveler) => ({
+      traveler,
+      keys: getTravelerAvailabilityKeys(traveler)
+    }))
+    .filter((entry) => entry.keys.size > 0);
+
+  if (!targetEntries.length) {
+    return null;
+  }
+
+  const paidStatuses = new Set(["paid", "traveling", "completed"]);
+  const targetPeriod = normalizeTravelPeriod(targetTravelPeriod);
+
+  for (const record of (Array.isArray(records) ? records : [])) {
+    if (!paidStatuses.has(String(record && record.status ? record.status : "").trim())) {
+      continue;
+    }
+
+    const existingPeriod = getTravelPeriod(record, buildServiceSnapshot(record));
+    if (!hasTravelPeriodOverlap(targetPeriod, existingPeriod)) {
+      continue;
+    }
+
+    const existingTravelers = getOrderTravelersForAvailability(record);
+    for (const existingTraveler of existingTravelers) {
+      const existingKeys = getTravelerAvailabilityKeys(existingTraveler);
+      for (const targetEntry of targetEntries) {
+        const hasMatchedKey = Array.from(targetEntry.keys).some((key) => existingKeys.has(key));
+        if (hasMatchedKey) {
+          return {
+            traveler: targetEntry.traveler,
+            order: record,
+            travelPeriod: existingPeriod
+          };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+async function listPaidOrderRecordsForAvailability() {
+  const statuses = ["paid", "traveling", "completed"];
+  const groups = await Promise.all(statuses.map((status) => listModelRecords(
+    getOrderModel(),
+    {
+      where: {
+        status: {
+          $eq: status
+        }
+      },
+      orderBy: [
+        {
+          createdAtTs: "desc"
+        }
+      ]
+    }
+  )));
+
+  return groups.reduce((rows, group) => rows.concat(group), []);
+}
+
+async function assertTravelersAvailableForPeriod(travelers, targetTravelPeriod) {
+  const records = await listPaidOrderRecordsForAvailability();
+  const conflict = findTravelerAvailabilityConflictFromRecords(records, travelers, targetTravelPeriod);
+  if (!conflict) {
+    return;
+  }
+
+  const travelerName = normalizeText(conflict.traveler && conflict.traveler.name) || "该出行人";
+  throw new Error(`${travelerName}在该时间段已经有下单的旅程，该订单无法提交`);
+}
+
 function getTravelPeriod(record, serviceSnapshot) {
   const snapshotPeriod = normalizeTravelPeriod(
     serviceSnapshot && typeof serviceSnapshot === "object" ? serviceSnapshot.travelPeriod : null
@@ -991,6 +1136,7 @@ function mapSqlOrder(record) {
   const discount = normalizeNumber(record.discountDec != null ? record.discountDec : record.discount, 0);
   const payable = normalizeNumber(record.payableDec != null ? record.payableDec : record.payable, amount - discount);
   const createdAtTs = normalizeNumber(record.createdAtTs || record.createdAt, Date.now());
+  const payExpireAtTs = getOrderPaymentExpireAtTs(record);
 
   return {
     _id: record._id || "",
@@ -1036,6 +1182,8 @@ function mapSqlOrder(record) {
     travelers,
     status: record.status || "pending",
     createdAt: formatDateTime(createdAtTs),
+    createdAtTs,
+    payExpireAtTs,
     versionName: serviceSnapshot.versionName || record.versionName || "",
     servicePeriodCode: record.servicePeriodCode || ""
   };
@@ -1151,7 +1299,11 @@ async function queryOrders(openid) {
     }
   );
 
-  return records.map(mapSqlOrder);
+  const effectiveRecords = await Promise.all(records.map((record) =>
+    autoCancelExpiredPendingOrder(record, "payment_expired", openid)
+  ));
+
+  return effectiveRecords.map(mapSqlOrder);
 }
 
 async function findOrderRecordByWhere(where) {
@@ -1366,16 +1518,18 @@ async function restoreServicePeriodSeats(periodId, peopleCount) {
 }
 
 function buildOrderStatusUpdateData(nextStatus) {
+  const now = Date.now();
   const updateData = {
-    status: nextStatus
+    status: nextStatus,
+    updatedAt: now
   };
 
   if (nextStatus === "paid") {
-    updateData.paidAtTs = Date.now();
+    updateData.paidAtTs = now;
   }
 
   if (nextStatus === "canceled") {
-    updateData.canceledAtTs = Date.now();
+    updateData.canceledAtTs = now;
   }
 
   return updateData;
@@ -1615,6 +1769,28 @@ function shouldRestoreSeatsForOrderStatus(status) {
   return status === "pending" || status === "paid" || status === "traveling";
 }
 
+function getOrderPaymentExpireAtTs(orderRecord) {
+  const explicitExpireAt = normalizeNumber(orderRecord && orderRecord.payExpireAtTs, 0);
+  if (explicitExpireAt > 0) {
+    return explicitExpireAt;
+  }
+
+  const createdAtTs = normalizeNumber(
+    orderRecord && (orderRecord.createdAtTs || orderRecord.createdAt),
+    0
+  );
+  return createdAtTs > 0 ? createdAtTs + ORDER_PAYMENT_EXPIRE_MS : 0;
+}
+
+function isPendingOrderPaymentExpired(orderRecord, now = Date.now()) {
+  if (!orderRecord || orderRecord.status !== "pending") {
+    return false;
+  }
+
+  const expireAtTs = getOrderPaymentExpireAtTs(orderRecord);
+  return expireAtTs > 0 && expireAtTs <= now;
+}
+
 async function rollbackCanceledOrderStatus(orderRecord) {
   try {
     await getOrderModel().update({
@@ -1677,6 +1853,74 @@ async function transitionOrderStatus(orderRecord, nextStatus) {
   throw new Error("order status changed too frequently, please retry");
 }
 
+async function restoreOrderResourcesAfterCancellation(orderRecord) {
+  if (
+    orderRecord.servicePeriodCode
+    && shouldRestoreSeatsForOrderStatus(orderRecord.status)
+  ) {
+    const periodRecord = await findSingleRecord(getServicePeriodModel(), {
+      where: {
+        periodCode: {
+          $eq: orderRecord.servicePeriodCode
+        }
+      }
+    });
+
+    if (!periodRecord) {
+      throw new Error("service period not found");
+    }
+
+    await restoreServicePeriodSeats(periodRecord._id, normalizePositiveInteger(orderRecord.peopleCount));
+  }
+
+  try {
+    const couponAssetIds = await findCouponAssetIdsByUsedOrderNo(orderRecord.orderNo);
+    await updateCouponAssetsUsage(
+      couponAssetIds.length ? couponAssetIds : splitCouponSelectionIds(orderRecord.couponId),
+      orderRecord.orderNo,
+      "active"
+    );
+  } catch (error) {
+    console.error("Failed to restore coupon assets after order cancellation", {
+      orderNo: orderRecord.orderNo,
+      error
+    });
+  }
+}
+
+async function cancelOrderRecord(orderRecord, source, userOpenid) {
+  const updatedOrder = await transitionOrderStatus(orderRecord, "canceled");
+  if (!updatedOrder) {
+    return null;
+  }
+
+  try {
+    await restoreOrderResourcesAfterCancellation(orderRecord);
+  } catch (error) {
+    await rollbackCanceledOrderStatus(orderRecord);
+    throw error;
+  }
+
+  await appendOrderStatusEvent({
+    orderNo: updatedOrder.orderNo || orderRecord.orderNo,
+    userOpenid: userOpenid || orderRecord.userOpenid,
+    status: "canceled",
+    fromStatus: orderRecord.status,
+    source: source || "status_change"
+  });
+
+  return updatedOrder;
+}
+
+async function autoCancelExpiredPendingOrder(orderRecord, source, userOpenid) {
+  if (!isPendingOrderPaymentExpired(orderRecord)) {
+    return orderRecord;
+  }
+
+  const canceledOrder = await cancelOrderRecord(orderRecord, source || "payment_expired", userOpenid || orderRecord.userOpenid);
+  return canceledOrder || Object.assign({}, orderRecord, { status: "canceled" });
+}
+
 async function getOrders(statusKey) {
   const openid = await getOpenId();
   return filterOrdersByStatus(await queryOrders(openid), statusKey);
@@ -1698,7 +1942,7 @@ async function getOrderById(orderId) {
     }
   });
 
-  return mapSqlOrder(record);
+  return mapSqlOrder(await autoCancelExpiredPendingOrder(record, "payment_expired", openid));
 }
 
 async function createOrder(payload) {
@@ -1754,23 +1998,6 @@ async function createOrder(payload) {
   }
 
   const orderExtras = buildOrderExtras(payload);
-  const settlement = await resolveOrderSettlementForUser(unitPrice * peopleCount, {
-    couponId: orderExtras.couponId,
-    couponSnapshot: orderExtras.couponSnapshot,
-    singleRoomPrice: orderExtras.singleRoomPrice,
-    peopleCount,
-    userOpenid: openid
-  });
-  const amount = settlement.amount;
-  const discount = settlement.discount;
-  const payable = settlement.payable;
-  const timestamp = Date.now();
-  const orderNo = createOrderNo(timestamp);
-  const orderRecordId = createSqlRecordId("order");
-  const shortId = String(orderNo).slice(-4);
-  const createdAtText = formatDateTime(timestamp);
-  const serviceSnapshot = payload.serviceSnapshot || {};
-  const creatorSnapshot = payload.creatorSnapshot || {};
   const orderContact = normalizeOrderContact(payload);
   const emergencyContact = normalizeEmergencyContact(payload);
   const travelers = normalizeTravelers(payload.travelers, payload.traveler, {
@@ -1785,6 +2012,30 @@ async function createOrder(payload) {
   if (participantError) {
     throw new Error(participantError);
   }
+  const targetTravelPeriod = normalizeTravelPeriod({
+    dateStart: periodRecord.dateStart || requestedTravelPeriod.dateStart,
+    dateEnd: periodRecord.dateEnd || requestedTravelPeriod.dateEnd || periodRecord.dateStart || requestedTravelPeriod.dateStart
+  });
+  await assertTravelersAvailableForPeriod(travelers, targetTravelPeriod);
+
+  const settlement = await resolveOrderSettlementForUser(unitPrice * peopleCount, {
+    couponId: orderExtras.couponId,
+    couponSnapshot: orderExtras.couponSnapshot,
+    singleRoomPrice: orderExtras.singleRoomPrice,
+    peopleCount,
+    userOpenid: openid
+  });
+  const amount = settlement.amount;
+  const discount = settlement.discount;
+  const payable = settlement.payable;
+  const timestamp = Date.now();
+  const payExpireAtTs = timestamp + ORDER_PAYMENT_EXPIRE_MS;
+  const orderNo = createOrderNo(timestamp);
+  const orderRecordId = createSqlRecordId("order");
+  const shortId = String(orderNo).slice(-4);
+  const createdAtText = formatDateTime(timestamp);
+  const serviceSnapshot = payload.serviceSnapshot || {};
+  const creatorSnapshot = payload.creatorSnapshot || {};
   const orderServiceSnapshot = buildOrderServiceSnapshot({
     payload,
     periodRecord,
@@ -1849,6 +2100,7 @@ async function createOrder(payload) {
     serviceSnapshotJson: stringifyJsonWithMaxLength(buildPersistedServiceSnapshot(orderServiceSnapshot), 240),
     creatorSnapshotJson: stringifyJsonWithMaxLength(buildPersistedCreatorSnapshot(creatorSnapshot), 240),
     status: "pending",
+    payExpireAtTs,
     createdAt: timestamp,
     createdAtText,
     createdAtTs: timestamp,
@@ -1929,68 +2181,35 @@ async function updateOrderStatus(orderId, nextStatus) {
     return null;
   }
 
-  if (targetRecord.status === nextStatus) {
-    return mapSqlOrder(targetRecord);
+  const effectiveTargetRecord = await autoCancelExpiredPendingOrder(targetRecord, "payment_expired", openid);
+  if (!effectiveTargetRecord || effectiveTargetRecord.status === "canceled") {
+    return mapSqlOrder(effectiveTargetRecord);
   }
 
-  if (!isAllowedOrderTransition(targetRecord.status, nextStatus)) {
+  if (effectiveTargetRecord.status === nextStatus) {
+    return mapSqlOrder(effectiveTargetRecord);
+  }
+
+  if (!isAllowedOrderTransition(effectiveTargetRecord.status, nextStatus)) {
     throw new Error("current order status does not allow transition");
   }
 
-  const updatedOrder = await transitionOrderStatus(targetRecord, nextStatus);
+  const updatedOrder = nextStatus === "canceled"
+    ? await cancelOrderRecord(effectiveTargetRecord, "status_change", openid)
+    : await transitionOrderStatus(effectiveTargetRecord, nextStatus);
   if (!updatedOrder) {
     return null;
   }
 
-  if (
-    nextStatus === "canceled" &&
-    targetRecord.servicePeriodCode &&
-    shouldRestoreSeatsForOrderStatus(targetRecord.status)
-  ) {
-    const periodRecord = await findSingleRecord(getServicePeriodModel(), {
-      where: {
-        periodCode: {
-          $eq: targetRecord.servicePeriodCode
-        }
-      }
+  if (nextStatus !== "canceled") {
+    await appendOrderStatusEvent({
+      orderNo: updatedOrder.orderNo || effectiveTargetRecord.orderNo,
+      userOpenid: openid,
+      status: nextStatus,
+      fromStatus: effectiveTargetRecord.status,
+      source: "status_change"
     });
-
-    if (!periodRecord) {
-      await rollbackCanceledOrderStatus(targetRecord);
-      throw new Error("service period not found");
-    }
-
-    try {
-      await restoreServicePeriodSeats(periodRecord._id, normalizePositiveInteger(targetRecord.peopleCount));
-    } catch (error) {
-      await rollbackCanceledOrderStatus(targetRecord);
-      throw error;
-    }
   }
-
-  if (nextStatus === "canceled") {
-    try {
-      const couponAssetIds = await findCouponAssetIdsByUsedOrderNo(targetRecord.orderNo);
-      await updateCouponAssetsUsage(
-        couponAssetIds.length ? couponAssetIds : splitCouponSelectionIds(targetRecord.couponId),
-        targetRecord.orderNo,
-        "active"
-      );
-    } catch (error) {
-      console.error("Failed to restore coupon assets after order cancellation", {
-        orderNo: targetRecord.orderNo,
-        error
-      });
-    }
-  }
-
-  await appendOrderStatusEvent({
-    orderNo: updatedOrder.orderNo || targetRecord.orderNo,
-    userOpenid: openid,
-    status: nextStatus,
-    fromStatus: targetRecord.status,
-    source: "status_change"
-  });
 
   if (nextStatus === "completed") {
     try {
@@ -2165,6 +2384,9 @@ exports.__test__ = {
   createSqlRecordId,
   filterOrdersByStatus,
   getTravelPeriod,
+  findTravelerAvailabilityConflictFromRecords,
+  getTravelerAvailabilityKeys,
+  hasTravelPeriodOverlap,
   mapSqlOrder,
   normalizeEmergencyContact,
   normalizeOrderContact,

@@ -15,6 +15,11 @@ function parseDateOnly(dateValue) {
   return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }
 
+function getDateOnlyTime(dateValue) {
+  const date = parseDateOnly(dateValue);
+  return date ? date.getTime() : 0;
+}
+
 function getOrderTravelPeriod(order) {
   if (isPlainObject(order && order.travelPeriod)) {
     return order.travelPeriod;
@@ -190,10 +195,21 @@ function filterOrdersByDisplayStatus(orders, statusKey) {
   return orders.filter((order) => order.status === statusKey);
 }
 
+function getOrderTravelStartTime(order) {
+  const period = getOrderTravelPeriod(order);
+  return getDateOnlyTime(period && period.dateStart);
+}
+
+function sortOrdersByTravelPeriodDesc(orders) {
+  return (Array.isArray(orders) ? orders : []).slice().sort((a, b) => {
+    return getOrderTravelStartTime(b) - getOrderTravelStartTime(a);
+  });
+}
+
 function getStatusMeta() {
   return {
     all: { key: "all", label: "全部" },
-    pending: { key: "pending", label: "待确认" },
+    pending: { key: "pending", label: "待支付" },
     paid: { key: "paid", label: "已确认" },
     traveling: { key: "traveling", label: "进行中" },
     completed: { key: "completed", label: "已完成" },
@@ -204,7 +220,7 @@ function getStatusMeta() {
 function getOrderTabsMeta() {
   return [
     { key: "all", label: "全部" },
-    { key: "pending", label: "待确认" },
+    { key: "pending", label: "待支付" },
     { key: "not_departed", label: "已确认" },
     { key: "completed", label: "已完成" }
   ];
@@ -260,5 +276,6 @@ module.exports = {
   getOrderTabsMeta,
   getTripPhaseKey,
   buildOrderCard,
-  filterOrdersByDisplayStatus
+  filterOrdersByDisplayStatus,
+  sortOrdersByTravelPeriodDesc
 };
