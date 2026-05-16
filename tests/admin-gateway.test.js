@@ -2434,7 +2434,9 @@ test("listOrders matches completed orders by Chinese status keyword", async () =
 
 test("listOrderDebugTestOrders lists only active test order marks", async () => {
   const originalEnabled = process.env.ENABLE_ORDER_DEBUG_TOOL;
+  const originalAllowList = process.env.ORDER_DEBUG_ADMIN_UIDS;
   process.env.ENABLE_ORDER_DEBUG_TOOL = "true";
+  process.env.ORDER_DEBUG_ADMIN_UIDS = "admin-1";
   const orderRows = {
     yz202604160001: {
       orderNo: "yz202604160001",
@@ -2492,37 +2494,85 @@ test("listOrderDebugTestOrders lists only active test order marks", async () => 
     } else {
       process.env.ENABLE_ORDER_DEBUG_TOOL = originalEnabled;
     }
+    if (originalAllowList === undefined) {
+      delete process.env.ORDER_DEBUG_ADMIN_UIDS;
+    } else {
+      process.env.ORDER_DEBUG_ADMIN_UIDS = originalAllowList;
+    }
   }
 });
 
-test("listOrderDebugTestOrders allows admin-level platform admins", async () => {
+test("listOrderDebugTestOrders rejects admin-level platform admins even when allowlisted", async () => {
   const originalEnabled = process.env.ENABLE_ORDER_DEBUG_TOOL;
+  const originalAllowList = process.env.ORDER_DEBUG_ADMIN_UIDS;
   process.env.ENABLE_ORDER_DEBUG_TOOL = "true";
+  process.env.ORDER_DEBUG_ADMIN_UIDS = "admin-2";
   const { __test__ } = loadAdminGatewayModule();
 
   try {
-    const result = await __test__.listOrderDebugTestOrders({}, {
-      id: "admin-2",
-      uid: "admin-2",
-      username: "ops-admin",
-      adminLevel: "admin",
-      accountType: "admin",
-      permissions: ["ops:read"]
-    });
-
-    assert.deepEqual(result, []);
+    await assert.rejects(
+      () => __test__.listOrderDebugTestOrders({}, {
+        id: "admin-2",
+        uid: "admin-2",
+        username: "ops-admin",
+        adminLevel: "admin",
+        accountType: "admin",
+        permissions: ["ops:read"]
+      }),
+      /当前账号没有订单调试工具权限/
+    );
   } finally {
     if (originalEnabled === undefined) {
       delete process.env.ENABLE_ORDER_DEBUG_TOOL;
     } else {
       process.env.ENABLE_ORDER_DEBUG_TOOL = originalEnabled;
     }
+    if (originalAllowList === undefined) {
+      delete process.env.ORDER_DEBUG_ADMIN_UIDS;
+    } else {
+      process.env.ORDER_DEBUG_ADMIN_UIDS = originalAllowList;
+    }
+  }
+});
+
+test("listOrderDebugTestOrders rejects owner admins outside the debug allowlist", async () => {
+  const originalEnabled = process.env.ENABLE_ORDER_DEBUG_TOOL;
+  const originalAllowList = process.env.ORDER_DEBUG_ADMIN_UIDS;
+  process.env.ENABLE_ORDER_DEBUG_TOOL = "true";
+  process.env.ORDER_DEBUG_ADMIN_UIDS = "other-owner";
+  const { __test__ } = loadAdminGatewayModule();
+
+  try {
+    await assert.rejects(
+      () => __test__.listOrderDebugTestOrders({}, {
+        id: "admin-1",
+        uid: "admin-1",
+        username: "ops",
+        adminLevel: "owner",
+        accountType: "admin",
+        permissions: ["ops:read"]
+      }),
+      /当前账号没有订单调试工具权限/
+    );
+  } finally {
+    if (originalEnabled === undefined) {
+      delete process.env.ENABLE_ORDER_DEBUG_TOOL;
+    } else {
+      process.env.ENABLE_ORDER_DEBUG_TOOL = originalEnabled;
+    }
+    if (originalAllowList === undefined) {
+      delete process.env.ORDER_DEBUG_ADMIN_UIDS;
+    } else {
+      process.env.ORDER_DEBUG_ADMIN_UIDS = originalAllowList;
+    }
   }
 });
 
 test("order debug mock payout rejects paying status", async () => {
   const originalEnabled = process.env.ENABLE_ORDER_DEBUG_TOOL;
+  const originalAllowList = process.env.ORDER_DEBUG_ADMIN_UIDS;
   process.env.ENABLE_ORDER_DEBUG_TOOL = "true";
+  process.env.ORDER_DEBUG_ADMIN_UIDS = "admin-1";
   const { __test__ } = loadAdminGatewayModule();
 
   try {
@@ -2546,6 +2596,11 @@ test("order debug mock payout rejects paying status", async () => {
       delete process.env.ENABLE_ORDER_DEBUG_TOOL;
     } else {
       process.env.ENABLE_ORDER_DEBUG_TOOL = originalEnabled;
+    }
+    if (originalAllowList === undefined) {
+      delete process.env.ORDER_DEBUG_ADMIN_UIDS;
+    } else {
+      process.env.ORDER_DEBUG_ADMIN_UIDS = originalAllowList;
     }
   }
 });

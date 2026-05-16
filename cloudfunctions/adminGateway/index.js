@@ -1522,9 +1522,9 @@ function assertOrderDebugToolAccess(adminUser) {
   assertAdminPermission(adminUser, "ops:read");
 
   const adminLevel = normalizeText(adminUser && adminUser.adminLevel).toLowerCase();
-  const isPlatformOperator = adminLevel === "owner" || adminLevel === "admin";
+  const isOwner = adminLevel === "owner";
   assertCondition(
-    isPlatformOperator || matchesAnyOrderDebugAllowList(adminUser),
+    isOwner && matchesAnyOrderDebugAllowList(adminUser),
     "当前账号没有订单调试工具权限"
   );
 }
