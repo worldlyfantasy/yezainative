@@ -1,14 +1,29 @@
-<view class="order-card">
-  <view class="order-card__head">
-    <text class="order-card__id">{{order.idPrefixText || "订单"}} #{{order.displayOrderNo}}</text>
-    <text class="order-card__status">{{order.statusText}}</text>
+<view
+  class="order-card order-card--{{order.displayStatusKey}}"
+  bindtap="handleTap"
+  hover-class="order-card--pressing"
+  hover-stay-time="100"
+>
+  <view class="order-card__cover-wrap">
+    <image wx:if="{{order.cover}}" class="order-card__cover" src="{{order.cover}}" mode="aspectFill"></image>
+    <view wx:else class="order-card__cover order-card__cover--placeholder">
+      <text class="order-card__cover-mark">野哉</text>
+    </view>
   </view>
-  <text class="order-card__name">{{order.serviceName}}</text>
-  <view class="order-card__meta">
-    <text>出行日期 {{order.travelDateText}}</text>
-    <text>金额 {{order.payableText}}</text>
-  </view>
-  <view class="order-card__actions">
-    <button class="outline-button order-card__button" bindtap="handleTap">查看详情</button>
+  <view class="order-card__body">
+    <view class="order-card__main">
+      <view class="order-card__head">
+        <text class="order-card__name">{{order.serviceName}}</text>
+        <text class="order-card__status">{{order.statusText}}</text>
+      </view>
+      <view class="order-card__meta">
+        <view class="order-card__meta-item">
+          <text class="order-card__meta-value">{{order.travelDateText}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="order-card__foot">
+      <text class="order-card__action">查看详情 ›</text>
+    </view>
   </view>
 </view>

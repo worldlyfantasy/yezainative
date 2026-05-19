@@ -41,3 +41,11 @@
   background: #e54b4b;
   border-radius: 3rpx;
 }
+
+.orders-page .section-block {
+  margin-top: 44rpx;
+}
+
+.orders-page .card-stack {
+  gap: 24rpx;
+}

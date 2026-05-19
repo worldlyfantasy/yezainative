@@ -9,6 +9,8 @@ const {
   normalizeServiceAssetFields
 } = require("./image-ref");
 
+const HOME_CREATOR_WALL_LIMIT = 13;
+
 const DESTINATION_REGION_OPTIONS = [
   { label: "藏区", value: "cn_tibetan" },
   { label: "新疆", value: "cn_xinjiang" },
@@ -116,10 +118,29 @@ const sqlApp = cloudbase.init({
 const models = sqlApp.models;
 const runSQL = models.$runSQL || models.runSQL;
 const CONFIG_COLLECTION = "app_configs";
+const HOME_PAGE_CONFIG_KEY = "homePage";
+const HOME_PAGE_SNAPSHOT_CONFIG_KEY = "homePageSnapshot";
+const HOME_PAGE_SNAPSHOT_VERSION = 1;
 const CONTENT_CACHE_TTL_MS = 5 * 60 * 1000;
 const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000;
 const HOME_PAGE_CACHE_TTL_MS = 60 * 1000;
+const HOME_PAGE_SNAPSHOT_CACHE_TTL_MS = 60 * 1000;
+const HOME_PAGE_SNAPSHOT_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 const JOURNEY_PAGE_CACHE_TTL_MS = 30 * 1000;
+const JOURNEY_PAGE_SNAPSHOT_CONFIG_KEY = "journeyPageSnapshot";
+const JOURNEY_PAGE_SNAPSHOT_VERSION = 1;
+const JOURNEY_PAGE_SNAPSHOT_CACHE_TTL_MS = 30 * 1000;
+const JOURNEY_PAGE_SNAPSHOT_MAX_AGE_MS = 5 * 60 * 1000;
+const CREATORS_PAGE_CACHE_TTL_MS = 60 * 1000;
+const CREATORS_PAGE_SNAPSHOT_CONFIG_KEY = "creatorsPageSnapshot";
+const CREATORS_PAGE_SNAPSHOT_VERSION = 1;
+const CREATORS_PAGE_SNAPSHOT_CACHE_TTL_MS = 60 * 1000;
+const CREATORS_PAGE_SNAPSHOT_MAX_AGE_MS = 15 * 60 * 1000;
+const DEFAULT_CREATORS_PAGE_CACHE_KEY = JSON.stringify({
+  destination: "",
+  regionCode: "",
+  style: ""
+});
 const COLLECTIONS = {
   creators: "creators",
   destinations: "destinations",
@@ -326,10 +347,18 @@ let contentDataPromise = null;
 const configValueCache = new Map();
 let homePageCache = null;
 let homePagePromise = null;
+let homePageSnapshotCache = null;
+let homePageSnapshotPromise = null;
 let journeyPageCache = null;
 let journeyPagePromise = null;
+let journeyPageSnapshotCache = null;
+let journeyPageSnapshotPromise = null;
 let customJourneyPageCache = null;
 let customJourneyPagePromise = null;
+const creatorsPageCache = new Map();
+const creatorsPagePromiseMap = new Map();
+let creatorsPageSnapshotCache = null;
+let creatorsPageSnapshotPromise = null;
 
 function clearGatewayCache() {
   contentDataCache = null;
@@ -337,10 +366,18 @@ function clearGatewayCache() {
   configValueCache.clear();
   homePageCache = null;
   homePagePromise = null;
+  homePageSnapshotCache = null;
+  homePageSnapshotPromise = null;
   journeyPageCache = null;
   journeyPagePromise = null;
+  journeyPageSnapshotCache = null;
+  journeyPageSnapshotPromise = null;
   customJourneyPageCache = null;
   customJourneyPagePromise = null;
+  creatorsPageCache.clear();
+  creatorsPagePromiseMap.clear();
+  creatorsPageSnapshotCache = null;
+  creatorsPageSnapshotPromise = null;
 
   return {
     cleared: true,
@@ -371,6 +408,10 @@ function normalizeArray(value) {
 function normalizeNumber(value, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && Object.prototype.toString.call(value) === "[object Object]";
 }
 
 function normalizeBoolean(value) {
@@ -559,12 +600,12 @@ function isJourneyPageDisplayPeriodStatus(status) {
 
 function sortJourneyPeriods(periods) {
   return (periods || []).slice().sort((left, right) => {
-    const statusDiff = getJourneyPeriodStatusPriority(left && left.status) - getJourneyPeriodStatusPriority(right && right.status);
-    if (statusDiff !== 0) {
-      return statusDiff;
+    const dateDiff = String(left && left.dateStart || "").localeCompare(String(right && right.dateStart || ""));
+    if (dateDiff !== 0) {
+      return dateDiff;
     }
 
-    return String(left && left.dateStart || "").localeCompare(String(right && right.dateStart || ""));
+    return getJourneyPeriodStatusPriority(left && left.status) - getJourneyPeriodStatusPriority(right && right.status);
   });
 }
 
@@ -617,6 +658,76 @@ function buildJourneySearchText(service, creator, relatedDestinations, fallbackR
     .toLowerCase();
 }
 
+function buildHomeCreatorCard(creator) {
+  const tags = getServiceRouteTags(creator);
+  return {
+    id: normalizeText(creator && creator.id),
+    slug: normalizeText(creator && creator.slug),
+    name: normalizeText(creator && creator.name),
+    avatar: normalizeImageRef(creator && creator.avatar, "card"),
+    stance: normalizeText(creator && creator.stance),
+    displayTags: tags.slice(0, 3),
+    gridDisplayTags: tags.slice(0, 3)
+  };
+}
+
+function buildHomeDestinationCard(destination) {
+  const regionCode = resolveDestinationRegionCode(destination && destination.regionCode, destination && destination.slug);
+  return {
+    id: normalizeText(destination && destination.id),
+    slug: normalizeText(destination && destination.slug),
+    name: normalizeText(destination && destination.name),
+    cover: normalizeImageRef(destination && destination.cover, "card"),
+    description: normalizeText(destination && destination.description),
+    regionCode,
+    regionLabel: getDestinationRegionLabel(regionCode)
+  };
+}
+
+function buildHomeIdeaCard(idea) {
+  return {
+    slug: normalizeText(idea && idea.slug),
+    title: normalizeText(idea && idea.title),
+    summary: normalizeText(idea && idea.summary),
+    theme: normalizeText(idea && (idea.themeLabel || idea.theme)),
+    cover: normalizeImageRef(idea && idea.cover, "card"),
+    authorName: normalizeText(idea && idea.authorName),
+    sourceType: normalizeText(idea && idea.sourceType),
+    wechatArticleUrl: normalizeText(idea && idea.wechatArticleUrl),
+    wechatArticleTitle: normalizeText(idea && idea.wechatArticleTitle)
+  };
+}
+
+function buildHomeServiceCard(service) {
+  return {
+    id: normalizeText(service && service.id),
+    slug: normalizeText(service && service.slug),
+    name: normalizeText(service && service.name),
+    cover: normalizeImageRef(service && service.cover, "card"),
+    summary: normalizeText(service && service.summary),
+    priceLabel: normalizeText(service && service.priceLabel),
+    durationTag: normalizeText(service && service.durationTag),
+    creatorName: normalizeText(service && service.creatorName)
+  };
+}
+
+function buildJourneyListPeriod(period) {
+  return {
+    id: normalizeText(period && period.id),
+    periodCode: normalizeText(period && period.periodCode),
+    versionName: normalizeText(period && period.versionName),
+    dateStart: normalizeText(period && period.dateStart),
+    dateEnd: normalizeText(period && period.dateEnd),
+    price: normalizeNumber(period && period.price, 0),
+    status: normalizeText(period && period.status),
+    dateLabel: normalizeText(period && period.dateLabel),
+    startDateLabel: normalizeText(period && period.startDateLabel),
+    endDateLabel: normalizeText(period && period.endDateLabel),
+    durationLabel: normalizeText(period && period.durationLabel),
+    statusText: normalizeText(period && period.statusText)
+  };
+}
+
 function buildJourneyCard(service, creator, relatedDestinations, activePeriods) {
   const publicService = buildPublicService(service, {
     creatorName: creator ? creator.name : ""
@@ -643,11 +754,22 @@ function buildJourneyCard(service, creator, relatedDestinations, activePeriods) 
     return result;
   }, {});
 
-  return Object.assign({}, publicService, {
+  const displayPeriodForCard = displayPeriod ? buildJourneyListPeriod(displayPeriod) : null;
+
+  return {
+    id: normalizeText(publicService && publicService.id),
+    slug: normalizeText(publicService && publicService.slug),
+    name: normalizeText(publicService && publicService.name),
+    cover: normalizeImageRef(publicService && publicService.cover, "card"),
+    summary: normalizeText(publicService && publicService.summary),
+    creatorName: normalizeText(publicService && publicService.creatorName),
+    type: normalizeText(publicService && publicService.type),
+    durationTag: normalizeText(publicService && publicService.durationTag),
+    priceLabel: normalizeText(publicService && publicService.priceLabel),
     routeTypes,
     primaryRouteType: routeTypes[0] || "",
-    activePeriods,
-    displayPeriod,
+    activePeriods: activePeriods.map(buildJourneyListPeriod),
+    displayPeriod: displayPeriodForCard,
     displayStatus: displayPeriod ? displayPeriod.status : "",
     displayStatusText: displayPeriod ? displayPeriod.statusText : "",
     displayDateStart: displayPeriod ? displayPeriod.dateStart : "",
@@ -659,7 +781,7 @@ function buildJourneyCard(service, creator, relatedDestinations, activePeriods) 
     destinationRegionLabels,
     destinationRegionImageMap,
     searchText: buildJourneySearchText(publicService, creator, relatedDestinations, destinationRegionLabels)
-  });
+  };
 }
 
 function buildCustomJourneyCard(service, creator, relatedDestinations) {
@@ -677,7 +799,16 @@ function buildCustomJourneyCard(service, creator, relatedDestinations) {
   );
   const destinationRegionLabels = unique(destinationRegionCodes.map((code) => getDestinationRegionLabel(code)));
 
-  return Object.assign({}, publicService, {
+  return {
+    id: normalizeText(publicService && publicService.id),
+    slug: normalizeText(publicService && publicService.slug),
+    name: normalizeText(publicService && publicService.name),
+    cover: normalizeImageRef(publicService && publicService.cover, "card"),
+    summary: normalizeText(publicService && publicService.summary),
+    creatorName: normalizeText(publicService && publicService.creatorName),
+    type: normalizeText(publicService && publicService.type),
+    durationTag: normalizeText(publicService && publicService.durationTag),
+    priceLabel: normalizeText(publicService && publicService.priceLabel),
     routeTypes,
     primaryRouteType: routeTypes[0] || "",
     activePeriods: [],
@@ -694,7 +825,7 @@ function buildCustomJourneyCard(service, creator, relatedDestinations) {
     destinationRegionLabels,
     destinationRegionImageMap: {},
     searchText: buildJourneySearchText(publicService, creator, relatedDestinations, destinationRegionLabels)
-  });
+  };
 }
 
 function buildJourneyRegionCardImageMap(configValue) {
@@ -1834,7 +1965,7 @@ async function loadHomePageCollectionsWithConfig(homeConfig) {
     listCollectionBySlugs(COLLECTIONS.destinations, featuredDestinationSlugs, { fieldSpec: DESTINATION_CARD_COLLECTION_FIELDS }),
     listCollectionBySlugs(COLLECTIONS.ideas, featuredIdeaSlugs, { fieldSpec: IDEA_CARD_COLLECTION_FIELDS }),
     listCollectionBySlugs(COLLECTIONS.services, configuredServiceSlugs, { fieldSpec: SERVICE_LIST_COLLECTION_FIELDS }),
-    listCollectionHead(COLLECTIONS.creators, 6, { fieldSpec: CREATOR_CARD_COLLECTION_FIELDS }),
+    listCollectionHead(COLLECTIONS.creators, HOME_CREATOR_WALL_LIMIT, { fieldSpec: CREATOR_CARD_COLLECTION_FIELDS }),
     listCollectionHead(COLLECTIONS.destinations, 8, { fieldSpec: DESTINATION_CARD_COLLECTION_FIELDS }),
     listCollectionHead(COLLECTIONS.ideas, 6, { fieldSpec: IDEA_CARD_COLLECTION_FIELDS }),
     listCollectionHead(COLLECTIONS.services, 12, { fieldSpec: SERVICE_LIST_COLLECTION_FIELDS }),
@@ -1859,7 +1990,7 @@ async function loadHomePageCollectionsWithConfig(homeConfig) {
   const normalizedConfiguredServices = exactConfiguredServices.map(normalizeServiceContentDoc);
   const normalizedFallbackServices = fallbackServices.map(normalizeServiceContentDoc);
 
-  const featuredCreators = takeActiveTopUp(normalizedFallbackCreators, normalizedFeaturedCreators, 3);
+  const featuredCreators = takeActiveTopUp(normalizedFallbackCreators, normalizedFeaturedCreators, HOME_CREATOR_WALL_LIMIT);
   const featuredDestinations = takeActiveTopUp(normalizedFallbackDestinations, normalizedFeaturedDestinations, 4);
   const featuredIdeasBase = takeActiveTopUp(normalizedFallbackIdeas, normalizedFeaturedIdeas, 3);
   const servicePool = takeActiveTopUp(normalizedFallbackServices, normalizedConfiguredServices, 12);
@@ -1948,6 +2079,16 @@ async function findPublicIdeaBySlug(slug) {
   return normalizeIdeaThemeDoc(normalizeIdeaAssetFields(idea));
 }
 
+async function readConfigDoc(key) {
+  const normalizedKey = normalizeText(key);
+  if (!normalizedKey) {
+    return null;
+  }
+
+  const result = await db.collection(CONFIG_COLLECTION).where({ key: normalizedKey }).limit(1).get();
+  return result.data && result.data.length ? result.data[0] : null;
+}
+
 async function getConfigValue(key) {
   const cached = configValueCache.get(key);
   if (cached && cached.expiresAt > Date.now()) {
@@ -1955,8 +2096,8 @@ async function getConfigValue(key) {
   }
 
   try {
-    const result = await db.collection(CONFIG_COLLECTION).where({ key }).limit(1).get();
-    if (!result.data || !result.data.length) {
+    const doc = await readConfigDoc(key);
+    if (!doc) {
       configValueCache.set(key, {
         expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,
         value: null
@@ -1964,7 +2105,6 @@ async function getConfigValue(key) {
       return null;
     }
 
-    const doc = result.data[0];
     const value = doc.value && typeof doc.value === "object" ? doc.value : doc;
     configValueCache.set(key, {
       expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,
@@ -1974,6 +2114,39 @@ async function getConfigValue(key) {
   } catch (error) {
     return null;
   }
+}
+
+async function saveConfigValue(key, value) {
+  const normalizedKey = normalizeText(key);
+  if (!normalizedKey || !isPlainObject(value)) {
+    return null;
+  }
+
+  const now = Date.now();
+  const nextDoc = {
+    key: normalizedKey,
+    value,
+    updatedAt: now
+  };
+  const existing = await readConfigDoc(normalizedKey);
+  configValueCache.delete(normalizedKey);
+
+  if (!existing) {
+    const createResult = await db.collection(CONFIG_COLLECTION).add({
+      data: Object.assign({}, nextDoc, {
+        createdAt: now
+      })
+    });
+    return Object.assign({}, nextDoc, {
+      _id: createResult && createResult._id,
+      createdAt: now
+    });
+  }
+
+  await db.collection(CONFIG_COLLECTION).doc(existing._id).update({
+    data: nextDoc
+  });
+  return Object.assign({}, existing, nextDoc);
 }
 
 function buildOptionList(items, mode) {
@@ -2468,17 +2641,333 @@ async function loadContentData() {
   return contentDataPromise;
 }
 
-async function getHomePageData() {
-  if (homePageCache && homePageCache.expiresAt > Date.now()) {
-    return homePageCache.value;
+function setHomePageCache(payload) {
+  homePageCache = {
+    expiresAt: Date.now() + HOME_PAGE_CACHE_TTL_MS,
+    value: payload
+  };
+  return payload;
+}
+
+function isValidHomePagePayload(payload) {
+  return (
+    isPlainObject(payload)
+    && Array.isArray(payload.heroSlides)
+    && Array.isArray(payload.featuredCreators)
+    && Array.isArray(payload.featuredDestinations)
+    && isPlainObject(payload.featuredServicesByTab)
+    && Array.isArray(payload.featuredIdeas)
+  );
+}
+
+function normalizeHomePageSnapshot(value) {
+  if (!isPlainObject(value)) {
+    return null;
   }
 
-  if (homePagePromise) {
-    return homePagePromise;
+  const payload = isValidHomePagePayload(value.payload) ? value.payload : null;
+  const generatedAt = normalizeNumber(value.generatedAt, 0);
+  if (!payload || !generatedAt) {
+    return null;
   }
 
-  homePagePromise = (async () => {
-  const homeConfig = (await getConfigValue("homePage")) || {};
+  return {
+    version: normalizeNumber(value.version, 0) || HOME_PAGE_SNAPSHOT_VERSION,
+    generatedAt,
+    expiresAt: normalizeNumber(value.expiresAt, 0),
+    payload
+  };
+}
+
+function isFreshHomePageSnapshot(snapshot) {
+  if (!snapshot || snapshot.version !== HOME_PAGE_SNAPSHOT_VERSION) {
+    return false;
+  }
+
+  const now = Date.now();
+  if (snapshot.expiresAt && snapshot.expiresAt <= now) {
+    return false;
+  }
+
+  return now - snapshot.generatedAt <= HOME_PAGE_SNAPSHOT_MAX_AGE_MS;
+}
+
+async function readHomePageSnapshot() {
+  if (homePageSnapshotCache && homePageSnapshotCache.expiresAt > Date.now()) {
+    return homePageSnapshotCache.value;
+  }
+
+  if (homePageSnapshotPromise) {
+    return homePageSnapshotPromise;
+  }
+
+  homePageSnapshotPromise = (async () => {
+    try {
+      const doc = await readConfigDoc(HOME_PAGE_SNAPSHOT_CONFIG_KEY);
+      const snapshot = normalizeHomePageSnapshot(doc && doc.value);
+      homePageSnapshotCache = {
+        expiresAt: Date.now() + HOME_PAGE_SNAPSHOT_CACHE_TTL_MS,
+        value: snapshot
+      };
+      return snapshot;
+    } catch (error) {
+      homePageSnapshotCache = {
+        expiresAt: Date.now() + HOME_PAGE_SNAPSHOT_CACHE_TTL_MS,
+        value: null
+      };
+      return null;
+    }
+  })()
+    .finally(() => {
+      homePageSnapshotPromise = null;
+    });
+
+  return homePageSnapshotPromise;
+}
+
+async function saveHomePageSnapshot(payload) {
+  if (!isValidHomePagePayload(payload)) {
+    return null;
+  }
+
+  const now = Date.now();
+  const snapshot = {
+    version: HOME_PAGE_SNAPSHOT_VERSION,
+    generatedAt: now,
+    expiresAt: now + HOME_PAGE_SNAPSHOT_MAX_AGE_MS,
+    payload
+  };
+
+  await saveConfigValue(HOME_PAGE_SNAPSHOT_CONFIG_KEY, snapshot);
+  homePageSnapshotCache = {
+    expiresAt: Date.now() + HOME_PAGE_SNAPSHOT_CACHE_TTL_MS,
+    value: snapshot
+  };
+  return snapshot;
+}
+
+function setJourneyPageCache(payload) {
+  journeyPageCache = {
+    expiresAt: Date.now() + JOURNEY_PAGE_CACHE_TTL_MS,
+    value: payload
+  };
+  return payload;
+}
+
+function isValidJourneyPagePayload(payload) {
+  return (
+    isPlainObject(payload)
+    && Array.isArray(payload.routeTypeOptions)
+    && Array.isArray(payload.regionOptions)
+    && Array.isArray(payload.journeys)
+  );
+}
+
+function normalizeJourneyPageSnapshot(value) {
+  if (!isPlainObject(value)) {
+    return null;
+  }
+
+  const payload = isValidJourneyPagePayload(value.payload) ? value.payload : null;
+  const generatedAt = normalizeNumber(value.generatedAt, 0);
+  if (!payload || !generatedAt) {
+    return null;
+  }
+
+  return {
+    version: normalizeNumber(value.version, 0) || JOURNEY_PAGE_SNAPSHOT_VERSION,
+    generatedAt,
+    expiresAt: normalizeNumber(value.expiresAt, 0),
+    payload
+  };
+}
+
+function isFreshJourneyPageSnapshot(snapshot) {
+  if (!snapshot || snapshot.version !== JOURNEY_PAGE_SNAPSHOT_VERSION) {
+    return false;
+  }
+
+  const now = Date.now();
+  if (snapshot.expiresAt && snapshot.expiresAt <= now) {
+    return false;
+  }
+
+  return now - snapshot.generatedAt <= JOURNEY_PAGE_SNAPSHOT_MAX_AGE_MS;
+}
+
+async function readJourneyPageSnapshot() {
+  if (journeyPageSnapshotCache && journeyPageSnapshotCache.expiresAt > Date.now()) {
+    return journeyPageSnapshotCache.value;
+  }
+
+  if (journeyPageSnapshotPromise) {
+    return journeyPageSnapshotPromise;
+  }
+
+  journeyPageSnapshotPromise = (async () => {
+    try {
+      const doc = await readConfigDoc(JOURNEY_PAGE_SNAPSHOT_CONFIG_KEY);
+      const snapshot = normalizeJourneyPageSnapshot(doc && doc.value);
+      journeyPageSnapshotCache = {
+        expiresAt: Date.now() + JOURNEY_PAGE_SNAPSHOT_CACHE_TTL_MS,
+        value: snapshot
+      };
+      return snapshot;
+    } catch (error) {
+      journeyPageSnapshotCache = {
+        expiresAt: Date.now() + JOURNEY_PAGE_SNAPSHOT_CACHE_TTL_MS,
+        value: null
+      };
+      return null;
+    }
+  })()
+    .finally(() => {
+      journeyPageSnapshotPromise = null;
+    });
+
+  return journeyPageSnapshotPromise;
+}
+
+async function saveJourneyPageSnapshot(payload) {
+  if (!isValidJourneyPagePayload(payload)) {
+    return null;
+  }
+
+  const now = Date.now();
+  const snapshot = {
+    version: JOURNEY_PAGE_SNAPSHOT_VERSION,
+    generatedAt: now,
+    expiresAt: now + JOURNEY_PAGE_SNAPSHOT_MAX_AGE_MS,
+    payload
+  };
+
+  await saveConfigValue(JOURNEY_PAGE_SNAPSHOT_CONFIG_KEY, snapshot);
+  journeyPageSnapshotCache = {
+    expiresAt: Date.now() + JOURNEY_PAGE_SNAPSHOT_CACHE_TTL_MS,
+    value: snapshot
+  };
+  return snapshot;
+}
+
+function normalizeCreatorsPageFilters(filters) {
+  const requestedFilters = filters || {};
+  return {
+    destination: normalizeText(requestedFilters.destination),
+    regionCode: normalizeDestinationRegionCode(requestedFilters.regionCode),
+    style: normalizeText(requestedFilters.style)
+  };
+}
+
+function getCreatorsPageCacheKey(filters) {
+  return JSON.stringify(normalizeCreatorsPageFilters(filters));
+}
+
+function setCreatorsPageCache(cacheKey, payload) {
+  creatorsPageCache.set(cacheKey, {
+    expiresAt: Date.now() + CREATORS_PAGE_CACHE_TTL_MS,
+    value: payload
+  });
+  return payload;
+}
+
+function isValidCreatorsPagePayload(payload) {
+  return (
+    isPlainObject(payload)
+    && Array.isArray(payload.destinationOptions)
+    && Array.isArray(payload.regionOptions)
+    && Array.isArray(payload.styleOptions)
+    && Array.isArray(payload.creators)
+  );
+}
+
+function normalizeCreatorsPageSnapshot(value) {
+  if (!isPlainObject(value)) {
+    return null;
+  }
+
+  const payload = isValidCreatorsPagePayload(value.payload) ? value.payload : null;
+  const generatedAt = normalizeNumber(value.generatedAt, 0);
+  if (!payload || !generatedAt) {
+    return null;
+  }
+
+  return {
+    version: normalizeNumber(value.version, 0) || CREATORS_PAGE_SNAPSHOT_VERSION,
+    generatedAt,
+    expiresAt: normalizeNumber(value.expiresAt, 0),
+    payload
+  };
+}
+
+function isFreshCreatorsPageSnapshot(snapshot) {
+  if (!snapshot || snapshot.version !== CREATORS_PAGE_SNAPSHOT_VERSION) {
+    return false;
+  }
+
+  const now = Date.now();
+  if (snapshot.expiresAt && snapshot.expiresAt <= now) {
+    return false;
+  }
+
+  return now - snapshot.generatedAt <= CREATORS_PAGE_SNAPSHOT_MAX_AGE_MS;
+}
+
+async function readCreatorsPageSnapshot() {
+  if (creatorsPageSnapshotCache && creatorsPageSnapshotCache.expiresAt > Date.now()) {
+    return creatorsPageSnapshotCache.value;
+  }
+
+  if (creatorsPageSnapshotPromise) {
+    return creatorsPageSnapshotPromise;
+  }
+
+  creatorsPageSnapshotPromise = (async () => {
+    try {
+      const doc = await readConfigDoc(CREATORS_PAGE_SNAPSHOT_CONFIG_KEY);
+      const snapshot = normalizeCreatorsPageSnapshot(doc && doc.value);
+      creatorsPageSnapshotCache = {
+        expiresAt: Date.now() + CREATORS_PAGE_SNAPSHOT_CACHE_TTL_MS,
+        value: snapshot
+      };
+      return snapshot;
+    } catch (error) {
+      creatorsPageSnapshotCache = {
+        expiresAt: Date.now() + CREATORS_PAGE_SNAPSHOT_CACHE_TTL_MS,
+        value: null
+      };
+      return null;
+    }
+  })()
+    .finally(() => {
+      creatorsPageSnapshotPromise = null;
+    });
+
+  return creatorsPageSnapshotPromise;
+}
+
+async function saveCreatorsPageSnapshot(payload) {
+  if (!isValidCreatorsPagePayload(payload)) {
+    return null;
+  }
+
+  const now = Date.now();
+  const snapshot = {
+    version: CREATORS_PAGE_SNAPSHOT_VERSION,
+    generatedAt: now,
+    expiresAt: now + CREATORS_PAGE_SNAPSHOT_MAX_AGE_MS,
+    payload
+  };
+
+  await saveConfigValue(CREATORS_PAGE_SNAPSHOT_CONFIG_KEY, snapshot);
+  creatorsPageSnapshotCache = {
+    expiresAt: Date.now() + CREATORS_PAGE_SNAPSHOT_CACHE_TTL_MS,
+    value: snapshot
+  };
+  return snapshot;
+}
+
+async function buildHomePagePayload() {
+  const homeConfig = (await getConfigValue(HOME_PAGE_CONFIG_KEY)) || {};
   const {
     creators,
     services,
@@ -2498,9 +2987,10 @@ async function getHomePageData() {
   Object.keys(featuredServicesByTab).forEach((key) => {
     featuredServicesByTab[key] = featuredServicesByTab[key].map((service) => {
       const creator = findCreatorByRef(creators, service.creatorId);
-      return buildPublicService(service, {
+      const publicService = buildPublicService(service, {
         creatorName: creator ? creator.name : ""
       });
+      return buildHomeServiceCard(publicService);
     });
   });
 
@@ -2520,16 +3010,71 @@ async function getHomePageData() {
             }]
           : [])
     ),
-    featuredCreators,
-    featuredDestinations,
+    featuredCreators: featuredCreators.map(buildHomeCreatorCard),
+    featuredDestinations: featuredDestinations.map(buildHomeDestinationCard),
     featuredServicesByTab,
-    featuredIdeas
-  };
-  homePageCache = {
-    expiresAt: Date.now() + HOME_PAGE_CACHE_TTL_MS,
-    value: payload
+    featuredIdeas: featuredIdeas.map(buildHomeIdeaCard)
   };
   return payload;
+}
+
+async function refreshHomePageSnapshot() {
+  const payload = await buildHomePagePayload();
+  const snapshot = await saveHomePageSnapshot(payload);
+  setHomePageCache(payload);
+  return {
+    refreshed: true,
+    generatedAt: snapshot ? snapshot.generatedAt : Date.now(),
+    expiresAt: snapshot ? snapshot.expiresAt : 0
+  };
+}
+
+async function refreshHomePageSnapshotBestEffort() {
+  try {
+    return await refreshHomePageSnapshot();
+  } catch (error) {
+    return {
+      refreshed: false,
+      error: normalizeText(error && error.message) || "refresh failed"
+    };
+  }
+}
+
+async function warmContentGateway() {
+  const [sqlAlive, homePageSnapshot, journeyPageSnapshot, creatorsPageSnapshot] = await Promise.all([
+    keepSqlAlive(),
+    refreshHomePageSnapshotBestEffort(),
+    refreshJourneyPageSnapshotBestEffort(),
+    refreshCreatorsPageSnapshotBestEffort()
+  ]);
+
+  return {
+    ok: true,
+    sqlAlive,
+    homePageSnapshot,
+    journeyPageSnapshot,
+    creatorsPageSnapshot
+  };
+}
+
+async function getHomePageData() {
+  if (homePageCache && homePageCache.expiresAt > Date.now()) {
+    return homePageCache.value;
+  }
+
+  if (homePagePromise) {
+    return homePagePromise;
+  }
+
+  homePagePromise = (async () => {
+    const snapshot = await readHomePageSnapshot();
+    if (isFreshHomePageSnapshot(snapshot)) {
+      return setHomePageCache(snapshot.payload);
+    }
+
+    const payload = await buildHomePagePayload();
+    await saveHomePageSnapshot(payload);
+    return setHomePageCache(payload);
   })()
     .finally(() => {
       homePagePromise = null;
@@ -2538,16 +3083,7 @@ async function getHomePageData() {
   return homePagePromise;
 }
 
-async function getJourneyPageData() {
-  if (journeyPageCache && journeyPageCache.expiresAt > Date.now()) {
-    return journeyPageCache.value;
-  }
-
-  if (journeyPagePromise) {
-    return journeyPagePromise;
-  }
-
-  journeyPagePromise = (async () => {
+async function buildJourneyPagePayload() {
   const { creators, destinations, services } = await loadJourneyPageCollections();
   const [sqlPeriods, soldCountMap, journeyPageConfig] = await Promise.all([
     listAllSqlServicePeriods({ returnNullOnError: true }),
@@ -2576,6 +3112,11 @@ async function getJourneyPageData() {
     })
     .filter(Boolean)
     .sort((left, right) => {
+      const dateDiff = String(left && left.displayDateStart || "").localeCompare(String(right && right.displayDateStart || ""));
+      if (dateDiff !== 0) {
+        return dateDiff;
+      }
+
       const statusDiff =
         getJourneyPeriodStatusPriority(left && left.displayStatus) -
         getJourneyPeriodStatusPriority(right && right.displayStatus);
@@ -2583,7 +3124,7 @@ async function getJourneyPageData() {
         return statusDiff;
       }
 
-      return String(left && left.displayDateStart || "").localeCompare(String(right && right.displayDateStart || ""));
+      return normalizeText(left && left.name).localeCompare(normalizeText(right && right.name), "zh-CN");
     });
 
   if (!sqlPeriodsAvailable && !journeys.length) {
@@ -2607,13 +3148,56 @@ async function getJourneyPageData() {
     regionOptions: buildJourneyRegionOptions(journeys, regionCardImageMap),
     journeys
   };
-  if (sqlPeriodsAvailable || journeys.length) {
-    journeyPageCache = {
-      expiresAt: Date.now() + JOURNEY_PAGE_CACHE_TTL_MS,
-      value: payload
+  return payload;
+}
+
+async function refreshJourneyPageSnapshot() {
+  const payload = await buildJourneyPagePayload();
+  const snapshot = await saveJourneyPageSnapshot(payload);
+  setJourneyPageCache(payload);
+  return {
+    refreshed: true,
+    generatedAt: snapshot ? snapshot.generatedAt : Date.now(),
+    expiresAt: snapshot ? snapshot.expiresAt : 0
+  };
+}
+
+async function refreshJourneyPageSnapshotBestEffort() {
+  try {
+    return await refreshJourneyPageSnapshot();
+  } catch (error) {
+    return {
+      refreshed: false,
+      error: normalizeText(error && error.message) || "refresh failed"
     };
   }
-  return payload;
+}
+
+async function getJourneyPageData() {
+  if (journeyPageCache && journeyPageCache.expiresAt > Date.now()) {
+    return journeyPageCache.value;
+  }
+
+  if (journeyPagePromise) {
+    return journeyPagePromise;
+  }
+
+  journeyPagePromise = (async () => {
+    const snapshot = await readJourneyPageSnapshot();
+    if (isFreshJourneyPageSnapshot(snapshot)) {
+      return setJourneyPageCache(snapshot.payload);
+    }
+
+    try {
+      const payload = await buildJourneyPagePayload();
+      await saveJourneyPageSnapshot(payload);
+      return setJourneyPageCache(payload);
+    } catch (error) {
+      if (snapshot && isValidJourneyPagePayload(snapshot.payload)) {
+        return setJourneyPageCache(snapshot.payload);
+      }
+      throw error;
+    }
   })()
     .finally(() => {
       journeyPagePromise = null;
@@ -2679,7 +3263,7 @@ async function getCustomJourneyPageData() {
   return customJourneyPagePromise;
 }
 
-async function getCreatorsPageData(filters) {
+async function buildCreatorsPagePayload(filters) {
   const { creators, destinations, services } = await loadContentData();
   const [soldCountMap, journeyPageConfig] = await Promise.all([
     getAllSoldCountByPeriodCodeMap(),
@@ -2766,6 +3350,68 @@ async function getCreatorsPageData(filters) {
     styleLabels: styleOptions.map((item) => item.label),
     creators: displayCreators
   };
+}
+
+async function refreshCreatorsPageSnapshot() {
+  const payload = await buildCreatorsPagePayload({});
+  const snapshot = await saveCreatorsPageSnapshot(payload);
+  setCreatorsPageCache(DEFAULT_CREATORS_PAGE_CACHE_KEY, payload);
+  return {
+    refreshed: true,
+    generatedAt: snapshot ? snapshot.generatedAt : Date.now(),
+    expiresAt: snapshot ? snapshot.expiresAt : 0
+  };
+}
+
+async function refreshCreatorsPageSnapshotBestEffort() {
+  try {
+    return await refreshCreatorsPageSnapshot();
+  } catch (error) {
+    return {
+      refreshed: false,
+      error: normalizeText(error && error.message) || "refresh failed"
+    };
+  }
+}
+
+async function getCreatorsPageData(filters) {
+  const cacheKey = getCreatorsPageCacheKey(filters);
+  const cached = creatorsPageCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
+  const pendingPromise = creatorsPagePromiseMap.get(cacheKey);
+  if (pendingPromise) {
+    return pendingPromise;
+  }
+
+  const shouldUseSnapshot = cacheKey === DEFAULT_CREATORS_PAGE_CACHE_KEY;
+  const promise = (async () => {
+    const snapshot = shouldUseSnapshot ? await readCreatorsPageSnapshot() : null;
+    if (shouldUseSnapshot && isFreshCreatorsPageSnapshot(snapshot)) {
+      return setCreatorsPageCache(cacheKey, snapshot.payload);
+    }
+
+    try {
+      const payload = await buildCreatorsPagePayload(filters);
+      if (shouldUseSnapshot) {
+        await saveCreatorsPageSnapshot(payload);
+      }
+      return setCreatorsPageCache(cacheKey, payload);
+    } catch (error) {
+      if (shouldUseSnapshot && snapshot && isValidCreatorsPagePayload(snapshot.payload)) {
+        return setCreatorsPageCache(cacheKey, snapshot.payload);
+      }
+      throw error;
+    }
+  })()
+    .finally(() => {
+      creatorsPagePromiseMap.delete(cacheKey);
+    });
+
+  creatorsPagePromiseMap.set(cacheKey, promise);
+  return promise;
 }
 
 async function getCreatorDetailData(slug) {
@@ -3338,6 +3984,10 @@ async function getServiceDetailData(slug) {
 const handlers = {
   clearCache: () => clearGatewayCache(),
   keepSqlAlive: () => keepSqlAlive(),
+  warmContentGateway: () => warmContentGateway(),
+  refreshHomePageSnapshot: () => refreshHomePageSnapshot(),
+  refreshJourneyPageSnapshot: () => refreshJourneyPageSnapshot(),
+  refreshCreatorsPageSnapshot: () => refreshCreatorsPageSnapshot(),
   getHomePageData: (payload) => getHomePageData(payload),
   getJourneyPageData: () => getJourneyPageData(),
   getCustomJourneyPageData: () => getCustomJourneyPageData(),
@@ -3362,7 +4012,7 @@ const handlers = {
 
 exports.main = async (event) => {
   const isTimerEvent = event && (event.Type === "Timer" || event.TriggerName || event.triggerName);
-  const action = event && event.action ? event.action : (isTimerEvent ? "keepSqlAlive" : "");
+  const action = event && event.action ? event.action : (isTimerEvent ? "warmContentGateway" : "");
   const payload = event && event.payload ? event.payload : {};
   const handler = handlers[action];
 

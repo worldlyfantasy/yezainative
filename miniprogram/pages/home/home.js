@@ -8,9 +8,9 @@ const {
   createShareTimeline
 } = require("../../utils/share");
 const SERVICE_TABS = [
-  { key: "featured", label: "野哉精选" },
   { key: "recent", label: "近期出行" },
-  { key: "special", label: "特别企划" }
+  { key: "featured", label: "野哉独家" },
+  { key: "more", label: "更多路线 →" }
 ];
 
 Page({
@@ -22,13 +22,14 @@ Page({
     featuredDestinations: [],
     featuredIdeas: [],
     serviceTabs: SERVICE_TABS,
-    activeServiceTab: "featured",
+    activeServiceTab: "recent",
     featuredServicesByTab: {
       featured: [],
       recent: [],
       special: []
     },
-    activeServices: []
+    activeServices: [],
+    creatorDialStyle: ""
   },
 
   async onLoad() {
@@ -130,13 +131,61 @@ Page({
   },
 
   onCreatorTap(event) {
+    const slug = (event.currentTarget && event.currentTarget.dataset && event.currentTarget.dataset.slug)
+      || (event.detail && event.detail.slug)
+      || "";
+    if (!slug) {
+      return;
+    }
+
     wx.navigateTo({
-      url: `/pkg/explore/creator-detail/index?slug=${event.detail.slug}`
+      url: `/pkg/explore/creator-detail/index?slug=${slug}`
     });
+  },
+
+  onCreatorDialTouchStart(event) {
+    const touch = event.touches && event.touches[0];
+    if (!touch) {
+      return;
+    }
+
+    this.creatorDialTouchStart = {
+      x: touch.clientX,
+      y: touch.clientY
+    };
+  },
+
+  onCreatorDialTouchMove(event) {
+    const touch = event.touches && event.touches[0];
+    if (!touch || !this.creatorDialTouchStart) {
+      return;
+    }
+
+    const nextX = this.clampDialOffset((touch.clientX - this.creatorDialTouchStart.x) * 0.16);
+    const nextY = this.clampDialOffset((touch.clientY - this.creatorDialTouchStart.y) * 0.16);
+    this.setData({
+      creatorDialStyle: `transform: translate3d(${nextX}px, ${nextY}px, 0); transition: none;`
+    });
+  },
+
+  onCreatorDialTouchEnd() {
+    this.creatorDialTouchStart = null;
+    this.setData({
+      creatorDialStyle: "transform: translate3d(0, 0, 0); transition: transform 260ms cubic-bezier(0.18, 0.82, 0.22, 1);"
+    });
+  },
+
+  clampDialOffset(value) {
+    return Math.max(-18, Math.min(18, Math.round(value)));
   },
 
   onServiceTabChange(event) {
     const { tab } = event.currentTarget.dataset;
+    if (tab === "more") {
+      this.goServices();
+      return;
+    }
+
     if (!tab || tab === this.data.activeServiceTab) {
       return;
     }
@@ -161,7 +210,7 @@ Page({
   },
 
   onIdeaTap(event) {
-    openIdea(event.detail);
+    openIdea((event && event.currentTarget && event.currentTarget.dataset) || event.detail);
   },
 
   resolveDefaultServiceTab(featuredServicesByTab) {
@@ -173,7 +222,7 @@ Page({
       }
     }
 
-    return serviceTabs.length ? serviceTabs[0].key : "featured";
+    return serviceTabs.length ? serviceTabs[0].key : "recent";
   },
 
   getServicesByTab(featuredServicesByTab, tabKey) {

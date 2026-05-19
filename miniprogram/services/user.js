@@ -15,7 +15,7 @@ function buildProfileShortcuts(user) {
     {
       key: "assets",
       label: "野哉分享家",
-      cardClassName: "",
+      cardClassName: "profile-entry-card--glyph-soft",
       desc: "券与奖励",
       glyphSrc:
         "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/野（扣底圆体）.png"
@@ -23,7 +23,7 @@ function buildProfileShortcuts(user) {
     {
       key: "favorites",
       label: "我的收藏",
-      cardClassName: "",
+      cardClassName: "profile-entry-card--glyph-soft",
       desc: "人物与旅程",
       glyphSrc:
         "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/哉（扣底圆体）.png"
@@ -31,7 +31,7 @@ function buildProfileShortcuts(user) {
     {
       key: "travelers",
       label: "出行人档案",
-      cardClassName: "",
+      cardClassName: "profile-entry-card--glyph-soft",
       desc: "常用出行人",
       glyphSrc:
         "cloud://yezai-3gr73wd48057512e-10f17b581.7965-yezai-3gr73wd48057512e-10f17b581-1407224025/brandasset/哉（扣底圆体）.png"

@@ -144,54 +144,9 @@ test("creators page keeps full tags for filtering and only exposes three display
   assert.equal(page.data.creators[0].locationText, "藏区・青海湖");
   assert.deepEqual(page.data.creators[0].displayTags, ["山野", "户外", "文化"]);
   assert.deepEqual(page.data.creators[0].gridDisplayTags, ["山野", "户外"]);
-  assert.equal(page.data.creatorViewMode, "grid");
   assert.equal(page.data.visibleStyleOptions.length, 9);
   assert.deepEqual(page.data.visibleStyleOptions.slice(0, 2).map((item) => item.value), ["山野", "城市"]);
   assert.equal(page.data.regionSheetColumns[0][0].countText, "2 位创作者");
-});
-
-test("creators page switches between card and grid view modes", () => {
-  const definition = loadPageDefinition(creatorsPageModulePath, (request, parent, isMain, originalLoad) => {
-    if (request === "../../repositories/content-repository") {
-      return {
-        getCreatorsPageData: async () => ({
-          regionOptions: [],
-          regionLabels: [],
-          styleOptions: [],
-          styleLabels: [],
-          creators: []
-        })
-      };
-    }
-
-    if (request === "../../utils/share") {
-      return {
-        enablePageShareMenus() {},
-        createAddToFavorites() {
-          return {};
-        },
-        createShareAppMessage() {
-          return {};
-        },
-        createShareTimeline() {
-          return {};
-        }
-      };
-    }
-
-    return originalLoad(request, parent, isMain);
-  });
-  const page = createPageInstance(definition);
-
-  assert.equal(page.data.creatorViewMode, "grid");
-  page.onCreatorViewModeTap({
-    currentTarget: {
-      dataset: {
-        mode: "card"
-      }
-    }
-  });
-  assert.equal(page.data.creatorViewMode, "card");
 });
 
 test("creators page splits region sheet between domestic and international tabs", async () => {

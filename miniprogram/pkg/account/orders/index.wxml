@@ -1,4 +1,4 @@
-<view class="page-shell">
+<view class="page-shell orders-page">
   <view class="order-tabs-bar">
     <view
       wx:for="{{tabs}}"

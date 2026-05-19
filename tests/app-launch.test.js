@@ -22,17 +22,26 @@ function cleanupGlobals() {
   delete global.wx;
 }
 
-test("app launch does not crash when wx.getImageInfo is callback-based", () => {
+test("app launch initializes cloud and global data without logo prefetch", () => {
   const calls = [];
+  const realSetTimeout = global.setTimeout;
+  global.setTimeout = (callback, delay) => {
+    calls.push({ type: "setTimeout", delay, callback });
+    return {
+      unref() {
+        calls.push({ type: "timer.unref" });
+      }
+    };
+  };
+
   global.wx = {
     cloud: {
       init(options) {
         calls.push({ type: "cloud.init", options });
       }
     },
-    getImageInfo(options) {
-      calls.push({ type: "getImageInfo", options });
-      return undefined;
+    loadFontFace(options) {
+      calls.push({ type: "loadFontFace", options });
     }
   };
 
@@ -44,11 +53,14 @@ test("app launch does not crash when wx.getImageInfo is callback-based", () => {
       appConfig.onLaunch.call(appInstance);
     });
 
-    assert.equal(calls.length, 2);
     assert.equal(calls[0].type, "cloud.init");
-    assert.equal(calls[1].type, "getImageInfo");
+    assert.equal(calls[1].type, "setTimeout");
+    assert.equal(calls[1].delay, 2500);
+    assert.equal(calls[2].type, "timer.unref");
+    assert.equal(calls.some((call) => call.type === "loadFontFace"), false);
     assert.equal(typeof appInstance.globalData, "object");
   } finally {
+    global.setTimeout = realSetTimeout;
     cleanupGlobals();
   }
 });

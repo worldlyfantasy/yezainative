@@ -1,7 +1,3 @@
 {
-  "navigationBarTitleText": "",
-  "usingComponents": {
-    "creator-card": "/components/yezai/creator-card/index",
-    "idea-card": "/components/yezai/idea-card/index"
-  }
+  "navigationBarTitleText": ""
 }

@@ -38,47 +38,18 @@
     </view>
   </view>
 
-  <view class="creator-result-head">
-    <text class="creator-result-head__count">共 {{creators.length}} 位创作者</text>
-    <view class="creator-view-switch">
-      <view
-        class="creator-view-switch__item {{creatorViewMode === 'grid' ? 'creator-view-switch__item--active' : ''}}"
-        data-mode="grid"
-        bindtap="onCreatorViewModeTap"
-        hover-class="creator-view-switch__item--pressed"
-      >
-        <view class="creator-view-switch__icon creator-view-switch__icon--grid">
-          <view wx:for="{{[1,2,3,4]}}" wx:key="*this" class="creator-view-switch__grid-cell"></view>
-        </view>
-      </view>
-      <view
-        class="creator-view-switch__item {{creatorViewMode === 'card' ? 'creator-view-switch__item--active' : ''}}"
-        data-mode="card"
-        bindtap="onCreatorViewModeTap"
-        hover-class="creator-view-switch__item--pressed"
-      >
-        <view class="creator-view-switch__icon creator-view-switch__icon--list">
-          <view wx:for="{{[1,2,3]}}" wx:key="*this" class="creator-view-switch__list-row">
-            <view class="creator-view-switch__list-thumb"></view>
-            <view class="creator-view-switch__list-line"></view>
-          </view>
-        </view>
-      </view>
-    </view>
-  </view>
-
-  <view class="section-block">
+  <view class="section-block creator-grid-block">
     <view wx:if="{{errorText}}" class="paper-block page-feedback">
       <text class="page-feedback__title">加载失败</text>
       <text class="page-feedback__desc">{{errorText}}</text>
     </view>
     <view wx:elif="{{loading}}" class="empty-state">创作者列表加载中...</view>
-    <view wx:elif="{{creators.length}}" class="{{creatorViewMode === 'grid' ? 'creator-grid' : 'creator-list'}}">
+    <view wx:elif="{{creators.length}}" class="creator-grid">
       <creator-card
         wx:for="{{creators}}"
         wx:key="id"
         creator="{{item}}"
-        variant="{{creatorViewMode}}"
+        variant="grid"
         bind:cardtap="onCreatorTap"
       ></creator-card>
     </view>

@@ -38,6 +38,13 @@ const INITIAL_JOURNEY_RENDER_COUNT = 6;
 const JOURNEY_RENDER_BATCH_SIZE = 6;
 const JOURNEY_VIEW_MODE_STORAGE_KEY = "yezaiJourneyViewMode";
 const VALID_JOURNEY_VIEW_MODES = new Set(["image", "grid", "compact"]);
+const RESULT_ROUTE_TYPE_OPTIONS = [
+  { key: "domestic-long", label: "长途", serviceTypes: ["长途旅行"] },
+  { key: "domestic-short", label: "短途", serviceTypes: ["短途旅行"] },
+  { key: "city-event", label: "城市", serviceTypes: ["在地体验"] },
+  { key: "international-long", label: "国际", serviceTypes: ["国际旅行"] }
+];
+const PRIMARY_RESULT_ROUTE_TYPE_KEYS = new Set(["domestic-long", "domestic-short"]);
 const REGION_SCOPE_TABS = [
   { key: "domestic", label: "国内" },
   { key: "international", label: "国际" }
@@ -113,6 +120,42 @@ function addDays(dateStr, days) {
   date.setUTCDate(date.getUTCDate() + days);
 
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function calcDurationDays(dateStart, dateEnd) {
+  if (!dateStart || !dateEnd || !/^\d{4}-\d{2}-\d{2}$/.test(dateStart) || !/^\d{4}-\d{2}-\d{2}$/.test(dateEnd)) {
+    return 0;
+  }
+
+  const start = new Date(`${dateStart}T00:00:00Z`);
+  const end = new Date(`${dateEnd}T00:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+    return 0;
+  }
+
+  return Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+}
+
+function buildDurationLabel(period, journey) {
+  const explicitLabel = normalizeText(period && period.durationLabel);
+  if (explicitLabel) {
+    return explicitLabel;
+  }
+
+  const explicitDays = Number(period && period.durationDays);
+  if (Number.isFinite(explicitDays) && explicitDays > 0) {
+    return `${Math.round(explicitDays)}天`;
+  }
+
+  const inferredDays = calcDurationDays(
+    normalizeText(period && period.dateStart),
+    normalizeText(period && (period.dateEnd || period.dateStart))
+  );
+  if (inferredDays > 0) {
+    return `${inferredDays}天`;
+  }
+
+  return normalizeText(journey && journey.durationTag);
 }
 
 function isWithinUpcomingWindow(dateStr) {
@@ -323,29 +366,30 @@ function buildCalendarWeeks(monthKey, markedDateSet, selectedDate) {
   return weeks;
 }
 
-function buildStatusOptions(selectedStatus) {
-  return JOURNEY_STATUS_FILTER_OPTIONS.map((item) => Object.assign({}, item, {
-    active: item.key === selectedStatus
-  }));
+function buildStatusOptions(selectedStatus, selectedRouteType = "", selectedJourneyType = "") {
+  return JOURNEY_STATUS_FILTER_OPTIONS
+    .filter((item) => item.key !== "confirmed")
+    .map((item) => Object.assign({}, item, {
+      active: item.key === "all" && !selectedJourneyType
+    }));
+}
+
+function splitResultRouteTypeOptions(options) {
+  const normalizedOptions = ensureArray(options);
+  return {
+    primaryResultRouteTypeOptions: normalizedOptions.filter((item) => item && PRIMARY_RESULT_ROUTE_TYPE_KEYS.has(item.key)),
+    secondaryResultRouteTypeOptions: normalizedOptions.filter((item) => item && !PRIMARY_RESULT_ROUTE_TYPE_KEYS.has(item.key))
+  };
 }
 
 function sortPeriods(periods, selectedStatus) {
   return (periods || []).slice().sort((left, right) => {
-    if (selectedStatus === "upcoming") {
-      const dateDiff = sortDateStrings(left && left.dateStart, right && right.dateStart);
-      if (dateDiff !== 0) {
-        return dateDiff;
-      }
-
-      return getStatusPriority(left && left.status) - getStatusPriority(right && right.status);
+    const dateDiff = sortDateStrings(left && left.dateStart, right && right.dateStart);
+    if (dateDiff !== 0) {
+      return dateDiff;
     }
 
-    const statusDiff = getStatusPriority(left && left.status) - getStatusPriority(right && right.status);
-    if (statusDiff !== 0) {
-      return statusDiff;
-    }
-
-    return sortDateStrings(left && left.dateStart, right && right.dateStart);
+    return getStatusPriority(left && left.status) - getStatusPriority(right && right.status);
   });
 }
 
@@ -356,6 +400,17 @@ function getRawJourneyRouteTypes(rawJourney) {
       .concat(ensureArray(rawJourney && rawJourney.styles))
       .map((item) => normalizeRouteTypeLabel(item))
   );
+}
+
+function getJourneyTypeLabels(rawJourney) {
+  const serviceType = normalizeText(rawJourney && (rawJourney.type || rawJourney.serviceType));
+  if (!serviceType) {
+    return [];
+  }
+
+  return RESULT_ROUTE_TYPE_OPTIONS
+    .filter((item) => item.serviceTypes.includes(serviceType))
+    .map((item) => item.label);
 }
 
 function getRawJourneyPeriods(rawJourney) {
@@ -370,14 +425,17 @@ Page({
     errorText: "",
     searchKeyword: "",
     visibleRouteTypeOptions: [],
+    resultRouteTypeOptions: [],
+    primaryResultRouteTypeOptions: [],
+    secondaryResultRouteTypeOptions: [],
     visibleRegionOptions: [],
     statusOptions: buildStatusOptions("all"),
     selectedRouteType: "",
+    selectedJourneyType: "",
     selectedDestinationRegionCode: "",
     selectedDestinationRegionLabel: "",
     selectedStatus: "all",
     selectedFilterChips: [],
-    resultCountText: "",
     renderedCountText: "",
     displayJourneys: [],
     displayJourneyColumns: [
@@ -466,6 +524,7 @@ Page({
 
   normalizeJourney(rawJourney) {
     const routeTypes = getRawJourneyRouteTypes(rawJourney);
+    const journeyTypeLabels = getJourneyTypeLabels(rawJourney);
     const activePeriods = sortPeriods(getRawJourneyPeriods(rawJourney), "all").map((period) => {
       const statusMeta = getStatusMeta(period && period.status);
       return Object.assign({}, period, {
@@ -484,6 +543,7 @@ Page({
         ? rawJourney.searchText
         : [rawJourney && rawJourney.name, creatorName]
           .concat(routeTypes)
+          .concat(journeyTypeLabels)
           .concat(destinationNames)
           .concat(destinationRegionLabels)
           .join(" ")
@@ -491,6 +551,7 @@ Page({
 
     return Object.assign({}, rawJourney, {
       routeTypes,
+      journeyTypeLabels,
       primaryRouteType: normalizeRouteTypeLabel(rawJourney && rawJourney.primaryRouteType) || routeTypes[0] || "",
       primaryRouteTypeWordmark: buildRouteTypeWordmarkUrl(
         normalizeRouteTypeLabel(rawJourney && rawJourney.primaryRouteType) || routeTypes[0] || ""
@@ -542,9 +603,11 @@ Page({
       this.setData({
         loading: false,
         errorText: "旅程列表加载失败，请稍后重试。",
-        resultCountText: "",
         displayJourneys: [],
         visibleRouteTypeOptions: [],
+        resultRouteTypeOptions: [],
+        primaryResultRouteTypeOptions: [],
+        secondaryResultRouteTypeOptions: [],
         visibleRegionOptions: []
       });
     }
@@ -563,6 +626,9 @@ Page({
       routeType: Object.prototype.hasOwnProperty.call(source, "routeType")
         ? normalizeText(source.routeType)
         : this.data.selectedRouteType,
+      journeyType: Object.prototype.hasOwnProperty.call(source, "journeyType")
+        ? normalizeText(source.journeyType)
+        : this.data.selectedJourneyType,
       destinationRegionCode: Object.prototype.hasOwnProperty.call(source, "destinationRegionCode")
         ? normalizeDestinationRegionCode(source.destinationRegionCode)
         : normalizeDestinationRegionCode(this.data.selectedDestinationRegionCode),
@@ -597,7 +663,19 @@ Page({
       return false;
     }
 
-    if (!config.excludeRouteType && filters.routeType && !(journey.routeTypes || []).includes(filters.routeType)) {
+    if (
+      !config.excludeRouteType
+      && filters.routeType
+      && !(journey.routeTypes || []).includes(filters.routeType)
+    ) {
+      return false;
+    }
+
+    if (
+      !config.excludeJourneyType
+      && filters.journeyType
+      && !(journey.journeyTypeLabels || []).includes(filters.journeyType)
+    ) {
       return false;
     }
 
@@ -678,7 +756,7 @@ Page({
       displayPrimaryDepartureDateText: journey && journey.isCustomGroup
         ? normalizeText(journey.displayDateLabel) || "按需求定制"
         : formatMonthDay(displayPeriod && displayPeriod.dateStart),
-      displayDurationLabel: normalizeText(displayPeriod && displayPeriod.durationLabel) || journey.durationTag || "",
+      displayDurationLabel: buildDurationLabel(displayPeriod, journey),
       displayVersionLabel: normalizeText(displayPeriod && displayPeriod.versionName)
     };
   },
@@ -710,21 +788,14 @@ Page({
         return result;
       }, [])
       .sort((left, right) => {
-        if (filters.status === "upcoming") {
-          const dateDiff = sortDateStrings(left && left.displayPeriod && left.displayPeriod.dateStart, right && right.displayPeriod && right.displayPeriod.dateStart);
-          if (dateDiff !== 0) {
-            return dateDiff;
-          }
-        } else {
-          const statusDiff = getStatusPriority(left && left.displayStatus) - getStatusPriority(right && right.displayStatus);
-          if (statusDiff !== 0) {
-            return statusDiff;
-          }
+        const dateDiff = sortDateStrings(left && left.displayPeriod && left.displayPeriod.dateStart, right && right.displayPeriod && right.displayPeriod.dateStart);
+        if (dateDiff !== 0) {
+          return dateDiff;
+        }
 
-          const dateDiff = sortDateStrings(left && left.displayPeriod && left.displayPeriod.dateStart, right && right.displayPeriod && right.displayPeriod.dateStart);
-          if (dateDiff !== 0) {
-            return dateDiff;
-          }
+        const statusDiff = getStatusPriority(left && left.displayStatus) - getStatusPriority(right && right.displayStatus);
+        if (statusDiff !== 0) {
+          return statusDiff;
         }
 
         return normalizeText(left && left.name).localeCompare(normalizeText(right && right.name));
@@ -743,6 +814,23 @@ Page({
       }
 
       (journey.routeTypes || []).forEach((tag) => matchedTypeSet.add(tag));
+    });
+
+    return matchedTypeSet;
+  },
+
+  buildAvailableJourneyTypeLabelSet(filters) {
+    const matchedTypeSet = new Set();
+
+    (this.allJourneys || []).forEach((journey) => {
+      const candidatePeriods = this.getMatchedPeriodsForJourney(journey, filters, {
+        excludeJourneyType: true
+      });
+      if (!candidatePeriods.length) {
+        return;
+      }
+
+      (journey.journeyTypeLabels || []).forEach((label) => matchedTypeSet.add(label));
     });
 
     return matchedTypeSet;
@@ -770,6 +858,24 @@ Page({
 
         return left.sortIndex - right.sortIndex;
       });
+  },
+
+  buildResultRouteTypeOptions(filters) {
+    const availableJourneyTypeLabelSet = this.buildAvailableJourneyTypeLabelSet(filters);
+
+    return RESULT_ROUTE_TYPE_OPTIONS
+      .filter((item) => (
+        PRIMARY_RESULT_ROUTE_TYPE_KEYS.has(item.key)
+        || availableJourneyTypeLabelSet.has(item.label)
+        || filters.journeyType === item.label
+      ))
+      .map((item) => ({
+        key: item.key,
+        value: item.label,
+        label: item.label,
+        available: availableJourneyTypeLabelSet.has(item.label),
+        selected: filters.journeyType === item.label
+      }));
   },
 
   buildAvailableRegionCountMap(filters) {
@@ -828,6 +934,13 @@ Page({
       chips.push({
         key: "routeType",
         label: buildRouteTypeDisplayLabel(filters.routeType)
+      });
+    }
+
+    if (filters.journeyType) {
+      chips.push({
+        key: "journeyType",
+        label: buildRouteTypeDisplayLabel(filters.journeyType)
       });
     }
 
@@ -1093,6 +1206,8 @@ Page({
     this.filteredJourneys = filteredJourneys;
     const initialDisplayJourneys = filteredJourneys.slice(0, INITIAL_JOURNEY_RENDER_COUNT);
     const visibleRouteTypeOptions = this.buildVisibleRouteTypeOptions(filters);
+    const resultRouteTypeOptions = this.buildResultRouteTypeOptions(filters);
+    const splitResultRouteTypes = splitResultRouteTypeOptions(resultRouteTypeOptions);
     const visibleRegionOptions = this.buildVisibleRegionOptions(filters);
     const selectedFilterChips = this.buildSelectedFilterChips(filters);
     const selectedDestinationRegionLabel = getDestinationRegionLabel(filters.destinationRegionCode);
@@ -1100,17 +1215,20 @@ Page({
       {
         searchKeyword: filters.searchKeyword,
         selectedRouteType: filters.routeType,
+        selectedJourneyType: filters.journeyType,
         selectedDestinationRegionCode: filters.destinationRegionCode,
         selectedDestinationRegionLabel,
         selectedStatus: filters.status,
         visibleRouteTypeOptions,
+        resultRouteTypeOptions,
+        primaryResultRouteTypeOptions: splitResultRouteTypes.primaryResultRouteTypeOptions,
+        secondaryResultRouteTypeOptions: splitResultRouteTypes.secondaryResultRouteTypeOptions,
         visibleRegionOptions,
         selectedFilterChips,
         displayJourneys: initialDisplayJourneys,
         displayJourneyColumns: this.buildJourneyColumns(initialDisplayJourneys),
         hasMoreJourneys: initialDisplayJourneys.length < filteredJourneys.length,
-        statusOptions: buildStatusOptions(filters.status),
-        resultCountText: `共 ${filteredJourneys.length} 条符合条件的旅程`,
+        statusOptions: buildStatusOptions(filters.status, filters.routeType, filters.journeyType),
         renderedCountText: this.buildRenderedCountText(filteredJourneys.length, initialDisplayJourneys.length)
       },
       this.buildDateSheetState(filters, patch),
@@ -1180,13 +1298,40 @@ Page({
 
   onRouteTypeTap(event) {
     const routeType = normalizeText(event.currentTarget.dataset.value);
+    const routeTypeOption = (this.data.visibleRouteTypeOptions || [])
+      .find((item) => item && item.value === routeType);
+    if (!routeType || !routeTypeOption || (!routeTypeOption.available && !routeTypeOption.selected)) {
+      return;
+    }
+
     this.applyJourneyFilters({
       routeType: routeType === this.data.selectedRouteType ? "" : routeType
     });
   },
 
+  onJourneyTypeTap(event) {
+    const journeyType = normalizeText(event.currentTarget.dataset.value);
+    const journeyTypeOption = (this.data.resultRouteTypeOptions || [])
+      .find((item) => item && item.value === journeyType);
+    if (!journeyType || !journeyTypeOption || (!journeyTypeOption.available && !journeyTypeOption.selected)) {
+      return;
+    }
+
+    this.applyJourneyFilters({
+      journeyType: journeyType === this.data.selectedJourneyType ? "" : journeyType
+    });
+  },
+
   onStatusTap(event) {
     const status = normalizeText(event.currentTarget.dataset.status) || "all";
+    if (status === "all") {
+      this.applyJourneyFilters({
+        journeyType: "",
+        status: "all"
+      });
+      return;
+    }
+
     if (status === this.data.selectedStatus) {
       this.applyJourneyFilters({
         status: "all"
@@ -1211,6 +1356,10 @@ Page({
       patch.routeType = "";
     }
 
+    if (key === "journeyType") {
+      patch.journeyType = "";
+    }
+
     if (key === "status") {
       patch.status = "all";
     }
@@ -1226,6 +1375,7 @@ Page({
     this.applyJourneyFilters({
       searchKeyword: "",
       routeType: "",
+      journeyType: "",
       destinationRegionCode: "",
       status: "all"
     });

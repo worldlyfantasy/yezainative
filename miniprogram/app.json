@@ -48,7 +48,7 @@
   ],
   "preloadRule": {
     "pages/home/home": {
-      "network": "all",
+      "network": "wifi",
       "packages": [
         "pkg/explore",
         "pkg/content"
@@ -62,17 +62,7 @@
     }
   },
   "usingComponents": {
-    "app-tab-bar": "/custom-tab-bar/index",
-    "hero-image": "/components/yezai/hero-image/index",
-    "page-title": "/components/yezai/page-title/index",
-    "section-title": "/components/yezai/section-title/index",
-    "narrative-text": "/components/yezai/narrative-text/index",
-    "quote-block": "/components/yezai/quote-block/index",
-    "creator-row": "/components/yezai/creator-row/index",
-    "favorite-star": "/components/yezai/favorite-star/index",
-    "journey-item": "/components/yezai/journey-item/index",
-    "invite-button": "/components/yezai/invite-button/index",
-    "divider-line": "/components/yezai/divider-line/index"
+    "app-tab-bar": "/custom-tab-bar/index"
   },
   "window": {
     "backgroundColor": "#f5efe3",

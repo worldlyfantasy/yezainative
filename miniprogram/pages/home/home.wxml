@@ -38,34 +38,18 @@
   </view>
 
   <view class="page-shell">
-    <view class="home-note">
-      <text class="home-note__text">看见那些有在地温度、沉淀真实体验的路线\n为每一位奔赴山野的旅人\n铺就一条通往真实旅途的路</text>
-    </view>
-
     <view wx:if="{{errorText}}" class="section-block paper-block page-feedback">
       <text class="page-feedback__title">首页暂时不可用</text>
       <text class="page-feedback__desc">{{errorText}}</text>
     </view>
     <view wx:elif="{{loading}}" class="section-block empty-state">首页内容加载中...</view>
     <block wx:else>
-      <image
-        class="home-section-divider divider--mountain"
-        src="/images/separator/sep-mountain.svg"
-        mode="widthFix"
-      ></image>
-
-      <view class="section-block">
-        <view class="section-head section-head--trip">
-          <view>
-            <text class="section-eyebrow">精选行程</text>
-          </view>
-          <text class="section-link" bindtap="goServices">查看全部 →</text>
-        </view>
-        <view class="service-tabs service-tabs--top">
+      <view class="section-block home-services">
+        <view class="service-tabs">
           <text
             wx:for="{{serviceTabs}}"
             wx:key="key"
-            class="service-tab {{item.key === activeServiceTab ? 'service-tab--active' : ''}}"
+            class="service-tab {{item.key === activeServiceTab ? 'service-tab--active' : ''}} {{item.key === 'more' ? 'service-tab--more' : ''}}"
             data-tab="{{item.key}}"
             bindtap="onServiceTabChange"
           >{{item.label}}</text>
@@ -92,51 +76,93 @@
           </view>
         </scroll-view>
       </view>
-      <image
-        class="home-section-divider divider--human"
-        src="/images/separator/sep-human.svg"
-        mode="widthFix"
-      ></image>
 
-      <view class="section-block">
+      <view class="section-block home-creators">
         <view class="section-head">
-          <view>
-            <text class="section-eyebrow">精选创作者</text>
+          <view class="home-section-title-row">
+            <text class="section-eyebrow">野哉创作者</text>
+            <text class="section-link" bindtap="goCreators">查看全部 →</text>
           </view>
-          <text class="section-link" bindtap="goCreators">查看全部 →</text>
+          <text class="home-section-desc">他们熟悉一片山、一条路、一座城的细节\n也愿意把真实经验交给远道而来的旅人</text>
         </view>
-        <view class="card-stack">
-          <creator-card
-            wx:for="{{featuredCreators}}"
-            wx:key="id"
-            creator="{{item}}"
-            show-divider="{{false}}"
-            bind:cardtap="onCreatorTap"
-          ></creator-card>
+        <view class="creator-constellation">
+          <view
+            class="creator-constellation__field"
+            bindtouchstart="onCreatorDialTouchStart"
+            bindtouchmove="onCreatorDialTouchMove"
+            bindtouchend="onCreatorDialTouchEnd"
+            bindtouchcancel="onCreatorDialTouchEnd"
+          >
+            <view class="creator-constellation__plate" style="{{creatorDialStyle}}">
+              <block wx:for="{{featuredCreators}}" wx:key="id">
+                <view
+                  wx:if="{{index < 13}}"
+                  class="creator-constellation__item creator-constellation__item--{{index}}"
+                  bindtap="onCreatorTap"
+                  data-slug="{{item.slug}}"
+                  hover-class="creator-constellation__item--pressed"
+                  hover-stay-time="80"
+                >
+                  <image
+                    wx:if="{{item.avatar}}"
+                    class="creator-constellation__avatar"
+                    src="{{item.avatar}}"
+                    mode="aspectFill"
+                    lazy-load="{{index > 2}}"
+                  ></image>
+                  <text wx:else class="creator-constellation__fallback">{{item.name}}</text>
+                </view>
+              </block>
+            </view>
+          </view>
         </view>
       </view>
-      <image
-        class="home-section-divider divider--pack"
-        src="/images/separator/sep-pack.svg"
-        mode="widthFix"
-      ></image>
 
-      <view class="section-block">
+      <view class="section-block home-ideas">
         <view class="section-head">
-          <view>
-            <text class="section-eyebrow">旅行文学</text>
+          <view class="home-section-title-row">
+            <text class="section-eyebrow">旅行故事</text>
+            <text class="section-link" bindtap="goIdeas">阅读更多 →</text>
           </view>
-          <text class="section-link" bindtap="goIdeas">阅读更多 →</text>
+          <text class="home-section-desc">把路上的风、人的声音和土地的纹理写下来\n在出发之前，先读见一段真实旅程</text>
         </view>
-        <view class="card-stack">
-          <idea-card
+        <view class="idea-list">
+          <view
             wx:for="{{featuredIdeas}}"
             wx:key="slug"
-            idea="{{item}}"
-            author-name="{{item.authorName}}"
-            show-divider="{{false}}"
-            bind:cardtap="onIdeaTap"
-          ></idea-card>
+            class="idea-list-item {{index === 0 ? 'idea-list-item--featured' : ''}}"
+            data-slug="{{item.slug}}"
+            data-source-type="{{item.sourceType}}"
+            data-wechat-article-url="{{item.wechatArticleUrl}}"
+            data-wechat-article-title="{{item.wechatArticleTitle}}"
+            data-title="{{item.title}}"
+            bindtap="onIdeaTap"
+            hover-class="idea-list-item--pressed"
+            hover-stay-time="80"
+          >
+            <view wx:if="{{index === 0}}" class="idea-list-item__cover-wrap">
+              <image class="idea-list-item__cover" src="{{item.cover || '/images/content/hero-aba-presence.jpg'}}" mode="aspectFill"></image>
+              <text class="idea-list-item__cover-label">田野 · 现场笔记</text>
+            </view>
+            <view wx:elif="{{item.cover}}" class="idea-list-item__thumb-wrap">
+              <image class="idea-list-item__thumb" src="{{item.cover}}" mode="aspectFill"></image>
+            </view>
+            <view wx:else class="idea-list-item__stamp">
+              <text class="idea-list-item__stamp-text">野哉</text>
+            </view>
+            <view class="idea-list-item__main">
+              <view class="idea-list-item__meta-row">
+                <text class="idea-list-item__theme">{{item.themeLabel || item.theme || '现场笔记'}}</text>
+                <text class="idea-list-item__number">NO.{{index + 1}}</text>
+              </view>
+              <text class="idea-list-item__title">{{item.title}}</text>
+              <text class="idea-list-item__summary" wx:if="{{item.summary}}">{{item.summary}}</text>
+              <view class="idea-list-item__footer">
+                <text class="idea-list-item__action">阅读全文</text>
+                <text class="idea-list-item__arrow">→</text>
+              </view>
+            </view>
+          </view>
         </view>
       </view>
     </block>

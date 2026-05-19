@@ -16,9 +16,7 @@ const {
 } = require("../../utils/share");
 const MAX_CREATOR_TAGS = 3;
 const MAX_GRID_CREATOR_TAGS = 2;
-const CREATOR_VIEW_MODE_STORAGE_KEY = "yezaiCreatorViewMode";
 const STYLE_SHEET_SELECTION_FEEDBACK_DELAY_MS = 110;
-const VALID_CREATOR_VIEW_MODES = new Set(["card", "grid"]);
 const REGION_SCOPE_TABS = [
   { key: "domestic", label: "国内" },
   { key: "international", label: "国际" }
@@ -31,35 +29,6 @@ function ensureArray(value) {
 
 function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function normalizeCreatorViewMode(mode) {
-  const normalized = normalizeText(mode);
-  return VALID_CREATOR_VIEW_MODES.has(normalized) ? normalized : "grid";
-}
-
-function getStoredCreatorViewMode() {
-  if (typeof wx === "undefined" || typeof wx.getStorageSync !== "function") {
-    return "grid";
-  }
-
-  try {
-    return normalizeCreatorViewMode(wx.getStorageSync(CREATOR_VIEW_MODE_STORAGE_KEY));
-  } catch (error) {
-    return "grid";
-  }
-}
-
-function setStoredCreatorViewMode(mode) {
-  if (typeof wx === "undefined" || typeof wx.setStorageSync !== "function") {
-    return;
-  }
-
-  try {
-    wx.setStorageSync(CREATOR_VIEW_MODE_STORAGE_KEY, mode);
-  } catch (error) {
-    console.warn("Failed to persist creator view mode", error);
-  }
 }
 
 function wait(ms) {
@@ -119,7 +88,6 @@ Page({
     styleOptions: [{ label: "全部", value: "" }],
     styleLabels: ["全部"],
     creators: [],
-    creatorViewMode: "grid",
     routeTriggerDots: [1, 2, 3, 4],
     selectedRegionCode: "",
     selectedRegionLabel: "",
@@ -141,8 +109,7 @@ Page({
 
     this.setData({
       loading: true,
-      errorText: "",
-      creatorViewMode: getStoredCreatorViewMode()
+      errorText: ""
     });
 
     try {
@@ -279,20 +246,6 @@ Page({
         errorText: "筛选结果加载失败，请稍后重试。"
       });
     }
-  },
-
-  onCreatorViewModeTap(event) {
-    const mode = normalizeCreatorViewMode(event && event.currentTarget && event.currentTarget.dataset
-      ? event.currentTarget.dataset.mode
-      : "");
-    if (mode === this.data.creatorViewMode) {
-      return;
-    }
-
-    setStoredCreatorViewMode(mode);
-    this.setData({
-      creatorViewMode: mode
-    });
   },
 
   getShareImageUrl() {

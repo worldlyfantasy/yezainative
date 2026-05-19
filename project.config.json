@@ -74,7 +74,52 @@
   "compileType": "miniprogram",
   "srcMiniprogramRoot": "miniprogram/",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "miniprogram/images/journey-types"
+      },
+      {
+        "type": "folder",
+        "value": "miniprogram/images/route-type-wordmark"
+      },
+      {
+        "type": "folder",
+        "value": "miniprogram/images/icons/journey-types"
+      },
+      {
+        "type": "folder",
+        "value": "miniprogram/images/icons/journey-types-webp"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/config/cloud-image-map.js"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/config/cloud-image-map.json"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/fonts/README.md"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/images/README.md"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/.DS_Store"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/images/.DS_Store"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/images/icons/.DS_Store"
+      }
+    ],
     "include": []
   },
   "editorSetting": {

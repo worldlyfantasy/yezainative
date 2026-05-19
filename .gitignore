@@ -29,6 +29,13 @@ pnpm-debug.log*
 # Editor swap files
 *.sw?
 
+# WeChat DevTools local image optimization artifacts
+*.opt-*.jpg
+*.opt-*.jpeg
+*.opt-*.png
+
 # Local one-off data backfill scripts
 scripts/backfill-service-full-group-size.js
 scripts/backfill-service-group-type.js
+
+.DS_Store

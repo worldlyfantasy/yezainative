@@ -11,17 +11,18 @@
     </view>
     <view class="order-detail__meta-list">
       <view class="order-detail__meta-row">
-        <text class="order-detail__meta-label">{{orderIdLabelText}}</text>
-        <text class="order-detail__meta-value">#{{order.displayOrderNo}}</text>
-      </view>
-      <view class="order-detail__meta-row">
         <text class="order-detail__meta-label">创建时间</text>
         <text class="order-detail__meta-value">{{order.createdAt}}</text>
       </view>
     </view>
   </view>
 
-  <view class="section-block paper-block">
+  <view
+    class="section-block paper-block order-detail__journey-card"
+    bindtap="openServiceDetail"
+    hover-class="order-detail__journey-card--pressing"
+    hover-stay-time="100"
+  >
     <text class="section-title">旅程信息</text>
     <view class="order-product">
       <image wx:if="{{order.cover}}" class="order-product__cover" src="{{order.cover}}" mode="aspectFill"></image>
@@ -32,6 +33,7 @@
         <text class="order-product__meta">{{order.travelDateText}}</text>
         <text class="order-product__meta">{{order.serviceType}}</text>
       </view>
+      <text class="order-product__arrow">›</text>
     </view>
   </view>
 

@@ -52,6 +52,15 @@
   text-align: right;
 }
 
+.order-detail__journey-card {
+  transition: opacity 0.16s ease-out, transform 0.16s ease-out;
+}
+
+.order-detail__journey-card--pressing {
+  opacity: 0.9;
+  transform: scale(0.992);
+}
+
 .order-product {
   display: flex;
   align-items: flex-start;
@@ -77,6 +86,14 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(135deg, rgba(153, 57, 33, 0.12), rgba(153, 57, 33, 0.03));
+}
+
+.order-product__arrow {
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 42rpx;
+  line-height: 1;
+  color: rgba(153, 57, 33, 0.44);
 }
 
 .order-product__cover--placeholder::after {

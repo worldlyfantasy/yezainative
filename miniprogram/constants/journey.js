@@ -25,7 +25,7 @@ const LEGACY_ROUTE_TYPE_ALIASES = {
 
 const STATUS_FILTER_OPTIONS = [
   { key: "all", label: "全部" },
-  { key: "confirmed", label: "确定成行" },
+  { key: "confirmed", label: "已成行" },
   { key: "available", label: "可报名" }
 ];
 
@@ -55,7 +55,7 @@ const STATUS_PRIORITY = {
   closed: 3
 };
 
-const ROUTE_TYPE_ICON_BASE = "/images/icons/journey-types";
+const ROUTE_TYPE_ICON_BASE = "/images/icons/journey-types-png";
 
 function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -76,7 +76,7 @@ function buildRouteTypeIconUrl(label) {
     return "";
   }
 
-  return `${ROUTE_TYPE_ICON_BASE}/${normalized}2.svg`;
+  return `${ROUTE_TYPE_ICON_BASE}/${normalized}2.png`;
 }
 
 function buildRouteTypeSelectedIconUrl(label) {
@@ -85,7 +85,7 @@ function buildRouteTypeSelectedIconUrl(label) {
     return "";
   }
 
-  return `${ROUTE_TYPE_ICON_BASE}/${normalized}3.svg`;
+  return `${ROUTE_TYPE_ICON_BASE}/${normalized}3.png`;
 }
 
 function buildRouteTypeWordmarkUrl(label) {
@@ -94,7 +94,7 @@ function buildRouteTypeWordmarkUrl(label) {
     return "";
   }
 
-  return `${ROUTE_TYPE_ICON_BASE}/${normalized}1.svg`;
+  return `${ROUTE_TYPE_ICON_BASE}/${normalized}1.png`;
 }
 
 function getStatusMeta(status) {

@@ -111,8 +111,9 @@ function createJourney(options) {
     cover: options.cover || "",
     summary: "",
     creatorName: options.creatorName || "野哉",
+    type: options.type || "",
     routeTypes: options.routeTypes || [],
-    durationTag: "",
+    durationTag: options.durationTag || "",
     priceLabel: options.priceLabel || "",
     primaryRouteTypeWordmark: "",
     destinationRegionCodes: options.destinationRegionCodes || [],
@@ -167,6 +168,41 @@ test("journey page keeps the date sheet independent from the selected destinatio
   assert.deepEqual(markedDates, ["2026-05-01"]);
 });
 
+test("journey page sorts journey cards by departure date before confirmed status", () => {
+  const page = createPageInstance();
+  page.allJourneys = [
+    createJourney({
+      slug: "confirmed-later",
+      activePeriods: [
+        {
+          dateStart: "2026-05-21",
+          status: "confirmed",
+          price: 4280
+        }
+      ]
+    }),
+    createJourney({
+      slug: "available-sooner",
+      activePeriods: [
+        {
+          dateStart: "2026-05-20",
+          status: "available",
+          price: 3980
+        }
+      ]
+    })
+  ];
+
+  page.applyJourneyFilters({
+    status: "all"
+  });
+
+  assert.deepEqual(
+    page.data.displayJourneys.map((item) => item.slug),
+    ["available-sooner", "confirmed-later"]
+  );
+});
+
 test("journey page normalizes legacy journey payloads that still use services and groupPeriods", async () => {
   const legacyPayload = {
     journeys: [
@@ -194,7 +230,6 @@ test("journey page normalizes legacy journey payloads that still use services an
   await page.loadJourneyData();
   clearTimeout(page.measureFilterStackTimer);
 
-  assert.equal(page.data.resultCountText, "共 1 条符合条件的旅程");
   assert.equal(page.data.displayJourneys.length, 1);
   assert.equal(page.data.displayJourneys[0].slug, "legacy-journey");
 });
@@ -233,6 +268,127 @@ test("journey page maps legacy route tags to the new route tag system and hides 
     page.data.visibleRouteTypeOptions.map((item) => item.value),
     ["研学", "文化"]
   );
+});
+
+test("journey page shows only supported result route type chips with matched journeys", () => {
+  const page = createPageInstance();
+  page.allJourneys = [
+    createJourney({
+      slug: "domestic-long",
+      type: "长途旅行",
+      routeTypes: ["文化"],
+      activePeriods: [
+        {
+          dateStart: "2026-05-01",
+          status: "available",
+          price: 3999
+        }
+      ]
+    }),
+    createJourney({
+      slug: "domestic-short",
+      type: "短途旅行",
+      routeTypes: ["户外"],
+      activePeriods: [
+        {
+          dateStart: "2026-05-02",
+          status: "available",
+          price: 1299
+        }
+      ]
+    }),
+    createJourney({
+      slug: "city-event",
+      type: "在地体验",
+      routeTypes: ["城市"],
+      activePeriods: [
+        {
+          dateStart: "2026-05-03",
+          status: "confirmed",
+          price: 299
+        }
+      ]
+    }),
+    createJourney({
+      slug: "old-tag",
+      type: "定制规划",
+      routeTypes: ["文化"],
+      activePeriods: [
+        {
+          dateStart: "2026-05-04",
+          status: "available",
+          price: 1999
+        }
+      ]
+    })
+  ].map((journey) => page.normalizeJourney(journey));
+  page.routeTypeOrder = page.buildRouteTypeOrder([], page.allJourneys);
+
+  page.applyJourneyFilters({
+    status: "all"
+  });
+
+  assert.deepEqual(
+    page.data.resultRouteTypeOptions.map((item) => item.value),
+    ["长途", "短途", "城市"]
+  );
+  assert.deepEqual(
+    page.data.primaryResultRouteTypeOptions.map((item) => item.value),
+    ["长途", "短途"]
+  );
+  assert.deepEqual(
+    page.data.secondaryResultRouteTypeOptions.map((item) => item.value),
+    ["城市"]
+  );
+
+  page.applyJourneyFilters({
+    routeType: "文化",
+    status: "all"
+  });
+
+  assert.equal(page.data.statusOptions.find((item) => item.key === "all").active, true);
+
+  page.applyJourneyFilters({
+    journeyType: "长途"
+  });
+
+  assert.equal(page.data.statusOptions.find((item) => item.key === "all").active, false);
+  assert.equal(page.data.resultRouteTypeOptions.find((item) => item.value === "长途").selected, true);
+  assert.equal(page.data.visibleRouteTypeOptions.find((item) => item.value === "文化").available, true);
+  assert.equal(page.data.visibleRouteTypeOptions.find((item) => item.value === "城市").available, false);
+
+  page.applyJourneyFilters({
+    journeyType: "",
+    status: "confirmed"
+  });
+
+  assert.equal(page.data.statusOptions.find((item) => item.key === "all").active, true);
+  assert.equal(page.data.selectedFilterChips.find((item) => item.key === "status").label, "已成行");
+});
+
+test("journey page clears journey type filters when tapping the all tab", () => {
+  const page = createPageInstance();
+  let appliedPatch = null;
+
+  page.data.selectedRouteType = "文化";
+  page.data.selectedJourneyType = "长途";
+  page.data.selectedStatus = "all";
+  page.applyJourneyFilters = (patch) => {
+    appliedPatch = patch;
+  };
+
+  page.onStatusTap({
+    currentTarget: {
+      dataset: {
+        status: "all"
+      }
+    }
+  });
+
+  assert.deepEqual(appliedPatch, {
+    journeyType: "",
+    status: "all"
+  });
 });
 
 test("journey page keeps region availability independent from transient calendar dates", () => {
@@ -558,6 +714,35 @@ test("journey page keeps region filtering persistent and closes the region sheet
   assert.equal(closed, true);
 });
 
+test("journey page ignores unavailable route type taps", () => {
+  const page = createPageInstance();
+  let appliedPatch = null;
+
+  page.data.selectedRouteType = "";
+  page.data.visibleRouteTypeOptions = [
+    {
+      key: "户外",
+      value: "户外",
+      label: "户外",
+      available: false,
+      selected: false
+    }
+  ];
+  page.applyJourneyFilters = (patch) => {
+    appliedPatch = patch;
+  };
+
+  page.onRouteTypeTap({
+    currentTarget: {
+      dataset: {
+        value: "户外"
+      }
+    }
+  });
+
+  assert.equal(appliedPatch, null);
+});
+
 test("journey page normalizes legacy destination region filters to the current region code", () => {
   const page = createPageInstance();
   page.allJourneys = [
@@ -583,7 +768,6 @@ test("journey page normalizes legacy destination region filters to the current r
 
   assert.equal(page.data.selectedDestinationRegionCode, "cn_great_northwest");
   assert.equal(page.data.selectedDestinationRegionLabel, "西北");
-  assert.equal(page.data.resultCountText, "共 1 条符合条件的旅程");
   assert.equal(page.data.displayJourneys.length, 1);
 });
 
@@ -607,6 +791,28 @@ test("journey page displays list prices from period price instead of raw service
 
   assert.equal(page.data.displayJourneys.length, 1);
   assert.equal(page.data.displayJourneys[0].priceText, "¥3980 起");
+});
+
+test("journey page decorates cards with duration labels from period data", () => {
+  const page = createPageInstance();
+  page.allJourneys = [
+    createJourney({
+      slug: "rainforest-dawn",
+      activePeriods: [
+        {
+          dateStart: "2026-05-10",
+          dateEnd: "2026-05-14",
+          status: "available",
+          price: 3980
+        }
+      ]
+    })
+  ];
+
+  page.applyJourneyFilters();
+
+  assert.equal(page.data.displayJourneys.length, 1);
+  assert.equal(page.data.displayJourneys[0].displayDurationLabel, "5天");
 });
 
 test("journey page only shows the confirmed tag for confirmed bookable periods", () => {

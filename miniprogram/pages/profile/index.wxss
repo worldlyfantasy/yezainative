@@ -401,6 +401,10 @@
   pointer-events: none;
 }
 
+.profile-entry-card--glyph-soft .profile-entry-card__glyph {
+  opacity: 0.42;
+}
+
 .profile-entry-card__head {
   position: relative;
   z-index: 1;
@@ -561,25 +565,36 @@
   padding: 22rpx 6rpx 12rpx;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  text-align: left;
-  border-top: 1rpx solid rgba(151, 124, 91, 0.16);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .profile-contact__label {
+  display: block;
   font-size: 24rpx;
   line-height: 1.4;
   font-weight: 600;
   letter-spacing: 2rpx;
+  text-align: center;
   color: rgba(153, 57, 33, 0.9);
 }
 
 .profile-contact__email {
+  display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
   line-height: 1.6;
+  text-align: center;
   color: rgba(74, 58, 43, 0.76);
+}
+
+.profile-credit {
+  margin-top: 72rpx;
+  text-align: center;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: rgba(74, 58, 43, 0.48);
 }
 
 .profile-completion-mask {

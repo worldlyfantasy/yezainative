@@ -3,7 +3,7 @@ const { getOrderStatusTabs, getOrders } = require("../../../repositories/transac
 Page({
   data: {
     tabs: [],
-    currentStatus: "pending",
+    currentStatus: "all",
     orders: []
   },
 

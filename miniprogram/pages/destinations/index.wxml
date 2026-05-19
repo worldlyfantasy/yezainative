@@ -59,24 +59,50 @@
           </scroll-view>
         </view>
 
-        <view class="journey-status-row">
-          <scroll-view class="journey-status-bar" scroll-x="true" enhanced="{{true}}" show-scrollbar="{{false}}">
-            <view class="journey-status-bar__track">
-              <view
-                wx:for="{{statusOptions}}"
-                wx:key="key"
-                class="journey-status-bar__item {{item.active ? 'journey-status-bar__item--active' : ''}}"
-                data-status="{{item.key}}"
-                bindtap="onStatusTap"
-                hover-class="journey-status-bar__item--pressed"
-              >{{item.label}}</view>
+        <view class="journey-status-row journey-status-row--tools">
+          <view class="journey-view-switch">
+            <view
+              class="journey-view-switch__item {{journeyViewMode === 'grid' ? 'journey-view-switch__item--active' : ''}}"
+              data-mode="grid"
+              bindtap="onJourneyViewModeTap"
+              hover-class="journey-view-switch__item--pressed"
+            >
+              <view class="journey-view-switch__icon journey-view-switch__icon--grid">
+                <view wx:for="{{[1,2,3,4]}}" wx:key="*this" class="journey-view-switch__grid-cell"></view>
+              </view>
             </view>
-          </scroll-view>
-          <text
-            wx:if="{{selectedFilterChips.length}}"
-            class="journey-status-row__clear"
-            bindtap="clearAllFilters"
-          >清空筛选</text>
+            <view
+              class="journey-view-switch__item {{journeyViewMode === 'image' ? 'journey-view-switch__item--active' : ''}}"
+              data-mode="image"
+              bindtap="onJourneyViewModeTap"
+              hover-class="journey-view-switch__item--pressed"
+            >
+              <view class="journey-view-switch__icon journey-view-switch__icon--image">
+                <view class="journey-view-switch__image-cover"></view>
+                <view class="journey-view-switch__image-line journey-view-switch__image-line--long"></view>
+                <view class="journey-view-switch__image-line journey-view-switch__image-line--short"></view>
+              </view>
+            </view>
+            <view
+              class="journey-view-switch__item {{journeyViewMode === 'compact' ? 'journey-view-switch__item--active' : ''}}"
+              data-mode="compact"
+              bindtap="onJourneyViewModeTap"
+              hover-class="journey-view-switch__item--pressed"
+            >
+              <view class="journey-view-switch__icon journey-view-switch__icon--compact">
+                <view wx:for="{{[1,2,3]}}" wx:key="*this" class="journey-view-switch__compact-row">
+                  <view class="journey-view-switch__compact-thumb"></view>
+                  <view class="journey-view-switch__compact-line"></view>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view wx:if="{{selectedFilterChips.length}}" class="journey-filter-actions">
+            <text
+              class="journey-status-row__pill journey-status-row__clear"
+              bindtap="clearAllFilters"
+            >重置筛选</text>
+          </view>
         </view>
       </view>
     </view>
@@ -108,66 +134,88 @@
         </scroll-view>
       </view>
 
-      <view class="journey-status-row">
-        <scroll-view class="journey-status-bar" scroll-x="true" enhanced="{{true}}" show-scrollbar="{{false}}">
-          <view class="journey-status-bar__track">
-            <view
-              wx:for="{{statusOptions}}"
-              wx:key="key"
-              class="journey-status-bar__item {{item.active ? 'journey-status-bar__item--active' : ''}}"
-              data-status="{{item.key}}"
-              bindtap="onStatusTap"
-              hover-class="journey-status-bar__item--pressed"
-            >{{item.label}}</view>
+      <view class="journey-status-row journey-status-row--tools">
+        <view class="journey-view-switch">
+          <view
+            class="journey-view-switch__item {{journeyViewMode === 'grid' ? 'journey-view-switch__item--active' : ''}}"
+            data-mode="grid"
+            bindtap="onJourneyViewModeTap"
+            hover-class="journey-view-switch__item--pressed"
+          >
+            <view class="journey-view-switch__icon journey-view-switch__icon--grid">
+              <view wx:for="{{[1,2,3,4]}}" wx:key="*this" class="journey-view-switch__grid-cell"></view>
+            </view>
           </view>
-        </scroll-view>
-        <text
-          wx:if="{{selectedFilterChips.length}}"
-          class="journey-status-row__clear"
-          bindtap="clearAllFilters"
-        >清空筛选</text>
+          <view
+            class="journey-view-switch__item {{journeyViewMode === 'image' ? 'journey-view-switch__item--active' : ''}}"
+            data-mode="image"
+            bindtap="onJourneyViewModeTap"
+            hover-class="journey-view-switch__item--pressed"
+          >
+            <view class="journey-view-switch__icon journey-view-switch__icon--image">
+              <view class="journey-view-switch__image-cover"></view>
+              <view class="journey-view-switch__image-line journey-view-switch__image-line--long"></view>
+              <view class="journey-view-switch__image-line journey-view-switch__image-line--short"></view>
+            </view>
+          </view>
+          <view
+            class="journey-view-switch__item {{journeyViewMode === 'compact' ? 'journey-view-switch__item--active' : ''}}"
+            data-mode="compact"
+            bindtap="onJourneyViewModeTap"
+            hover-class="journey-view-switch__item--pressed"
+          >
+            <view class="journey-view-switch__icon journey-view-switch__icon--compact">
+              <view wx:for="{{[1,2,3]}}" wx:key="*this" class="journey-view-switch__compact-row">
+                <view class="journey-view-switch__compact-thumb"></view>
+                <view class="journey-view-switch__compact-line"></view>
+              </view>
+            </view>
+          </view>
+        </view>
+        <view wx:if="{{selectedFilterChips.length}}" class="journey-filter-actions">
+          <text
+            class="journey-status-row__pill journey-status-row__clear"
+            bindtap="clearAllFilters"
+          >重置筛选</text>
+        </view>
       </view>
     </view>
 
     <view class="journey-result-head">
-      <text class="journey-result-head__count">{{resultCountText}}</text>
-      <view class="journey-view-switch">
-        <view
-          class="journey-view-switch__item {{journeyViewMode === 'grid' ? 'journey-view-switch__item--active' : ''}}"
-          data-mode="grid"
-          bindtap="onJourneyViewModeTap"
-          hover-class="journey-view-switch__item--pressed"
-        >
-          <view class="journey-view-switch__icon journey-view-switch__icon--grid">
-            <view wx:for="{{[1,2,3,4]}}" wx:key="*this" class="journey-view-switch__grid-cell"></view>
-          </view>
+      <scroll-view class="journey-status-bar journey-status-bar--result" scroll-x="true" enhanced="{{true}}" show-scrollbar="{{false}}">
+        <view class="journey-status-bar__track">
+          <view
+            wx:for="{{statusOptions}}"
+            wx:key="key"
+            class="journey-status-bar__item {{item.active ? 'journey-status-bar__item--active' : ''}}"
+            data-status="{{item.key}}"
+            bindtap="onStatusTap"
+            hover-class="journey-status-bar__item--pressed"
+          >{{item.label}}</view>
+          <view
+            wx:for="{{primaryResultRouteTypeOptions}}"
+            wx:key="key"
+            class="journey-status-bar__item journey-status-bar__item--route {{item.available ? '' : 'journey-status-bar__item--disabled'}} {{item.selected ? 'journey-status-bar__item--active' : ''}}"
+            data-value="{{item.value}}"
+            bindtap="onJourneyTypeTap"
+            hover-class="journey-status-bar__item--pressed"
+          >{{item.label}}</view>
+          <view
+            wx:for="{{secondaryResultRouteTypeOptions}}"
+            wx:key="key"
+            class="journey-status-bar__item journey-status-bar__item--route {{item.available ? '' : 'journey-status-bar__item--disabled'}} {{item.selected ? 'journey-status-bar__item--active' : ''}}"
+            data-value="{{item.value}}"
+            bindtap="onJourneyTypeTap"
+            hover-class="journey-status-bar__item--pressed"
+          >{{item.label}}</view>
         </view>
-        <view
-          class="journey-view-switch__item {{journeyViewMode === 'image' ? 'journey-view-switch__item--active' : ''}}"
-          data-mode="image"
-          bindtap="onJourneyViewModeTap"
-          hover-class="journey-view-switch__item--pressed"
-        >
-          <view class="journey-view-switch__icon journey-view-switch__icon--image">
-            <view class="journey-view-switch__image-cover"></view>
-            <view class="journey-view-switch__image-line journey-view-switch__image-line--long"></view>
-            <view class="journey-view-switch__image-line journey-view-switch__image-line--short"></view>
-          </view>
-        </view>
-        <view
-          class="journey-view-switch__item {{journeyViewMode === 'compact' ? 'journey-view-switch__item--active' : ''}}"
-          data-mode="compact"
-          bindtap="onJourneyViewModeTap"
-          hover-class="journey-view-switch__item--pressed"
-        >
-          <view class="journey-view-switch__icon journey-view-switch__icon--compact">
-            <view wx:for="{{[1,2,3]}}" wx:key="*this" class="journey-view-switch__compact-row">
-              <view class="journey-view-switch__compact-thumb"></view>
-              <view class="journey-view-switch__compact-line"></view>
-            </view>
-          </view>
-        </view>
-      </view>
+      </scroll-view>
+      <view
+        class="journey-confirmed-filter {{selectedStatus === 'confirmed' ? 'journey-confirmed-filter--active' : ''}}"
+        data-status="confirmed"
+        bindtap="onStatusTap"
+        hover-class="journey-confirmed-filter--pressed"
+      >只看已成行</view>
     </view>
 
     <view wx:if="{{errorText}}" class="paper-block page-feedback journey-page__feedback">
@@ -179,7 +227,7 @@
           wx:if="{{selectedFilterChips.length}}"
           class="outline-button journey-page__feedback-button"
           bindtap="clearAllFilters"
-        >清空筛选</button>
+        >重置筛选</button>
       </view>
     </view>
 
@@ -231,7 +279,6 @@
         </view>
       </block>
       <view class="journey-list__footer">
-        <text wx:if="{{renderedCountText}}" class="journey-list__footer-text">{{renderedCountText}}</text>
         <button
           wx:if="{{hasMoreJourneys}}"
           class="outline-button journey-list__footer-button"
@@ -246,7 +293,7 @@
       <text wx:if="{{emptyStateDescSecondary}}" class="journey-empty__desc">{{emptyStateDescSecondary}}</text>
       <view class="journey-empty__actions">
         <button wx:if="{{showEmptyClearRegionAction}}" class="outline-button journey-empty__button" bindtap="clearDestinationRegionFilter">清空区域</button>
-        <button wx:else class="outline-button journey-empty__button" bindtap="clearAllFilters">清空筛选</button>
+        <button wx:else class="outline-button journey-empty__button" bindtap="clearAllFilters">重置筛选</button>
       </view>
     </view>
   </view>

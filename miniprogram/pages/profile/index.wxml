@@ -90,6 +90,10 @@
     </view>
   </block>
 
+  <view class="profile-credit">
+    <text>～ Made with ❤️ by 海森 🪽 ～</text>
+  </view>
+
   <view wx:if="{{profilePromptVisible}}" class="profile-completion-mask {{profilePromptKeyboardActive ? 'profile-completion-mask--keyboard' : ''}}" catchtouchmove="noop">
     <view class="profile-completion-panel" catchtap="noop">
       <view class="profile-completion__head">

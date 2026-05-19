@@ -2,7 +2,7 @@
 const SPLASH_HOLD_MS = 1000;
 const SPLASH_FADE_MS = 200;
 const HOME_PATH = "/pages/home/home";
-const ENABLE_SPLASH_DEBUG = false;
+const LAST_SPLASH_DATE_STORAGE_KEY = "yezai:lastSplashDate";
 // 优先使用本地 Logo，与文字同时显示无延迟；不存在则用云存储地址（需联网）
 const LOGO_LOCAL_PATH = "/images/splash-logo.png";
 const LOGO_CLOUD_ID =
@@ -16,19 +16,49 @@ function restoreSplash(page, error) {
   });
 }
 
-function debugLog(location, message, data, hypothesisId) {
-  if (!ENABLE_SPLASH_DEBUG) {
+function getLocalDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function hasShownSplashToday() {
+  if (typeof wx === "undefined" || typeof wx.getStorageSync !== "function") {
+    return false;
+  }
+
+  try {
+    return wx.getStorageSync(LAST_SPLASH_DATE_STORAGE_KEY) === getLocalDateKey(new Date());
+  } catch (error) {
+    return false;
+  }
+}
+
+function markSplashShownToday() {
+  if (typeof wx === "undefined" || typeof wx.setStorageSync !== "function") {
     return;
   }
 
-  const payload = { sessionId: "b47e01", location, message, data: data || {}, timestamp: Date.now(), hypothesisId };
-  console.warn("[splash debug]", JSON.stringify(payload));
-  wx.request({
-    url: "http://127.0.0.1:7534/ingest/4b528870-c39d-43e2-8b98-da57e3c13434",
-    method: "POST",
-    header: { "Content-Type": "application/json", "X-Debug-Session-Id": "b47e01" },
-    data: payload,
-    fail: function() {}
+  try {
+    wx.setStorageSync(LAST_SPLASH_DATE_STORAGE_KEY, getLocalDateKey(new Date()));
+  } catch (error) {
+    // Storage failures should not block the entry animation.
+  }
+}
+
+function openHomePage(page) {
+  wx.redirectTo({
+    url: HOME_PATH,
+    fail: (error) => {
+      restoreSplash(page, error);
+      wx.reLaunch({
+        url: HOME_PATH,
+        fail: (relaunchError) => {
+          console.error("Failed to relaunch home page from splash", relaunchError);
+        }
+      });
+    }
   });
 }
 
@@ -44,16 +74,13 @@ Page({
   },
 
   onLoad() {
-    // #region agent log
-    debugLog("splash/splash.js:onLoad", "splash onLoad", { quoteColumnsLen: this.data.quoteColumns.length, logoSrc: this.data.logoSrc }, "H1");
-    // #endregion
-    this.startAutoTransition();
-  },
+    if (hasShownSplashToday()) {
+      openHomePage(this);
+      return;
+    }
 
-  onReady() {
-    // #region agent log
-    debugLog("splash/splash.js:onReady", "splash onReady", {}, "H1");
-    // #endregion
+    markSplashShownToday();
+    this.startAutoTransition();
   },
 
   onLogoError() {
@@ -72,15 +99,9 @@ Page({
     this.holdTimer = setTimeout(() => {
       this.beginLeave();
     }, SPLASH_HOLD_MS);
-    // #region agent log
-    debugLog("splash/splash.js:startAutoTransition", "holdTimer set", { SPLASH_HOLD_MS }, "H3");
-    // #endregion
   },
 
   beginLeave() {
-    // #region agent log
-    debugLog("splash/splash.js:beginLeave", "beginLeave called", { leaving: !!this.leaving }, "H3");
-    // #endregion
     if (this.leaving) {
       return;
     }
@@ -90,23 +111,9 @@ Page({
     this.setData({
       isFading: true
     });
-    // #region agent log
-    debugLog("splash/splash.js:beginLeave", "setData isFading true", {}, "H5");
-    // #endregion
 
     this.redirectTimer = setTimeout(() => {
-      wx.redirectTo({
-        url: HOME_PATH,
-        fail: (error) => {
-          restoreSplash(this, error);
-          wx.reLaunch({
-            url: HOME_PATH,
-            fail: (relaunchError) => {
-              console.error("Failed to relaunch home page from splash", relaunchError);
-            }
-          });
-        }
-      });
+      openHomePage(this);
     }, SPLASH_FADE_MS);
   },
 

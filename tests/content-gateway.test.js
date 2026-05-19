@@ -55,8 +55,36 @@ function loadContentGatewayModule(options = {}) {
           return {
             command,
             collection(name) {
-              const data = collections[name] || {};
+              const data = collections[name] || (collections[name] = {});
+              const getRows = () => {
+                if (!Array.isArray(data.list)) {
+                  data.list = [];
+                }
+                return data.list;
+              };
               return {
+                add: async ({ data: nextDoc }) => {
+                  const rows = getRows();
+                  const _id = nextDoc && nextDoc._id ? nextDoc._id : `mock-${name}-${rows.length + 1}`;
+                  rows.push(Object.assign({}, nextDoc, { _id }));
+                  return { _id };
+                },
+                doc(id) {
+                  return {
+                    update: async ({ data: update }) => {
+                      const rows = getRows();
+                      const index = rows.findIndex((item) => item && item._id === id);
+                      if (index >= 0) {
+                        rows[index] = Object.assign({}, rows[index], update || {});
+                      }
+                      return {
+                        stats: {
+                          updated: index >= 0 ? 1 : 0
+                        }
+                      };
+                    }
+                  };
+                },
                 field() {
                   return this;
                 },
@@ -418,6 +446,443 @@ test("contentGateway falls back to legacy NoSQL groupPeriods when SQL periods ar
   assert.equal(result.ok, true);
   assert.equal(result.data.featuredServicesByTab.featured[0].priceLabel, "¥4280 起");
   assert.equal(result.data.featuredServicesByTab.featured[0].durationTag, "4天");
+});
+
+test("contentGateway serves home page data from a fresh persisted snapshot", async () => {
+  const snapshotPayload = {
+    heroSlides: [{ id: "hero-snapshot", title: "快照首页" }],
+    featuredCreators: [],
+    featuredDestinations: [],
+    featuredServicesByTab: {
+      featured: [],
+      recent: [],
+      special: []
+    },
+    featuredIdeas: []
+  };
+  const gateway = loadContentGatewayModule({
+    collections: {
+      app_configs: {
+        list: [
+          {
+            key: "homePageSnapshot",
+            value: {
+              version: 1,
+              generatedAt: Date.now(),
+              expiresAt: Date.now() + 60 * 60 * 1000,
+              payload: snapshotPayload
+            }
+          }
+        ]
+      }
+    }
+  });
+
+  const result = await gateway.main({
+    action: "getHomePageData",
+    payload: {}
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.data, snapshotPayload);
+});
+
+test("contentGateway can refresh and persist a home page snapshot", async () => {
+  const collections = {
+    creators: {
+      list: [{ id: "creator-1", slug: "guide-a", name: "领队A", status: "active" }]
+    },
+    destinations: {
+      list: [{ slug: "qiandongnan", name: "黔东南", status: "active" }]
+    },
+    services: {
+      list: [
+        {
+          id: "service-1",
+          slug: "miao-night-walk",
+          name: "苗寨夜行",
+          status: "active",
+          creatorId: "creator-1",
+          destinationSlugs: ["qiandongnan"],
+          type: "短途旅行",
+          groupPeriods: [
+            {
+              periodCode: "MIAO-20260426",
+              dateStart: "2026-04-26",
+              dateEnd: "2026-04-29",
+              price: 4280,
+              status: "available"
+            }
+          ]
+        }
+      ]
+    },
+    ideas: {
+      list: [
+        {
+          slug: "miao-story",
+          title: "苗乡故事",
+          status: "active",
+          authorId: "creator-1",
+          body: "正文"
+        }
+      ]
+    },
+    app_configs: {
+      list: [
+        {
+          _id: "home-config",
+          key: "homePage",
+          value: {
+            featuredCreatorSlugs: ["guide-a"],
+            featuredDestinationSlugs: ["qiandongnan"],
+            featuredServiceSlugs: ["miao-night-walk"],
+            featuredIdeaSlugs: ["miao-story"]
+          }
+        }
+      ]
+    }
+  };
+  const gateway = loadContentGatewayModule({
+    collections
+  });
+
+  const result = await gateway.main({
+    action: "refreshHomePageSnapshot",
+    payload: {}
+  });
+
+  const snapshotDoc = collections.app_configs.list.find((item) => item.key === "homePageSnapshot");
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.refreshed, true);
+  assert.ok(snapshotDoc);
+  assert.equal(snapshotDoc.value.version, 1);
+  assert.equal(snapshotDoc.value.payload.featuredServicesByTab.featured[0].slug, "miao-night-walk");
+});
+
+test("contentGateway keeps up to thirteen configured home creators", async () => {
+  const creators = Array.from({ length: 13 }, (_, index) => ({
+    id: `creator-${index + 1}`,
+    slug: `creator-${index + 1}`,
+    name: `创作者${index + 1}`,
+    avatar: `avatar-${index + 1}.jpg`,
+    status: "active"
+  }));
+  const collections = {
+    creators: {
+      list: creators
+    },
+    destinations: {
+      list: [{ slug: "home-destination", name: "首页目的地", status: "active" }]
+    },
+    services: {
+      list: [{
+        id: "service-1",
+        slug: "home-service",
+        name: "首页路线",
+        status: "active",
+        creatorId: "creator-1",
+        destinationSlugs: ["home-destination"]
+      }]
+    },
+    ideas: {
+      list: [{
+        slug: "home-idea",
+        title: "首页故事",
+        status: "active",
+        authorId: "creator-1",
+        body: "正文"
+      }]
+    },
+    app_configs: {
+      list: [
+        {
+          _id: "home-config",
+          key: "homePage",
+          value: {
+            featuredCreatorSlugs: creators.map((item) => item.slug),
+            featuredDestinationSlugs: ["home-destination"],
+            featuredServiceSlugs: ["home-service"],
+            featuredIdeaSlugs: ["home-idea"]
+          }
+        }
+      ]
+    }
+  };
+  const gateway = loadContentGatewayModule({
+    collections
+  });
+
+  const result = await gateway.main({
+    action: "getHomePageData",
+    payload: {}
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.featuredCreators.length, 13);
+  assert.equal(result.data.featuredCreators[12].slug, "creator-13");
+});
+
+test("contentGateway serves journey page data from a fresh persisted snapshot", async () => {
+  let sqlCalls = 0;
+  const snapshotPayload = {
+    routeTypeOptions: [{ label: "山野", value: "山野" }],
+    regionOptions: [],
+    journeys: [{ slug: "snapshot-route", name: "快照旅程" }]
+  };
+  const gateway = loadContentGatewayModule({
+    collections: {
+      app_configs: {
+        list: [
+          {
+            key: "journeyPageSnapshot",
+            value: {
+              version: 1,
+              generatedAt: Date.now(),
+              expiresAt: Date.now() + 60 * 1000,
+              payload: snapshotPayload
+            }
+          }
+        ]
+      }
+    },
+    runSQL: async () => {
+      sqlCalls += 1;
+      throw new Error("live journey data should not be queried");
+    }
+  });
+
+  const result = await gateway.main({
+    action: "getJourneyPageData",
+    payload: {}
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.data, snapshotPayload);
+  assert.equal(sqlCalls, 0);
+});
+
+test("contentGateway can refresh and persist a journey page snapshot", async () => {
+  const collections = {
+    creators: {
+      list: [{ id: "creator-1", slug: "guide-a", name: "领队A" }]
+    },
+    destinations: {
+      list: [{ slug: "qiandongnan", name: "黔东南", status: "active" }]
+    },
+    services: {
+      list: [
+        {
+          id: "service-1",
+          slug: "miao-night-walk",
+          name: "苗寨夜行",
+          status: "active",
+          creatorId: "creator-1",
+          destinationSlugs: ["qiandongnan"],
+          tags: ["山野"],
+          groupPeriods: [
+            {
+              periodCode: "MIAO-20260426",
+              dateStart: "2026-04-26",
+              dateEnd: "2026-04-29",
+              price: 4280,
+              status: "available"
+            }
+          ]
+        }
+      ]
+    },
+    ideas: {
+      list: [{ slug: "seed-idea", title: "种子故事", status: "active", authorId: "creator-1", body: "正文" }]
+    },
+    app_configs: {
+      list: []
+    }
+  };
+  const gateway = loadContentGatewayModule({
+    collections
+  });
+
+  const result = await gateway.main({
+    action: "refreshJourneyPageSnapshot",
+    payload: {}
+  });
+  const snapshotDoc = collections.app_configs.list.find((item) => item.key === "journeyPageSnapshot");
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.refreshed, true);
+  assert.ok(snapshotDoc);
+  assert.equal(snapshotDoc.value.version, 1);
+  assert.equal(snapshotDoc.value.payload.journeys[0].slug, "miao-night-walk");
+});
+
+test("contentGateway sorts journey cards by departure date before confirmed status", async () => {
+  const collections = {
+    creators: {
+      list: [{ id: "creator-1", slug: "guide-a", name: "领队A" }]
+    },
+    destinations: {
+      list: [{ slug: "qiandongnan", name: "黔东南", status: "active" }]
+    },
+    services: {
+      list: [
+        {
+          id: "service-confirmed",
+          slug: "confirmed-later",
+          name: "确定晚出发",
+          status: "active",
+          creatorId: "creator-1",
+          destinationSlugs: ["qiandongnan"],
+          groupPeriods: [
+            {
+              periodCode: "CONF-20260521",
+              dateStart: "2026-05-21",
+              dateEnd: "2026-05-24",
+              price: 4280,
+              status: "confirmed"
+            }
+          ]
+        },
+        {
+          id: "service-available",
+          slug: "available-sooner",
+          name: "可报名先出发",
+          status: "active",
+          creatorId: "creator-1",
+          destinationSlugs: ["qiandongnan"],
+          groupPeriods: [
+            {
+              periodCode: "AVAIL-20260520",
+              dateStart: "2026-05-20",
+              dateEnd: "2026-05-23",
+              price: 3980,
+              status: "available"
+            }
+          ]
+        }
+      ]
+    },
+    app_configs: {
+      list: []
+    }
+  };
+  const gateway = loadContentGatewayModule({
+    collections,
+    runSQL: async () => ({
+      data: {
+        executeResultList: []
+      }
+    })
+  });
+
+  const result = await gateway.main({
+    action: "getJourneyPageData",
+    payload: {}
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(
+    result.data.journeys.map((item) => item.slug),
+    ["available-sooner", "confirmed-later"]
+  );
+});
+
+test("contentGateway serves creators page data from a fresh persisted snapshot for default filters", async () => {
+  let sqlCalls = 0;
+  const snapshotPayload = {
+    destinationOptions: [{ label: "全部", value: "" }],
+    regionOptions: [{ label: "全部", value: "" }],
+    styleOptions: [{ label: "全部", value: "" }],
+    destinationLabels: ["全部"],
+    regionLabels: ["全部"],
+    styleLabels: ["全部"],
+    creators: [{ slug: "snapshot-creator", name: "快照创作者" }]
+  };
+  const gateway = loadContentGatewayModule({
+    collections: {
+      app_configs: {
+        list: [
+          {
+            key: "creatorsPageSnapshot",
+            value: {
+              version: 1,
+              generatedAt: Date.now(),
+              expiresAt: Date.now() + 60 * 1000,
+              payload: snapshotPayload
+            }
+          }
+        ]
+      }
+    },
+    runSQL: async () => {
+      sqlCalls += 1;
+      throw new Error("live creators data should not be queried");
+    }
+  });
+
+  const result = await gateway.main({
+    action: "getCreatorsPageData",
+    payload: { filters: {} }
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.data, snapshotPayload);
+  assert.equal(sqlCalls, 0);
+});
+
+test("contentGateway can refresh and persist a creators page snapshot", async () => {
+  const collections = {
+    creators: {
+      list: [{ id: "creator-1", slug: "guide-a", name: "领队A", tags: ["山野"] }]
+    },
+    destinations: {
+      list: [{ slug: "qiandongnan", name: "黔东南", status: "active" }]
+    },
+    services: {
+      list: [
+        {
+          id: "service-1",
+          slug: "miao-night-walk",
+          name: "苗寨夜行",
+          status: "active",
+          creatorId: "creator-1",
+          destinationSlugs: ["qiandongnan"],
+          tags: ["山野"],
+          groupPeriods: [
+            {
+              periodCode: "MIAO-20260426",
+              dateStart: "2026-04-26",
+              dateEnd: "2026-04-29",
+              price: 4280,
+              status: "available"
+            }
+          ]
+        }
+      ]
+    },
+    ideas: {
+      list: [{ slug: "seed-idea", title: "种子故事", status: "active", authorId: "creator-1", body: "正文" }]
+    },
+    app_configs: {
+      list: []
+    }
+  };
+  const gateway = loadContentGatewayModule({
+    collections
+  });
+
+  const result = await gateway.main({
+    action: "refreshCreatorsPageSnapshot",
+    payload: {}
+  });
+  const snapshotDoc = collections.app_configs.list.find((item) => item.key === "creatorsPageSnapshot");
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.refreshed, true);
+  assert.ok(snapshotDoc);
+  assert.equal(snapshotDoc.value.version, 1);
+  assert.equal(snapshotDoc.value.payload.creators[0].slug, "guide-a");
 });
 
 test("contentGateway separates regular and custom service groups", async () => {
@@ -919,7 +1384,12 @@ test("contentGateway timer event keeps SQL alive", async () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.data.ok, true);
-  assert.deepEqual(sqlCalls, ["SELECT 1 AS `keepAlive`"]);
+  assert.equal(result.data.sqlAlive.ok, true);
+  assert.equal(result.data.homePageSnapshot.refreshed, false);
+  assert.equal(result.data.creatorsPageSnapshot.refreshed, false);
+  assert.equal(sqlCalls[0], "SELECT 1 AS `keepAlive`");
+  assert.ok(sqlCalls.some((sql) => sql.includes("FROM `ServicePeriod`")));
+  assert.ok(sqlCalls.some((sql) => sql.includes("FROM `TravelOrder`")));
 });
 
 test("contentGateway uses service regionCodes before destination fallback for journeys", async () => {

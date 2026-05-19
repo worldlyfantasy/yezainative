@@ -1948,19 +1948,6 @@ Page({
       await this.startOrderPayment(order);
     } catch (error) {
       console.error("Failed to submit order", error);
-      let debugDetail = "";
-      try {
-        debugDetail = JSON.stringify(error);
-      } catch (e) {
-        debugDetail = "";
-      }
-      console.error("Submit order debug detail", {
-        message: error && error.message,
-        errMsg: error && error.errMsg,
-        error: error && error.error,
-        reason: error && error.reason,
-        serialized: debugDetail
-      });
       this.setData({
         submissionToken: createSubmissionToken()
       });
@@ -1972,13 +1959,6 @@ Page({
         title: toastMessage,
         icon: "none"
       });
-      if (toastMessage === "提交失败[E_EMPTY]") {
-        wx.showModal({
-          title: "下单失败调试信息",
-          content: debugDetail || "error object is empty",
-          showCancel: false
-        });
-      }
     } finally {
       this.setData({
         submitting: false

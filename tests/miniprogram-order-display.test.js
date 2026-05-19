@@ -9,6 +9,10 @@ const userServiceModulePath = path.resolve(
   __dirname,
   "../miniprogram/services/user.js"
 );
+const ordersPageModulePath = path.resolve(
+  __dirname,
+  "../miniprogram/pkg/account/orders/index.js"
+);
 
 async function withMockedDate(isoDateText, callback) {
   const RealDate = Date;
@@ -68,6 +72,42 @@ function loadUserService(mocks) {
   } finally {
     Module._load = originalLoad;
   }
+}
+
+function loadOrdersPageDefinition(mocks = {}) {
+  const originalLoad = Module._load;
+  const originalPage = global.Page;
+  let capturedDefinition = null;
+
+  global.Page = function registerPage(definition) {
+    capturedDefinition = definition;
+  };
+
+  Module._load = function mockLoader(request, parent, isMain) {
+    if (request === "../../../repositories/transaction-repository") {
+      return mocks.transactionRepository || {
+        getOrderStatusTabs: () => [],
+        getOrders: async () => []
+      };
+    }
+
+    return originalLoad(request, parent, isMain);
+  };
+
+  delete require.cache[ordersPageModulePath];
+
+  try {
+    require(ordersPageModulePath);
+  } finally {
+    Module._load = originalLoad;
+    if (originalPage === undefined) {
+      delete global.Page;
+    } else {
+      global.Page = originalPage;
+    }
+  }
+
+  return capturedDefinition;
 }
 
 test("transaction-meta builds display fields and filters confirmed orders by trip phase", () => {
@@ -169,6 +209,24 @@ test("transaction-meta sorts order cards by travel period descending", () => {
     transactionMeta.sortOrdersByTravelPeriodDesc(orders).map((item) => item.travelPeriod.dateStart),
     ["2026-07-02", "2026-04-17", "2026-04-16"]
   );
+});
+
+test("orders page defaults to all orders and still accepts explicit status", () => {
+  const pageDefinition = loadOrdersPageDefinition();
+  const page = {
+    data: JSON.parse(JSON.stringify(pageDefinition.data)),
+    setData(update) {
+      Object.assign(this.data, update);
+    }
+  };
+
+  assert.equal(page.data.currentStatus, "all");
+
+  pageDefinition.onLoad.call(page, {
+    status: "not_departed"
+  });
+
+  assert.equal(page.data.currentStatus, "not_departed");
 });
 
 test("transaction-meta hides rooming preference for one-day routes", () => {

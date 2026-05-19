@@ -12,7 +12,7 @@ function cloneData(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function loadPageDefinition(cancelOrder) {
+function loadPageDefinition(cancelOrder, getServiceDetailSummaryData) {
   const originalLoad = Module._load;
   const originalPage = global.Page;
   const originalWx = global.wx;
@@ -34,6 +34,12 @@ function loadPageDefinition(cancelOrder) {
     if (request === "../../../repositories/payment-repository") {
       return {
         payOrderWithWechat: async () => ({})
+      };
+    }
+
+    if (request === "../../../repositories/content-repository") {
+      return {
+        getServiceDetailSummaryData: getServiceDetailSummaryData || (async () => null)
       };
     }
 
@@ -143,4 +149,82 @@ test("order detail redirects to journeys after pending order cancellation succee
   assert.deepEqual(canceledOrders, ["order-1"]);
   assert.deepEqual(toasts, [{ title: "取消成功", icon: "success" }]);
   assert.deepEqual(reLaunches, [{ url: "/pages/destinations/index" }]);
+});
+
+test("order detail opens active service detail from journey card", async () => {
+  const navigations = [];
+  const definition = loadPageDefinition(
+    async () => ({}),
+    async (slug) => ({
+      service: {
+        slug
+      }
+    })
+  );
+  const page = createPageInstance(definition);
+  page.setData({
+    order: {
+      serviceSlug: "songhua-river"
+    }
+  });
+
+  const originalWx = global.wx;
+  global.wx = {
+    navigateTo(payload) {
+      navigations.push(payload);
+    },
+    showToast() {}
+  };
+
+  try {
+    await page.openServiceDetail();
+  } finally {
+    if (originalWx === undefined) {
+      delete global.wx;
+    } else {
+      global.wx = originalWx;
+    }
+  }
+
+  assert.deepEqual(navigations, [{ url: "/pkg/explore/service-detail/index?slug=songhua-river" }]);
+  assert.equal(page.data.openingService, false);
+});
+
+test("order detail does not navigate when service is inactive", async () => {
+  const navigations = [];
+  const toasts = [];
+  const definition = loadPageDefinition(
+    async () => ({}),
+    async () => null
+  );
+  const page = createPageInstance(definition);
+  page.setData({
+    order: {
+      serviceSlug: "inactive-service"
+    }
+  });
+
+  const originalWx = global.wx;
+  global.wx = {
+    navigateTo(payload) {
+      navigations.push(payload);
+    },
+    showToast(payload) {
+      toasts.push(payload);
+    }
+  };
+
+  try {
+    await page.openServiceDetail();
+  } finally {
+    if (originalWx === undefined) {
+      delete global.wx;
+    } else {
+      global.wx = originalWx;
+    }
+  }
+
+  assert.deepEqual(navigations, []);
+  assert.deepEqual(toasts, [{ title: "该旅程已下架", icon: "none" }]);
+  assert.equal(page.data.openingService, false);
 });

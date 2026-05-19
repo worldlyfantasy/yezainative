@@ -1,4 +1,5 @@
 const { cancelOrder, getOrderById } = require("../../../repositories/transaction-repository");
+const { getServiceDetailSummaryData } = require("../../../repositories/content-repository");
 const { payOrderWithWechat } = require("../../../repositories/payment-repository");
 const { getOrderDetailPageConfig, getServiceDetailPageConfig } = require("../../../repositories/config-repository");
 const { buildOrderCard } = require("../../../constants/transaction-meta");
@@ -24,7 +25,8 @@ Page({
     completedPrimaryText: "",
     payCountdownText: "30分钟",
     paying: false,
-    canceling: false
+    canceling: false,
+    openingService: false
   },
 
   countdownTimer: null,
@@ -192,6 +194,44 @@ Page({
         }
       }
     });
+  },
+
+  async openServiceDetail() {
+    const { order } = this.data;
+    const serviceSlug = String(order && order.serviceSlug ? order.serviceSlug : "").trim();
+    if (this.data.openingService) {
+      return;
+    }
+    if (!serviceSlug) {
+      wx.showToast({
+        title: "该旅程已下架",
+        icon: "none"
+      });
+      return;
+    }
+
+    this.setData({ openingService: true });
+    try {
+      const payload = await getServiceDetailSummaryData(serviceSlug);
+      if (!payload || !payload.service) {
+        wx.showToast({
+          title: "该旅程已下架",
+          icon: "none"
+        });
+        return;
+      }
+
+      wx.navigateTo({
+        url: `/pkg/explore/service-detail/index?slug=${serviceSlug}`
+      });
+    } catch (error) {
+      wx.showToast({
+        title: "该旅程已下架",
+        icon: "none"
+      });
+    } finally {
+      this.setData({ openingService: false });
+    }
   },
 
   openConsultSheet() {
