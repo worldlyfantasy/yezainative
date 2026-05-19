@@ -1100,7 +1100,7 @@ function resolveDisplayServicePeriodStatus(record, soldCount = resolvePeriodSold
   }
 
   const totalSeats = resolvePeriodTotalSeats(record, soldCount);
-  const minGroup = Math.max(1, normalizePositiveInteger(record && record.minGroup, 1));
+  const minGroup = Math.max(0, normalizePositiveInteger(record && record.minGroup, 1));
   const dateStart = normalizeText(record && record.dateStart);
 
   if (dateStart && today && dateStart <= today) {
@@ -8325,7 +8325,7 @@ async function saveServicePeriod(payload, adminUser) {
     assertCondition(!duplicated, "系统生成的团期编码重复，请稍后重试");
   }
 
-  const minGroup = Math.max(1, normalizePositiveInteger(payload && payload.minGroup, 1));
+  const minGroup = Math.max(0, normalizePositiveInteger(payload && payload.minGroup, 1));
   const soldCount = existing ? await getSoldCountByPeriodCode(originalPeriodCode || periodCode) : 0;
   if (existing) {
     const currentDisplayStatus = resolveDisplayServicePeriodStatus(existing, soldCount);

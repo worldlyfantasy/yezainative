@@ -493,6 +493,15 @@ test("service period manual status only keeps available or inactive while soldou
   assert.equal(__test__.resolveServicePeriodStatus("available", { status: "inactive" }, 6), "inactive");
 });
 
+test("service period status accepts zero as a valid minimum group size", () => {
+  const { __test__ } = loadAdminGatewayModule();
+
+  assert.equal(
+    __test__.resolveServicePeriodStatus("available", { status: "active" }, 6, "", "", 0, 0),
+    "confirmed"
+  );
+});
+
 test("slug helpers follow legacy-style creator, destination, and service patterns", () => {
   const { __test__ } = loadAdminGatewayModule();
 
