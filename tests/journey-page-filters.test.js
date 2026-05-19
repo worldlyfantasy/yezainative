@@ -366,6 +366,54 @@ test("journey page shows only supported result route type chips with matched jou
   assert.equal(page.data.selectedFilterChips.find((item) => item.key === "status").label, "已成行");
 });
 
+test("journey page hides absent primary result route type tabs", () => {
+  const page = createPageInstance();
+  page.allJourneys = [
+    createJourney({
+      slug: "domestic-long",
+      type: "长途旅行",
+      routeTypes: ["山野"],
+      activePeriods: [
+        {
+          dateStart: "2026-05-01",
+          status: "available",
+          price: 3999
+        }
+      ]
+    }),
+    createJourney({
+      slug: "city-event",
+      type: "在地体验",
+      routeTypes: ["城市"],
+      activePeriods: [
+        {
+          dateStart: "2026-05-02",
+          status: "available",
+          price: 299
+        }
+      ]
+    })
+  ].map((journey) => page.normalizeJourney(journey));
+  page.routeTypeOrder = page.buildRouteTypeOrder([], page.allJourneys);
+
+  page.applyJourneyFilters({
+    status: "all"
+  });
+
+  assert.deepEqual(
+    page.data.resultRouteTypeOptions.map((item) => item.value),
+    ["长途", "城市"]
+  );
+  assert.deepEqual(
+    page.data.primaryResultRouteTypeOptions.map((item) => item.value),
+    ["长途"]
+  );
+  assert.deepEqual(
+    page.data.secondaryResultRouteTypeOptions.map((item) => item.value),
+    ["城市"]
+  );
+});
+
 test("journey page clears journey type filters when tapping the all tab", () => {
   const page = createPageInstance();
   let appliedPatch = null;

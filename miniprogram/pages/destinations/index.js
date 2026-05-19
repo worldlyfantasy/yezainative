@@ -861,12 +861,16 @@ Page({
   },
 
   buildResultRouteTypeOptions(filters) {
+    const resultTypeVisibilityFilters = Object.assign({}, filters, {
+      journeyType: "",
+      status: "all"
+    });
+    const visibleJourneyTypeLabelSet = this.buildAvailableJourneyTypeLabelSet(resultTypeVisibilityFilters);
     const availableJourneyTypeLabelSet = this.buildAvailableJourneyTypeLabelSet(filters);
 
     return RESULT_ROUTE_TYPE_OPTIONS
       .filter((item) => (
-        PRIMARY_RESULT_ROUTE_TYPE_KEYS.has(item.key)
-        || availableJourneyTypeLabelSet.has(item.label)
+        visibleJourneyTypeLabelSet.has(item.label)
         || filters.journeyType === item.label
       ))
       .map((item) => ({

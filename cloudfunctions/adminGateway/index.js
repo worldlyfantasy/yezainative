@@ -184,6 +184,19 @@ const CACHE_INVALIDATE_ACTIONS = new Set([
   "deleteIdea",
   "saveConfigDetail"
 ]);
+const CONTENT_GATEWAY_REFRESH_ACTIONS_BY_ADMIN_ACTION = {
+  saveService: ["refreshHomePageSnapshot", "refreshJourneyPageSnapshot", "refreshCreatorsPageSnapshot"],
+  deleteService: ["refreshHomePageSnapshot", "refreshJourneyPageSnapshot", "refreshCreatorsPageSnapshot"],
+  saveServicePeriod: ["refreshHomePageSnapshot", "refreshJourneyPageSnapshot", "refreshCreatorsPageSnapshot"],
+  deleteServicePeriod: ["refreshHomePageSnapshot", "refreshJourneyPageSnapshot", "refreshCreatorsPageSnapshot"],
+  saveCreator: ["refreshHomePageSnapshot", "refreshCreatorsPageSnapshot"],
+  deleteCreator: ["refreshHomePageSnapshot", "refreshCreatorsPageSnapshot"],
+  saveDestination: ["refreshHomePageSnapshot", "refreshJourneyPageSnapshot", "refreshCreatorsPageSnapshot"],
+  deleteDestination: ["refreshHomePageSnapshot", "refreshJourneyPageSnapshot", "refreshCreatorsPageSnapshot"],
+  saveIdea: ["refreshHomePageSnapshot"],
+  deleteIdea: ["refreshHomePageSnapshot"],
+  saveConfigDetail: ["refreshHomePageSnapshot", "refreshJourneyPageSnapshot", "refreshCreatorsPageSnapshot"]
+};
 const SERVICE_TYPE_OPTIONS = ["在地体验", "短途旅行", "长途旅行", "国际旅行"];
 const LEGACY_SERVICE_TYPE_OPTIONS = ["带团旅行", "定制规划", "路线设计"];
 const DEFAULT_SERVICE_TYPE = "短途旅行";
@@ -1529,24 +1542,37 @@ function assertOrderDebugToolAccess(adminUser) {
   );
 }
 
-async function invalidateContentGatewayCache(triggerAction) {
-  try {
-    await cloud.callFunction({
-      name: CONTENT_GATEWAY_FUNCTION_NAME,
-      data: {
-        action: "clearCache",
-        payload: {
-          source: "adminGateway",
-          triggerAction: normalizeText(triggerAction)
-        }
+function getContentGatewayRefreshActions(triggerAction) {
+  return uniqueStrings(CONTENT_GATEWAY_REFRESH_ACTIONS_BY_ADMIN_ACTION[normalizeText(triggerAction)] || []);
+}
+
+async function callContentGatewayMaintenanceAction(action, triggerAction) {
+  return cloud.callFunction({
+    name: CONTENT_GATEWAY_FUNCTION_NAME,
+    data: {
+      action,
+      payload: {
+        source: "adminGateway",
+        triggerAction: normalizeText(triggerAction)
       }
-    });
-  } catch (error) {
-    console.warn("Failed to invalidate content gateway cache", {
-      triggerAction,
-      functionName: CONTENT_GATEWAY_FUNCTION_NAME,
-      error: error && error.message ? error.message : error
-    });
+    }
+  });
+}
+
+async function invalidateContentGatewayCache(triggerAction) {
+  const actions = ["clearCache"].concat(getContentGatewayRefreshActions(triggerAction));
+
+  for (const action of actions) {
+    try {
+      await callContentGatewayMaintenanceAction(action, triggerAction);
+    } catch (error) {
+      console.warn("Failed to run content gateway maintenance action", {
+        action,
+        triggerAction,
+        functionName: CONTENT_GATEWAY_FUNCTION_NAME,
+        error: error && error.message ? error.message : error
+      });
+    }
   }
 }
 
@@ -3534,7 +3560,7 @@ function sanitizeServiceGalleryGroups(value, fallbackGallery) {
     return groups;
   }
 
-  const images = dedupeImageValues(fallbackGallery).map(normalizeImageAssetValue).filter(Boolean);
+  const images = dedupeImageValues(fallbackGallery || []).map(normalizeImageAssetValue).filter(Boolean);
   return images.length
     ? [
         {
@@ -3886,7 +3912,7 @@ async function ensureImageAssetField(value, fallbackFolder) {
 }
 
 async function ensureImageAssetList(values, fallbackFolder) {
-  const items = dedupeImageValues(values);
+  const items = dedupeImageValues(values || []);
   const nextList = [];
 
   for (let index = 0; index < items.length; index += 1) {
@@ -5796,9 +5822,14 @@ async function saveService(payload, adminUser) {
   }
   const previousCreatorId = existing ? normalizeText(existing.creatorId) : "";
   const sourceDraftId = normalizeText(payload && payload.draftId);
-  const name = normalizeText(payload && payload.name);
+  const requestedStatus = normalizeStatus(
+    payload && payload.status,
+    SERVICE_STATUSES,
+    existing ? buildStatusTag(existing) : buildStatusTag(payload)
+  );
+  const name = normalizeText(payload && payload.name) || (requestedStatus === "inactive" && existing ? normalizeText(existing.name) : "");
   const type = normalizeServiceType(
-    payload && payload.type,
+    normalizeText(payload && payload.type) || (requestedStatus === "inactive" && existing ? existing.type : ""),
     {
       durationTag: payload && payload.durationTag,
       travelDetail: payload && payload.travelDetail
@@ -5831,32 +5862,56 @@ async function saveService(payload, adminUser) {
     assertCondition(!duplicatedId, "该路线 ID 已存在");
   }
 
+  if (existing && requestedStatus === "inactive" && buildStatusTag(existing) !== "inactive") {
+    await db.collection(COLLECTIONS.services).doc(existing._id).update({
+      data: {
+        status: "inactive",
+        updatedAt: Date.now(),
+        updatedBy: normalizeText(adminUser && (adminUser.uid || adminUser.id))
+      }
+    });
+    await deactivateServicePeriodsByServiceSlug(slug);
+    await syncCreatorDestinationSlugsForServiceCreatorId(previousCreatorId, adminUser);
+    return getServiceDetail({ _id: existing._id }, adminUser);
+  }
+
   const preparedSave = await copyDraftServiceAssetsForSave(payload, slug);
   const normalizedPayload = await normalizeServiceImagePayload(preparedSave.payload, slug);
   const creators = await listCollection(COLLECTIONS.creators);
+  const requestedCreatorId =
+    normalizeText(normalizedPayload && normalizedPayload.creatorId)
+    || (requestedStatus === "inactive" && existing ? normalizeText(existing.creatorId) : "");
   const matchedCreator = isCreatorPortalUser(adminUser)
     ? await resolveBoundCreator(adminUser)
-    : creators.find((creator) => listCreatorRefs(creator).includes(normalizeText(normalizedPayload && normalizedPayload.creatorId)));
+    : creators.find((creator) => listCreatorRefs(creator).includes(requestedCreatorId));
   assertCondition(matchedCreator, "请选择已存在的创作者");
 
   const now = Date.now();
   const logicalId = existing ? normalizeText(existing.id) : (normalizeText(normalizedPayload && normalizedPayload.id) || createServiceLogicalId(slug));
   const creatorRoles = uniqueStrings(normalizedPayload && normalizedPayload.creatorRoles);
-  const creatorMessage = normalizeText(normalizedPayload && normalizedPayload.creatorMessage);
+  const creatorMessage =
+    normalizeText(normalizedPayload && normalizedPayload.creatorMessage)
+    || (requestedStatus === "inactive" && existing ? normalizeText(existing.creatorMessage) : "");
   const fullGroupSize = normalizePositiveInteger(
     normalizedPayload && normalizedPayload.fullGroupSize,
     existing ? normalizePositiveInteger(existing && existing.fullGroupSize, 0) : 0
   );
-  const regionCodes = normalizeServiceRegionCodes(normalizedPayload && normalizedPayload.regionCodes);
+  const regionCodes = normalizeServiceRegionCodes(
+    isPlainObject(normalizedPayload) && Object.prototype.hasOwnProperty.call(normalizedPayload, "regionCodes")
+      ? normalizedPayload.regionCodes
+      : (requestedStatus === "inactive" && existing ? existing.regionCodes : [])
+  );
   const routeTags = normalizeRouteTags(normalizedPayload && normalizedPayload.tags, existing ? getServiceRouteTags(existing) : []);
   const groupTypeSource =
     normalizedPayload && Object.prototype.hasOwnProperty.call(normalizedPayload, "groupType")
       ? normalizedPayload.groupType
       : existing && existing.groupType;
-  assertCondition(regionCodes.length >= 1, "请至少选择 1 个路线区域");
-  assertCondition(routeTags.length >= 1, "请至少选择 1 个路线标签");
-  assertCondition(routeTags.length <= 3, "路线标签最多选择 3 个");
-  assertCondition(creatorMessage, "请填写创作者的话");
+  if (requestedStatus === "active") {
+    assertCondition(regionCodes.length >= 1, "请至少选择 1 个路线区域");
+    assertCondition(routeTags.length >= 1, "请至少选择 1 个路线标签");
+    assertCondition(routeTags.length <= 3, "路线标签最多选择 3 个");
+    assertCondition(creatorMessage, "请填写创作者的话");
+  }
   const nextDoc = {
     id: logicalId,
     slug,
@@ -5875,7 +5930,7 @@ async function saveService(payload, adminUser) {
     summary: normalizeText(normalizedPayload && normalizedPayload.summary),
     tags: routeTags,
     styles: routeTags,
-    status: normalizeStatus(normalizedPayload && normalizedPayload.status, SERVICE_STATUSES, buildStatusTag(existing || normalizedPayload)),
+    status: requestedStatus,
     travelDetail: sanitizeTravelDetail(
       normalizedPayload && normalizedPayload.travelDetail,
       {
@@ -12021,6 +12076,7 @@ exports.__test__ = {
   resendCreatorRegistrationActivationEmail,
   sendCreatorRegistrationApprovalEmail,
   sendCreatorRegistrationActivationEmail,
+  getContentGatewayRefreshActions,
   buildServicePeriodCreateRecord,
   buildSyntheticOrderStatusLogs,
   backfillOrderContactFields,

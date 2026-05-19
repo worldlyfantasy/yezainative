@@ -235,7 +235,7 @@ test("contentGateway service booking sold count excludes unpaid pending orders",
     }
   });
 
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, true, result.error);
   const soldCountSql = sqlCalls.find((sql) => sql.includes("FROM `TravelOrder`"));
   assert.ok(soldCountSql);
   assert.match(soldCountSql, /IN \('paid', 'traveling', 'completed'\)/);
@@ -326,7 +326,7 @@ test("contentGateway returns active idea detail from direct slug lookup", async 
     payload: { slug: "harbor-notes" }
   });
 
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, true, result.error);
   assert.equal(result.data.idea.slug, "harbor-notes");
   assert.equal(result.data.idea.title, "港口笔记");
   assert.equal(result.data.idea.sourceType, "mini");
@@ -443,9 +443,68 @@ test("contentGateway falls back to legacy NoSQL groupPeriods when SQL periods ar
     payload: {}
   });
 
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, true, result.error);
   assert.equal(result.data.featuredServicesByTab.featured[0].priceLabel, "¥4280 起");
   assert.equal(result.data.featuredServicesByTab.featured[0].durationTag, "4天");
+});
+
+test("contentGateway keeps configured home service tabs exact without fallback top-up", async () => {
+  const gateway = loadContentGatewayModule({
+    collections: {
+      app_configs: {
+        list: [
+          {
+            key: "homePage",
+            value: {
+              featuredCreatorSlugs: ["author-a"],
+              featuredDestinationSlugs: [],
+              featuredIdeaSlugs: ["configured-story"],
+              featuredServiceSlugs: ["configured-one"],
+              recentServiceSlugs: [],
+              specialProjectServiceSlugs: []
+            }
+          }
+        ]
+      },
+      creators: {
+        list: [{ id: "creator-1", slug: "author-a", name: "作者A", status: "active" }]
+      },
+      destinations: {
+        list: [{ slug: "qiandongnan", name: "黔东南", status: "active" }]
+      },
+      services: {
+        list: [
+          { id: "service-1", slug: "configured-one", name: "配置路线", creatorId: "creator-1", status: "active" },
+          { id: "service-2", slug: "fallback-one", name: "补位路线一", creatorId: "creator-1", status: "active" },
+          { id: "service-3", slug: "fallback-two", name: "补位路线二", creatorId: "creator-1", status: "active" }
+        ]
+      },
+      ideas: {
+        list: [
+          { slug: "configured-story", title: "配置故事", status: "active", authorId: "creator-1", body: "正文" },
+          { slug: "fallback-story", title: "补位故事", status: "active", authorId: "creator-1", body: "正文" }
+        ]
+      }
+    },
+    runSQL: async () => ({
+      data: {
+        executeResultList: []
+      }
+    })
+  });
+
+  const result = await gateway.main({
+    action: "getHomePageData",
+    payload: {}
+  });
+
+  assert.equal(result.ok, true, result.error);
+  assert.deepEqual(result.data.featuredCreators.map((item) => item.slug), ["author-a"]);
+  assert.deepEqual(result.data.featuredDestinations, []);
+  assert.deepEqual(result.data.featuredServicesByTab.featured.map((item) => item.slug), ["configured-one"]);
+  assert.deepEqual(result.data.featuredServicesByTab.recent, []);
+  assert.deepEqual(result.data.featuredServicesByTab.special, []);
+  assert.deepEqual(result.data.featuredIdeas.map((item) => item.slug), ["configured-story"]);
 });
 
 test("contentGateway serves home page data from a fresh persisted snapshot", async () => {
@@ -883,6 +942,60 @@ test("contentGateway can refresh and persist a creators page snapshot", async ()
   assert.ok(snapshotDoc);
   assert.equal(snapshotDoc.value.version, 1);
   assert.equal(snapshotDoc.value.payload.creators[0].slug, "guide-a");
+});
+
+test("contentGateway includes active creators without active routes in default creator list", async () => {
+  const gateway = loadContentGatewayModule({
+    collections: {
+      creators: {
+        list: [
+          { id: "creator-1", slug: "with-route", name: "有路线创作者" },
+          { id: "creator-2", slug: "without-route", name: "无路线创作者" }
+        ]
+      },
+      destinations: {
+        list: [{ slug: "qinghai-lake", name: "青海湖畔", regionCode: "cn_tibetan" }]
+      },
+      services: {
+        list: [
+          {
+            id: "service-1",
+            slug: "qinghai-loop",
+            name: "青海湖环线",
+            creatorId: "creator-1",
+            destinationSlugs: ["qinghai-lake"],
+            tags: ["山野"],
+            groupPeriods: [
+              {
+                periodCode: "QH-20260501",
+                dateStart: "2026-05-01",
+                dateEnd: "2026-05-05",
+                price: 3980,
+                status: "available"
+              }
+            ]
+          }
+        ]
+      },
+      ideas: {
+        list: [{ slug: "seed-idea", title: "种子故事", status: "active", authorId: "creator-1", body: "正文" }]
+      }
+    }
+  });
+
+  const defaultResult = await gateway.main({
+    action: "getCreatorsPageData",
+    payload: { filters: {} }
+  });
+  const regionResult = await gateway.main({
+    action: "getCreatorsPageData",
+    payload: { filters: { regionCode: "cn_tibetan" } }
+  });
+
+  assert.equal(defaultResult.ok, true);
+  assert.deepEqual(defaultResult.data.creators.map((item) => item.slug), ["with-route", "without-route"]);
+  assert.equal(regionResult.ok, true);
+  assert.deepEqual(regionResult.data.creators.map((item) => item.slug), ["with-route"]);
 });
 
 test("contentGateway separates regular and custom service groups", async () => {

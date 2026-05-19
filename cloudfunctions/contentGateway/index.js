@@ -1940,6 +1940,14 @@ function takeActiveTopUp(items, existingItems, limit) {
   return selected.slice(0, maxCount);
 }
 
+function selectConfiguredOrFallback(configValue, configuredItems, fallbackItems, limit) {
+  if (Array.isArray(configValue)) {
+    return (Array.isArray(configuredItems) ? configuredItems : []).slice(0, limit);
+  }
+
+  return takeActiveTopUp(fallbackItems, configuredItems, limit);
+}
+
 async function loadHomePageCollectionsWithConfig(homeConfig) {
   const featuredCreatorSlugs = normalizeArray(homeConfig && homeConfig.featuredCreatorSlugs);
   const featuredDestinationSlugs = normalizeArray(homeConfig && homeConfig.featuredDestinationSlugs);
@@ -1990,9 +1998,24 @@ async function loadHomePageCollectionsWithConfig(homeConfig) {
   const normalizedConfiguredServices = exactConfiguredServices.map(normalizeServiceContentDoc);
   const normalizedFallbackServices = fallbackServices.map(normalizeServiceContentDoc);
 
-  const featuredCreators = takeActiveTopUp(normalizedFallbackCreators, normalizedFeaturedCreators, HOME_CREATOR_WALL_LIMIT);
-  const featuredDestinations = takeActiveTopUp(normalizedFallbackDestinations, normalizedFeaturedDestinations, 4);
-  const featuredIdeasBase = takeActiveTopUp(normalizedFallbackIdeas, normalizedFeaturedIdeas, 3);
+  const featuredCreators = selectConfiguredOrFallback(
+    homeConfig && homeConfig.featuredCreatorSlugs,
+    normalizedFeaturedCreators,
+    normalizedFallbackCreators,
+    HOME_CREATOR_WALL_LIMIT
+  );
+  const featuredDestinations = selectConfiguredOrFallback(
+    homeConfig && homeConfig.featuredDestinationSlugs,
+    normalizedFeaturedDestinations,
+    normalizedFallbackDestinations,
+    4
+  );
+  const featuredIdeasBase = selectConfiguredOrFallback(
+    homeConfig && homeConfig.featuredIdeaSlugs,
+    normalizedFeaturedIdeas,
+    normalizedFallbackIdeas,
+    3
+  );
   const servicePool = takeActiveTopUp(normalizedFallbackServices, normalizedConfiguredServices, 12);
   const creatorRefs = unique(
     featuredCreators
@@ -2013,12 +2036,9 @@ async function loadHomePageCollectionsWithConfig(homeConfig) {
     });
   });
 
-  ensureContentCollections({
-    creators: featuredCreators,
-    destinations: featuredDestinations,
-    services: servicePool,
-    ideas: featuredIdeas
-  });
+  if (!featuredCreators.length && !featuredDestinations.length && !servicePool.length && !featuredIdeas.length) {
+    throw new Error("Cloud content collections are empty");
+  }
 
   return {
     creators: creatorResolverPool,
@@ -2242,10 +2262,6 @@ function getCreatorRelatedServices(creator, services, destinationRegionCodeMap, 
 function filterCreators(creators, services, destinationRegionCodeMap, options) {
   const filters = options || {};
   return (creators || []).filter((creator) => {
-    if (!listCreatorRelatedServices(creator, services).length) {
-      return false;
-    }
-
     const matchStyle = filters.style ? normalizeArray(creator && creator.tags).includes(filters.style) : true;
     if (!matchStyle) {
       return false;
@@ -2553,6 +2569,10 @@ function listBySlugOrder(items, slugs, limit) {
 
 function buildHomeServicesTab(services, slugs, fallbackStartIndex) {
   const limit = 3;
+  if (Array.isArray(slugs)) {
+    return listBySlugOrder(services, slugs, limit);
+  }
+
   const picked = listBySlugOrder(services, slugs, limit);
   if (picked.length >= limit) {
     return picked;
@@ -2975,9 +2995,9 @@ async function buildHomePagePayload() {
     featuredDestinations,
     featuredIdeas
   } = await loadHomePageCollectionsWithConfig(homeConfig);
-  const featuredServiceSlugs = homeConfig.featuredServiceSlugs || [];
-  const recentServiceSlugs = homeConfig.recentServiceSlugs || [];
-  const specialProjectServiceSlugs = homeConfig.specialProjectServiceSlugs || [];
+  const featuredServiceSlugs = Array.isArray(homeConfig.featuredServiceSlugs) ? homeConfig.featuredServiceSlugs : null;
+  const recentServiceSlugs = Array.isArray(homeConfig.recentServiceSlugs) ? homeConfig.recentServiceSlugs : null;
+  const specialProjectServiceSlugs = Array.isArray(homeConfig.specialProjectServiceSlugs) ? homeConfig.specialProjectServiceSlugs : null;
 
   const featuredServicesByTab = {
     featured: buildHomeServicesTab(services, featuredServiceSlugs, 0),

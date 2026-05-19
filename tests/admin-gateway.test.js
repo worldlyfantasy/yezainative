@@ -1538,6 +1538,28 @@ test("getSystemHealth reports env mismatch risk and downstream probe status", as
   ]);
 });
 
+test("adminGateway maps content mutations to affected content snapshot refreshes", () => {
+  const { __test__ } = loadAdminGatewayModule();
+
+  assert.deepEqual(__test__.getContentGatewayRefreshActions("saveCreator"), [
+    "refreshHomePageSnapshot",
+    "refreshCreatorsPageSnapshot"
+  ]);
+  assert.deepEqual(__test__.getContentGatewayRefreshActions("saveService"), [
+    "refreshHomePageSnapshot",
+    "refreshJourneyPageSnapshot",
+    "refreshCreatorsPageSnapshot"
+  ]);
+  assert.deepEqual(__test__.getContentGatewayRefreshActions("saveServicePeriod"), [
+    "refreshHomePageSnapshot",
+    "refreshJourneyPageSnapshot",
+    "refreshCreatorsPageSnapshot"
+  ]);
+  assert.deepEqual(__test__.getContentGatewayRefreshActions("saveIdea"), [
+    "refreshHomePageSnapshot"
+  ]);
+});
+
 test("saveIdea allows wechat mode without excerptBody", async () => {
   const { __test__ } = loadAdminGatewayModule({
     userDocs: {
@@ -1817,6 +1839,67 @@ test("saveService requires creatorMessage", async () => {
       ),
     /请填写创作者的话/
   );
+});
+
+test("saveService allows incomplete existing service to be set inactive", async () => {
+  const { __test__, __mocks__ } = loadAdminGatewayModule({
+    collectionData: {
+      creators: [
+        {
+          id: "creator-b",
+          slug: "creator-b",
+          name: "创作者 B",
+          status: "active"
+        }
+      ],
+      services: [
+        {
+          _id: "service-doc-1",
+          id: "service-songhua-dock",
+          slug: "songhua-dock",
+          name: "松花泊行",
+          type: "短途旅行",
+          status: "active",
+          creatorId: "creator-b",
+          creatorRoles: ["创作者"],
+          creatorMessage: "",
+          regionCodes: [],
+          destinationSlugs: ["harbin"],
+          summary: "",
+          cover: "",
+          gallery: [],
+          galleryGroups: [],
+          tags: [],
+          styles: [],
+          travelDetail: {
+            overview: {},
+            itinerary: {
+              days: []
+            },
+            costs: {
+              include: [],
+              exclude: [],
+              refundRules: []
+            },
+            notices: []
+          }
+        }
+      ]
+    }
+  });
+
+  await __test__.saveService(
+    {
+      _id: "service-doc-1",
+      status: "inactive"
+    },
+    { uid: "admin-1", permissions: ["services:read", "services:write"] }
+  );
+
+  const serviceUpdate = __mocks__.collectionUpdates.find((item) => item.name === "services" && item.id === "service-doc-1");
+  assert.equal(serviceUpdate && serviceUpdate.data.status, "inactive");
+  assert.equal(Object.prototype.hasOwnProperty.call(serviceUpdate.data, "name"), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(serviceUpdate.data, "travelDetail"), false);
 });
 
 test("service draft saves multiple cloud drafts and keeps version history", async () => {
