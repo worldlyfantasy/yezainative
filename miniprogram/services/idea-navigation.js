@@ -4,13 +4,23 @@ function isWechatRedirectIdea(idea) {
   return sourceType === "wechat" && /^https?:\/\//i.test(articleUrl);
 }
 
+function buildIdeaArticleBridgeUrl(idea) {
+  const normalizedIdea = idea && typeof idea === "object" ? idea : {};
+  const articleUrl = String(normalizedIdea.wechatArticleUrl || "").trim();
+  if (!/^https?:\/\//i.test(articleUrl)) {
+    return "";
+  }
+
+  return `/pkg/content/article-bridge/index?target=${encodeURIComponent(articleUrl)}&title=${encodeURIComponent(normalizedIdea.wechatArticleTitle || normalizedIdea.title || "")}`;
+}
+
 function openIdea(idea) {
   const normalizedIdea = idea && typeof idea === "object" ? idea : {};
   const slug = String(normalizedIdea.slug || "").trim();
 
   if (isWechatRedirectIdea(normalizedIdea)) {
     wx.navigateTo({
-      url: `/pkg/content/article-bridge/index?target=${encodeURIComponent(normalizedIdea.wechatArticleUrl)}&title=${encodeURIComponent(normalizedIdea.wechatArticleTitle || normalizedIdea.title || "")}`
+      url: buildIdeaArticleBridgeUrl(normalizedIdea)
     });
     return;
   }
@@ -25,5 +35,7 @@ function openIdea(idea) {
 }
 
 module.exports = {
+  buildIdeaArticleBridgeUrl,
+  isWechatRedirectIdea,
   openIdea
 };

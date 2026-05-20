@@ -3,6 +3,7 @@
     <view class="journey-route-card__thumb-shell">
       <image wx:if="{{journey.cover}}" class="journey-route-card__thumb" src="{{journey.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
       <view wx:else class="journey-route-card__thumb journey-route-card__thumb--empty"></view>
+      <view wx:if="{{!customExample && journey.displayStatus === 'confirmed'}}" class="journey-route-card__confirmed-corner journey-route-card__confirmed-corner--compact">已成行</view>
       <view wx:if="{{journey.displayDurationLabel}}" class="journey-route-card__duration-pill journey-route-card__duration-pill--compact">{{journey.displayDurationLabel}}</view>
     </view>
     <view class="journey-route-card__compact-body">
@@ -29,6 +30,7 @@
       <view class="journey-route-card__cover-shell">
         <image wx:if="{{journey.cover}}" class="journey-route-card__cover" src="{{journey.cover}}" mode="widthFix" lazy-load="{{true}}"></image>
         <view wx:else class="journey-route-card__cover journey-route-card__cover--empty"></view>
+        <view wx:if="{{!customExample && journey.displayStatus === 'confirmed'}}" class="journey-route-card__confirmed-corner">已成行</view>
         <view wx:if="{{!customExample && journey.displayDurationLabel}}" class="journey-route-card__cover-badges">
           <view class="journey-route-card__duration-pill">{{journey.displayDurationLabel}}</view>
         </view>

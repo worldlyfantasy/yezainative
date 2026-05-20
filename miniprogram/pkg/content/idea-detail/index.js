@@ -2,6 +2,7 @@ const { getIdeaDetailData } = require("../../../repositories/content-repository"
 const { isFavorited, toggleFavorite } = require("../../../repositories/transaction-repository");
 const { getCurrentUser } = require("../../../services/user");
 const { goTopLevel, TOP_LEVEL_ROUTES } = require("../../../services/navigation");
+const { buildIdeaArticleBridgeUrl, isWechatRedirectIdea } = require("../../../services/idea-navigation");
 const { clearFavoriteNotice, showFavoriteNotice } = require("../utils/favorite-notice");
 const { renderIdeaBodyRichText } = require("../utils/content");
 const { enablePageShareMenus, createShareAppMessage, createShareTimeline } = require("../../../utils/share");
@@ -58,6 +59,13 @@ Page({
       }
 
       const idea = payload.idea || {};
+      if (isWechatRedirectIdea(idea)) {
+        wx.redirectTo({
+          url: buildIdeaArticleBridgeUrl(idea)
+        });
+        return;
+      }
+
       const sourceType = idea.sourceType || "mini";
       const publishedDateLabel = formatPublishedDate(idea.publishedAt);
       const excerptHtml = renderIdeaBodyRichText(idea.excerptBody || "");
@@ -181,7 +189,7 @@ Page({
     }
 
     wx.navigateTo({
-      url: `/pkg/content/article-bridge/index?target=${encodeURIComponent(articleUrl)}&title=${encodeURIComponent(idea.wechatArticleTitle || idea.title || "")}`
+      url: buildIdeaArticleBridgeUrl(idea)
     });
   },
 

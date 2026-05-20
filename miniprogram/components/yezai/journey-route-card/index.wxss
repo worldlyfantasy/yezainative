@@ -84,6 +84,31 @@
   z-index: 2;
 }
 
+.journey-route-card__confirmed-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+  min-width: 104rpx;
+  padding: 9rpx 18rpx 10rpx;
+  border-radius: 0 30rpx 0 18rpx;
+  background: rgba(209, 94, 20, 0.94);
+  box-shadow: 0 4rpx 12rpx rgba(70, 36, 15, 0.2);
+  color: #fff7ed;
+  font-size: 22rpx;
+  line-height: 1.35;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.journey-route-card__confirmed-corner--compact {
+  min-width: 82rpx;
+  padding: 5rpx 11rpx 6rpx;
+  border-radius: 0 22rpx 0 14rpx;
+  font-size: 18rpx;
+}
+
 .journey-route-card__route-wordmark {
   position: absolute;
   right: 22rpx;
@@ -387,6 +412,13 @@
   min-height: 32rpx;
   padding: 3rpx 9rpx;
   font-size: 17rpx;
+}
+
+.journey-route-card--grid .journey-route-card__confirmed-corner {
+  min-width: 82rpx;
+  padding: 5rpx 11rpx 6rpx;
+  border-radius: 0 18rpx 0 14rpx;
+  font-size: 18rpx;
 }
 
 .journey-route-card--grid .journey-route-card__route-wordmark {

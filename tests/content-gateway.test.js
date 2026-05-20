@@ -459,6 +459,7 @@ test("contentGateway keeps configured home service tabs exact without fallback t
               featuredCreatorSlugs: ["author-a"],
               featuredDestinationSlugs: [],
               featuredIdeaSlugs: ["configured-story"],
+              heroSlides: [{ id: "hero-configured-story", title: "配置故事头图", targetIdeaSlug: "configured-story" }],
               featuredServiceSlugs: ["configured-one"],
               recentServiceSlugs: [],
               specialProjectServiceSlugs: []
@@ -481,7 +482,18 @@ test("contentGateway keeps configured home service tabs exact without fallback t
       },
       ideas: {
         list: [
-          { slug: "configured-story", title: "配置故事", status: "active", authorId: "creator-1", body: "正文" },
+          {
+            slug: "configured-story",
+            title: "配置故事",
+            status: "active",
+            authorId: "creator-1",
+            coverPosition: { x: 72, y: 34 },
+            displayMode: "featured",
+            sourceType: "wechat",
+            wechatArticleUrl: "https://mp.weixin.qq.com/s/configured",
+            wechatArticleTitle: "配置故事公众号原文",
+            body: "正文"
+          },
           { slug: "fallback-story", title: "补位故事", status: "active", authorId: "creator-1", body: "正文" }
         ]
       }
@@ -505,6 +517,64 @@ test("contentGateway keeps configured home service tabs exact without fallback t
   assert.deepEqual(result.data.featuredServicesByTab.recent, []);
   assert.deepEqual(result.data.featuredServicesByTab.special, []);
   assert.deepEqual(result.data.featuredIdeas.map((item) => item.slug), ["configured-story"]);
+  assert.equal(result.data.featuredIdeas[0].sourceType, "wechat");
+  assert.equal(result.data.featuredIdeas[0].displayMode, "featured");
+  assert.equal(result.data.featuredIdeas[0].wechatArticleUrl, "https://mp.weixin.qq.com/s/configured");
+  assert.deepEqual(result.data.featuredIdeas[0].coverPosition, { x: 72, y: 34 });
+  assert.equal(result.data.heroSlides[0].sourceType, "wechat");
+  assert.equal(result.data.heroSlides[0].wechatArticleUrl, "https://mp.weixin.qq.com/s/configured");
+  assert.deepEqual(result.data.heroSlides[0].coverPosition, { x: 72, y: 34 });
+});
+
+test("contentGateway orders configured home ideas by story sort order", async () => {
+  const gateway = loadContentGatewayModule({
+    collections: {
+      app_configs: {
+        list: [
+          {
+            key: "homePage",
+            value: {
+              featuredIdeaSlugs: ["story-five", "story-two", "story-four"],
+              featuredServiceSlugs: [],
+              recentServiceSlugs: [],
+              specialProjectServiceSlugs: []
+            }
+          }
+        ]
+      },
+      creators: {
+        list: [{ id: "creator-1", slug: "author-a", name: "作者A", status: "active" }]
+      },
+      destinations: {
+        list: []
+      },
+      services: {
+        list: []
+      },
+      ideas: {
+        list: [
+          { slug: "story-one", title: "第 1 篇", status: "active", authorId: "creator-1", sortOrder: 1000 },
+          { slug: "story-two", title: "第 2 篇", status: "active", authorId: "creator-1", sortOrder: 2000 },
+          { slug: "story-three", title: "第 3 篇", status: "active", authorId: "creator-1", sortOrder: 3000 },
+          { slug: "story-four", title: "第 4 篇", status: "active", authorId: "creator-1", sortOrder: 4000 },
+          { slug: "story-five", title: "第 5 篇", status: "active", authorId: "creator-1", sortOrder: 5000 }
+        ]
+      }
+    },
+    runSQL: async () => ({
+      data: {
+        executeResultList: []
+      }
+    })
+  });
+
+  const result = await gateway.main({
+    action: "getHomePageData",
+    payload: {}
+  });
+
+  assert.equal(result.ok, true, result.error);
+  assert.deepEqual(result.data.featuredIdeas.map((item) => item.slug), ["story-two", "story-four", "story-five"]);
 });
 
 test("contentGateway serves home page data from a fresh persisted snapshot", async () => {
@@ -1203,6 +1273,61 @@ test("contentGateway includes single room fields in booking periods", async () =
   assert.equal(result.data.groupPeriods[0].singleRoomEnabled, true);
   assert.equal(result.data.groupPeriods[0].singleRoomPrice, 600);
   assert.equal(result.data.groupPeriods[0].singleRoomNotice, "房态有限，需人工确认");
+});
+
+test("contentGateway preserves zero minimum group size in booking periods", async () => {
+  const gateway = loadContentGatewayModule({
+    collections: {
+      creators: {
+        list: [{ id: "creator-1", slug: "author-a", name: "作者A" }]
+      },
+      services: {
+        list: [
+          {
+            id: "service-1",
+            slug: "zero-min-group",
+            name: "零人成团路线",
+            creatorId: "creator-1",
+            type: "短途旅行",
+            groupPeriods: []
+          }
+        ]
+      }
+    },
+    runSQL: async (sql) => {
+      if (String(sql).includes("FROM `ServicePeriod`")) {
+        return {
+          data: {
+            executeResultList: [
+              {
+                periodCode: "ZERO-20260426",
+                dateStart: "2026-04-26",
+                dateEnd: "2026-04-29",
+                price: 4280,
+                remainingSeats: 8,
+                minGroup: 0,
+                status: "available"
+              }
+            ]
+          }
+        };
+      }
+
+      return {
+        data: {
+          executeResultList: []
+        }
+      };
+    }
+  });
+
+  const result = await gateway.main({
+    action: "getServiceBookingData",
+    payload: { slug: "zero-min-group" }
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.groupPeriods[0].minGroup, 0);
 });
 
 test("contentGateway filters creator regions by existing routes and sorts region results by active departure date", async () => {

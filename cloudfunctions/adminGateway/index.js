@@ -140,6 +140,8 @@ const rdb = app.rdb();
 const QUERY_BATCH_SIZE = 100;
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
+const IDEA_SORT_ORDER_STEP = 1000;
+const IDEA_SORT_ORDER_LEGACY_BASE = 8000000000000000;
 const SQL_RESUME_RETRY_MAX_ATTEMPTS = 3;
 const SQL_QUERY_RETRY_MAX_ATTEMPTS = 3;
 const SQL_RESUME_RETRY_BASE_DELAY_MS = 800;
@@ -182,6 +184,7 @@ const CACHE_INVALIDATE_ACTIONS = new Set([
   "deleteDestination",
   "saveIdea",
   "deleteIdea",
+  "reorderIdeas",
   "saveConfigDetail"
 ]);
 const CONTENT_GATEWAY_REFRESH_ACTIONS_BY_ADMIN_ACTION = {
@@ -195,6 +198,7 @@ const CONTENT_GATEWAY_REFRESH_ACTIONS_BY_ADMIN_ACTION = {
   deleteDestination: ["refreshHomePageSnapshot", "refreshJourneyPageSnapshot", "refreshCreatorsPageSnapshot"],
   saveIdea: ["refreshHomePageSnapshot"],
   deleteIdea: ["refreshHomePageSnapshot"],
+  reorderIdeas: ["refreshHomePageSnapshot"],
   saveConfigDetail: ["refreshHomePageSnapshot", "refreshJourneyPageSnapshot", "refreshCreatorsPageSnapshot"]
 };
 const SERVICE_TYPE_OPTIONS = ["在地体验", "短途旅行", "长途旅行", "国际旅行"];
@@ -274,6 +278,8 @@ const IDEA_THEME_OPTIONS = [
 ];
 const IDEA_SOURCE_TYPES = ["mini", "wechat", "hybrid"];
 const DEFAULT_IDEA_SOURCE_TYPE = "mini";
+const IDEA_DISPLAY_MODES = ["featured", "thumbnail"];
+const DEFAULT_IDEA_DISPLAY_MODE = "thumbnail";
 const DEFAULT_IDEA_READ_MORE_TEXT = "阅读全文";
 const DEFAULT_IDEA_THEME_KEY = "yezai-field-notes";
 const IDEA_THEME_LABEL_MAP = IDEA_THEME_OPTIONS.reduce((map, item) => {
@@ -1032,6 +1038,49 @@ function normalizeNumber(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function normalizeIdeaSortOrder(value, fallback = 0) {
+  const parsed = Math.round(normalizeNumber(value, fallback));
+  return parsed > 0 ? parsed : fallback;
+}
+
+function resolveIdeaSortOrderValue(idea) {
+  const explicitOrder = normalizeIdeaSortOrder(idea && idea.sortOrder, 0);
+  if (explicitOrder > 0) {
+    return explicitOrder;
+  }
+
+  const updatedAt = normalizeNumber(idea && idea.updatedAt, 0);
+  return IDEA_SORT_ORDER_LEGACY_BASE - updatedAt;
+}
+
+function resolveNextIdeaSortOrder(ideas) {
+  const maxSortOrder = normalizeArray(ideas).reduce(
+    (maxValue, idea) => Math.max(maxValue, resolveIdeaSortOrderValue(idea)),
+    0
+  );
+
+  return maxSortOrder > 0 ? maxSortOrder + IDEA_SORT_ORDER_STEP : IDEA_SORT_ORDER_STEP;
+}
+
+function normalizePercent(value, fallback = 50) {
+  const parsed = normalizeNumber(value, fallback);
+  return Math.min(100, Math.max(0, Math.round(parsed)));
+}
+
+function normalizeCoverPosition(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {
+      x: 50,
+      y: 50
+    };
+  }
+
+  return {
+    x: normalizePercent(value.x, 50),
+    y: normalizePercent(value.y, 50)
+  };
+}
+
 function normalizeBoolean(value) {
   if (typeof value === "boolean") {
     return value;
@@ -1696,6 +1745,15 @@ function normalizeIdeaSourceType(value) {
   }
 
   return DEFAULT_IDEA_SOURCE_TYPE;
+}
+
+function normalizeIdeaDisplayMode(value) {
+  const normalized = normalizeText(value);
+  if (IDEA_DISPLAY_MODES.includes(normalized)) {
+    return normalized;
+  }
+
+  return DEFAULT_IDEA_DISPLAY_MODE;
 }
 
 function sanitizeExternalUrl(value) {
@@ -4556,9 +4614,11 @@ function mapIdeaDetailRecord(idea, authorNameMap, adminUser) {
     themeLabel: ideaTheme.themeLabel,
     isCustomTheme: ideaTheme.isCustomTheme,
     sourceType: normalizeIdeaSourceType(idea && idea.sourceType),
+    displayMode: normalizeIdeaDisplayMode(idea && idea.displayMode),
     status: buildStatusTag(idea),
     summary: normalizeText(idea && idea.summary),
     cover: getImageAssetOriginal(idea && idea.cover),
+    coverPosition: normalizeCoverPosition(idea && idea.coverPosition),
     authorId: normalizeText(idea && idea.authorId),
     authorName: authorNameMap[normalizeText(idea && idea.authorId)] || "",
     regionCodes: normalizeServiceRegionCodes(idea && idea.regionCodes),
@@ -4572,6 +4632,7 @@ function mapIdeaDetailRecord(idea, authorNameMap, adminUser) {
     publishedAt: normalizeNumber(idea && idea.publishedAt),
     readMoreText: normalizeText(idea && idea.readMoreText) || DEFAULT_IDEA_READ_MORE_TEXT,
     syncStatus: normalizeText(idea && idea.syncStatus) || "draft",
+    sortOrder: normalizeIdeaSortOrder(idea && idea.sortOrder, 0),
     access: getIdeaAccess(idea, adminUser),
     createdAt: normalizeNumber(idea && idea.createdAt),
     updatedAt: normalizeNumber(idea && idea.updatedAt)
@@ -5793,7 +5854,10 @@ async function getServiceDetail(payload, adminUser) {
   const service = await findServiceDoc(payload);
   assertCondition(service, "未找到对应路线");
 
-  const creators = await listCollection(COLLECTIONS.creators);
+  const [creators, ideas] = await Promise.all([
+    listCollection(COLLECTIONS.creators),
+    listCollection(COLLECTIONS.ideas)
+  ]);
   const creatorNameMap = creators.reduce((map, creator) => {
     const refs = listCreatorRefs(creator);
     refs.forEach((ref) => {
@@ -7653,6 +7717,7 @@ async function saveIdea(payload, adminUser) {
   const title = normalizeText(payload && payload.title);
   const requestedSlug = normalizeText(payload && payload.slug).toLowerCase();
   const sourceType = normalizeIdeaSourceType(payload && payload.sourceType);
+  const displayMode = normalizeIdeaDisplayMode(payload && payload.displayMode);
   const slug = existing
     ? normalizeText(existing.slug).toLowerCase()
     : (requestedSlug || await generateIdeaSlug(title));
@@ -7680,7 +7745,10 @@ async function saveIdea(payload, adminUser) {
     assertCondition(!duplicatedSlug, "该故事 slug 已存在");
   }
 
-  const creators = await listCollection(COLLECTIONS.creators);
+  const [creators, ideas] = await Promise.all([
+    listCollection(COLLECTIONS.creators),
+    listCollection(COLLECTIONS.ideas)
+  ]);
   const matchedAuthor = isCreatorPortalUser(adminUser)
     ? await resolveBoundCreator(adminUser)
     : creators.find((creator) =>
@@ -7723,8 +7791,10 @@ async function saveIdea(payload, adminUser) {
     themeLabel: ideaTheme.themeLabel,
     isCustomTheme: ideaTheme.isCustomTheme,
     sourceType,
+    displayMode,
     summary: normalizeText(normalizedPayload && normalizedPayload.summary),
     cover: getImageAssetOriginal(normalizedPayload && normalizedPayload.cover),
+    coverPosition: normalizeCoverPosition(normalizedPayload && normalizedPayload.coverPosition),
     authorId: normalizeText(matchedAuthor && matchedAuthor.id) || normalizeText(normalizedPayload && normalizedPayload.authorId),
     regionCodes,
     destinationSlugs: uniqueStrings(normalizedPayload && normalizedPayload.destinationSlugs),
@@ -7737,6 +7807,9 @@ async function saveIdea(payload, adminUser) {
     publishedAt: publishedAt > 0 ? publishedAt : now,
     readMoreText,
     syncStatus: syncStatus === "published" ? "published" : "draft",
+    sortOrder: existing
+      ? normalizeIdeaSortOrder(existing && existing.sortOrder, 0)
+      : resolveNextIdeaSortOrder(ideas),
     status: normalizeStatus(normalizedPayload && normalizedPayload.status, SERVICE_STATUSES, buildStatusTag(existing || normalizedPayload)),
     updatedAt: now,
     updatedBy: operatorId
@@ -7753,6 +7826,51 @@ async function saveIdea(payload, adminUser) {
 
   await db.collection(COLLECTIONS.ideas).doc(existing._id).update({ data: nextDoc });
   return getIdeaDetail({ _id: existing._id }, adminUser);
+}
+
+async function reorderIdeas(payload, adminUser) {
+  assertAdminPermission(adminUser, "ideas:write");
+  const orderedIds = uniqueStrings(payload && payload.orderedIds);
+  assertCondition(orderedIds.length > 0, "请先调整至少一篇故事的顺序");
+
+  const startIndex = Math.max(0, Math.floor(normalizeNumber(payload && payload.startIndex, 0)));
+  const now = Date.now();
+  const operatorId = normalizeText(adminUser && (adminUser.uid || adminUser.id));
+  const ideas = await listCollection(COLLECTIONS.ideas);
+  const ideaMap = ideas.reduce((map, idea) => {
+    const refs = [
+      normalizeText(idea && idea._id),
+      normalizeText(idea && idea.id),
+      normalizeText(idea && idea.slug)
+    ].filter(Boolean);
+
+    refs.forEach((ref) => {
+      if (!map[ref]) {
+        map[ref] = idea;
+      }
+    });
+    return map;
+  }, {});
+
+  const targets = orderedIds.map((id) => ideaMap[normalizeText(id)]).filter(Boolean);
+  assertCondition(targets.length === orderedIds.length, "部分故事不存在，请刷新后重试");
+  targets.forEach((idea) => {
+    assertCondition(buildStatusTag(idea) === "active", "只能调整在架故事的展示顺序");
+  });
+
+  await Promise.all(targets.map((idea, index) =>
+    db.collection(COLLECTIONS.ideas).doc(idea._id).update({
+      data: {
+        sortOrder: (startIndex + index + 1) * IDEA_SORT_ORDER_STEP,
+        sortUpdatedAt: now,
+        sortUpdatedBy: operatorId
+      }
+    })
+  ));
+
+  return {
+    updated: targets.length
+  };
 }
 
 async function deleteIdea(payload, adminUser) {
@@ -8079,6 +8197,7 @@ async function listIdeas(payload, adminUser) {
         themeLabel: ideaTheme.themeLabel,
         isCustomTheme: ideaTheme.isCustomTheme,
         sourceType: normalizeIdeaSourceType(idea && idea.sourceType),
+        displayMode: normalizeIdeaDisplayMode(idea && idea.displayMode),
         status: buildStatusTag(idea),
         authorId: normalizeText(idea && idea.authorId),
         authorName: authorMap[normalizeText(idea.authorId)] || "",
@@ -8087,6 +8206,7 @@ async function listIdeas(payload, adminUser) {
         destinationSlugs: uniqueStrings(idea && idea.destinationSlugs),
         destinationCount: normalizeArray(idea.destinationSlugs).length,
         summary: normalizeText(idea.summary),
+        sortOrder: normalizeIdeaSortOrder(idea && idea.sortOrder, 0),
         access: getIdeaAccess(idea, adminUser),
         createdAt: normalizeNumber(idea && idea.createdAt),
         updatedAt: normalizeNumber(idea && idea.updatedAt)
@@ -8112,10 +8232,12 @@ async function listIdeas(payload, adminUser) {
   if (shouldReturnPagedResult(payload)) {
     return buildPagedResult(items, payload, {
       defaultPageSize: 10,
-      defaultSortBy: "updatedAt",
-      defaultSortDirection: "desc",
+      defaultSortBy: "sortOrder",
+      defaultSortDirection: "asc",
       getSortValue: (item, sortBy) => {
         switch (sortBy) {
+          case "sortOrder":
+            return resolveIdeaSortOrderValue(item);
           case "title":
             return item.title;
           case "theme":
@@ -11874,6 +11996,10 @@ const handlers = {
     const adminUser = await requireAdmin();
     return saveIdea(payload, adminUser);
   },
+  reorderIdeas: async (payload) => {
+    const adminUser = await requireAdmin();
+    return reorderIdeas(payload, adminUser);
+  },
   deleteIdea: async (payload) => {
     const adminUser = await requireAdmin();
     return deleteIdea(payload, adminUser);
@@ -12129,7 +12255,8 @@ exports.__test__ = {
   maintenanceBackfillServiceCreatorMessages,
   maintenanceRestoreServices,
   saveService,
-  saveIdea
+  saveIdea,
+  reorderIdeas
 };
 
 exports.main = async (event) => {

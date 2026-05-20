@@ -9,9 +9,17 @@
       duration="1000"
     >
       <swiper-item wx:for="{{heroSlides}}" wx:key="id">
-        <view class="hero__slide hero__slide--{{item.variant}} {{item.tone === 'muted' ? 'hero__slide--muted' : ''}}" bindtap="onHeroTap" data-slug="{{item.targetIdeaSlug}}">
+        <view
+          class="hero__slide hero__slide--{{item.variant}} {{item.tone === 'muted' ? 'hero__slide--muted' : ''}}"
+          bindtap="onHeroTap"
+          data-slug="{{item.targetIdeaSlug}}"
+          data-source-type="{{item.sourceType}}"
+          data-wechat-article-url="{{item.wechatArticleUrl}}"
+          data-wechat-article-title="{{item.wechatArticleTitle}}"
+          data-title="{{item.title}}"
+        >
           <block wx:if="{{item.variant === 'photo'}}">
-            <image class="hero__image" src="{{item.image}}" mode="aspectFill" lazy-load="{{index > 0}}" binderror="onHeroImageError" data-src="{{item.image}}" data-id="{{item.id}}"></image>
+            <view class="hero__image hero__image-bg" style="{{item.imageBackgroundStyle}}"></view>
             <view wx:if="{{item.showMask !== false}}" class="hero__mask"></view>
           </block>
           <block wx:else>
@@ -130,7 +138,7 @@
           <view
             wx:for="{{featuredIdeas}}"
             wx:key="slug"
-            class="idea-list-item {{index === 0 ? 'idea-list-item--featured' : ''}}"
+            class="idea-list-item {{item.displayMode === 'featured' ? 'idea-list-item--featured' : ''}}"
             data-slug="{{item.slug}}"
             data-source-type="{{item.sourceType}}"
             data-wechat-article-url="{{item.wechatArticleUrl}}"
@@ -140,12 +148,13 @@
             hover-class="idea-list-item--pressed"
             hover-stay-time="80"
           >
-            <view wx:if="{{index === 0}}" class="idea-list-item__cover-wrap">
-              <image class="idea-list-item__cover" src="{{item.cover || '/images/content/hero-aba-presence.jpg'}}" mode="aspectFill"></image>
+            <view wx:if="{{item.displayMode === 'featured'}}" class="idea-list-item__cover-wrap">
+              <view wx:if="{{item.cover}}" class="idea-list-item__cover idea-list-item__cover-bg" style="{{item.coverBackgroundStyle}}"></view>
+              <image wx:else class="idea-list-item__cover" src="/images/content/hero-aba-presence.jpg" mode="aspectFill"></image>
               <text class="idea-list-item__cover-label">田野 · 现场笔记</text>
             </view>
             <view wx:elif="{{item.cover}}" class="idea-list-item__thumb-wrap">
-              <image class="idea-list-item__thumb" src="{{item.cover}}" mode="aspectFill"></image>
+              <view class="idea-list-item__thumb idea-list-item__cover-bg" style="{{item.coverBackgroundStyle}}"></view>
             </view>
             <view wx:else class="idea-list-item__stamp">
               <text class="idea-list-item__stamp-text">野哉</text>

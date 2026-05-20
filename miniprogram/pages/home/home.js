@@ -112,14 +112,7 @@ Page({
   },
 
   onHeroTap(event) {
-    const { slug } = event.currentTarget.dataset;
-    if (!slug) {
-      return;
-    }
-
-    wx.navigateTo({
-      url: `/pkg/content/idea-detail/index?slug=${slug}`
-    });
+    openIdea((event && event.currentTarget && event.currentTarget.dataset) || {});
   },
 
   onHeroImageError(event) {

@@ -8,6 +8,63 @@ function ensureObject(value) {
   return value && typeof value === "object" ? value : {};
 }
 
+function normalizePercent(value, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(100, Math.max(0, Math.round(parsed)));
+}
+
+function buildCoverPositionStyle(position) {
+  const source = ensureObject(position);
+  const x = normalizePercent(source.x, 50);
+  const y = normalizePercent(source.y, 50);
+  return `object-fit: cover; object-position: ${x}% ${y}%;`;
+}
+
+function buildBackgroundImageStyle(image, position) {
+  const normalizedImage = String(image || "").trim().replace(/["\\]/g, "\\$&");
+  if (!normalizedImage) {
+    return "";
+  }
+
+  const source = ensureObject(position);
+  const x = normalizePercent(source.x, 50);
+  const y = normalizePercent(source.y, 50);
+  return `background-image: url("${normalizedImage}"); background-size: cover; background-repeat: no-repeat; background-position: ${x}% ${y}%;`;
+}
+
+function normalizeIdeaDisplayMode(value) {
+  return String(value || "").trim() === "featured" ? "featured" : "thumbnail";
+}
+
+function mapIdeaCoverPosition(item) {
+  const source = ensureObject(item);
+  if (!source || !item) {
+    return item;
+  }
+
+  return Object.assign({}, source, {
+    displayMode: normalizeIdeaDisplayMode(source.displayMode),
+    coverPositionStyle: buildCoverPositionStyle(source.coverPosition),
+    coverBackgroundStyle: buildBackgroundImageStyle(source.cover, source.coverPosition)
+  });
+}
+
+function mapHeroSlidePosition(item) {
+  const source = ensureObject(item);
+  if (!source || !item) {
+    return item;
+  }
+
+  return Object.assign({}, source, {
+    imagePositionStyle: buildCoverPositionStyle(source.coverPosition || source.imagePosition),
+    imageBackgroundStyle: buildBackgroundImageStyle(source.image, source.coverPosition || source.imagePosition)
+  });
+}
+
 function normalizeIdeaSortTimestamp(item) {
   const source = ensureObject(item);
   const candidates = [
@@ -29,7 +86,7 @@ function mapHomePageData(payload) {
   const source = ensureObject(payload);
   const servicesByTab = ensureObject(source.featuredServicesByTab);
   return {
-    heroSlides: normalizeHeroSlides(source.heroSlides),
+    heroSlides: normalizeHeroSlides(source.heroSlides).map(mapHeroSlidePosition),
     featuredCreators: ensureArray(source.featuredCreators),
     featuredDestinations: ensureArray(source.featuredDestinations),
     featuredServicesByTab: {
@@ -37,7 +94,7 @@ function mapHomePageData(payload) {
       recent: ensureArray(servicesByTab.recent),
       special: ensureArray(servicesByTab.special)
     },
-    featuredIdeas: ensureArray(source.featuredIdeas)
+    featuredIdeas: ensureArray(source.featuredIdeas).map(mapIdeaCoverPosition)
   };
 }
 
@@ -75,7 +132,7 @@ function mapCreatorDetailData(payload) {
     creator: source.creator || null,
     creatorDestinations: ensureArray(source.creatorDestinations),
     relatedServices: ensureArray(source.relatedServices),
-    creatorIdeas: sortIdeasByNewest(source.creatorIdeas)
+    creatorIdeas: ensureArray(source.creatorIdeas).map(mapIdeaCoverPosition)
   };
 }
 
@@ -103,7 +160,7 @@ function mapDestinationDetailData(payload) {
     typeLabels: ensureArray(source.typeLabels),
     styleLabels: ensureArray(source.styleLabels),
     relatedCreators: ensureArray(source.relatedCreators),
-    relatedIdeas: ensureArray(source.relatedIdeas),
+    relatedIdeas: ensureArray(source.relatedIdeas).map(mapIdeaCoverPosition),
     services: ensureArray(source.services)
   };
 }
@@ -113,7 +170,7 @@ function mapIdeasPageData(payload) {
   return {
     themes: ensureArray(source.themes),
     pageTitle: source.pageTitle || "旅行故事",
-    ideas: sortIdeasByNewest(source.ideas)
+    ideas: ensureArray(source.ideas).map(mapIdeaCoverPosition)
   };
 }
 
@@ -124,7 +181,7 @@ function mapIdeaDetailData(payload) {
 
   const source = ensureObject(payload);
   return {
-    idea: source.idea || null,
+    idea: source.idea ? mapIdeaCoverPosition(source.idea) : null,
     author: source.author || null,
     relatedRegions: ensureArray(source.relatedRegions),
     relatedServices: ensureArray(source.relatedServices),

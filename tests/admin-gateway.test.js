@@ -1770,6 +1770,7 @@ test("saveIdea maps legacy idea themes into the new fixed theme set", async () =
       themeLabel: "徒步自然",
       isCustomTheme: false,
       sourceType: "wechat",
+      displayMode: "featured",
       status: "active",
       summary: "更新后的摘要",
       cover: "cloud://cover.jpg",
@@ -1791,6 +1792,7 @@ test("saveIdea maps legacy idea themes into the new fixed theme set", async () =
   assert.equal(ideaUpdate.data.themeKey, "xiaoye-travel-notes");
   assert.equal(ideaUpdate.data.themeLabel, "小野旅记");
   assert.equal(ideaUpdate.data.isCustomTheme, false);
+  assert.equal(ideaUpdate.data.displayMode, "featured");
 });
 
 test("saveService requires creatorMessage", async () => {

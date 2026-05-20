@@ -122,6 +122,7 @@ const HOME_PAGE_CONFIG_KEY = "homePage";
 const HOME_PAGE_SNAPSHOT_CONFIG_KEY = "homePageSnapshot";
 const HOME_PAGE_SNAPSHOT_VERSION = 1;
 const CONTENT_CACHE_TTL_MS = 5 * 60 * 1000;
+const IDEA_SORT_ORDER_LEGACY_BASE = 8000000000000000;
 const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000;
 const HOME_PAGE_CACHE_TTL_MS = 60 * 1000;
 const HOME_PAGE_SNAPSHOT_CACHE_TTL_MS = 60 * 1000;
@@ -181,6 +182,8 @@ const IDEA_THEME_OPTIONS = [
 ];
 const IDEA_SOURCE_TYPES = ["mini", "wechat", "hybrid"];
 const DEFAULT_PUBLIC_IDEA_SOURCE_TYPE = "mini";
+const IDEA_DISPLAY_MODES = ["featured", "thumbnail"];
+const DEFAULT_PUBLIC_IDEA_DISPLAY_MODE = "thumbnail";
 const SERVICE_GROUP_TYPES = ["regular", "custom"];
 const DEFAULT_SERVICE_GROUP_TYPE = "regular";
 const CUSTOM_SERVICE_GROUP_TYPE = "custom";
@@ -338,8 +341,15 @@ const IDEA_CARD_COLLECTION_FIELDS = {
   themeLabel: true,
   summary: true,
   cover: true,
+  coverPosition: true,
+  displayMode: true,
   authorId: true,
+  sourceType: true,
+  wechatArticleUrl: true,
+  wechatArticleTitle: true,
   regionCodes: true,
+  sortOrder: true,
+  updatedAt: true,
   status: true
 };
 let contentDataCache = null;
@@ -408,6 +418,57 @@ function normalizeArray(value) {
 function normalizeNumber(value, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeIdeaSortOrder(value, fallback = 0) {
+  const parsed = Math.round(normalizeNumber(value, fallback));
+  return parsed > 0 ? parsed : fallback;
+}
+
+function resolveIdeaSortOrderValue(idea) {
+  const explicitOrder = normalizeIdeaSortOrder(idea && idea.sortOrder, 0);
+  if (explicitOrder > 0) {
+    return explicitOrder;
+  }
+
+  return IDEA_SORT_ORDER_LEGACY_BASE - normalizeNumber(idea && idea.updatedAt, 0);
+}
+
+function sortIdeasForDisplay(ideas) {
+  return normalizeArray(ideas).slice().sort((left, right) => {
+    const orderDiff = resolveIdeaSortOrderValue(left) - resolveIdeaSortOrderValue(right);
+    if (orderDiff !== 0) {
+      return orderDiff;
+    }
+
+    return normalizeText(left && left.slug).localeCompare(
+      normalizeText(right && right.slug),
+      "zh-Hans-CN",
+      {
+        numeric: true,
+        sensitivity: "base"
+      }
+    );
+  });
+}
+
+function normalizePercent(value, fallback = 50) {
+  const parsed = normalizeNumber(value, fallback);
+  return Math.min(100, Math.max(0, Math.round(parsed)));
+}
+
+function normalizeCoverPosition(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {
+      x: 50,
+      y: 50
+    };
+  }
+
+  return {
+    x: normalizePercent(value.x, 50),
+    y: normalizePercent(value.y, 50)
+  };
 }
 
 function isPlainObject(value) {
@@ -629,7 +690,7 @@ function buildPublicGroupPeriods(periods, soldCountMap) {
         totalSeats,
         soldCount,
         remainingSeats,
-        minGroup: Number(period && period.minGroup) || 1
+        minGroup: Math.max(0, normalizeNumber(period && period.minGroup, 1))
       });
     })
   );
@@ -691,11 +752,39 @@ function buildHomeIdeaCard(idea) {
     summary: normalizeText(idea && idea.summary),
     theme: normalizeText(idea && (idea.themeLabel || idea.theme)),
     cover: normalizeImageRef(idea && idea.cover, "card"),
+    coverPosition: normalizeCoverPosition(idea && idea.coverPosition),
+    displayMode: normalizeIdeaDisplayMode(idea && idea.displayMode),
     authorName: normalizeText(idea && idea.authorName),
     sourceType: normalizeText(idea && idea.sourceType),
     wechatArticleUrl: normalizeText(idea && idea.wechatArticleUrl),
     wechatArticleTitle: normalizeText(idea && idea.wechatArticleTitle)
   };
+}
+
+function attachHeroIdeaNavigation(slides, ideas) {
+  const ideaMap = (Array.isArray(ideas) ? ideas : []).reduce((map, idea) => {
+    const slug = normalizeText(idea && idea.slug);
+    if (slug && !map[slug]) {
+      map[slug] = idea;
+    }
+    return map;
+  }, {});
+
+  return (Array.isArray(slides) ? slides : []).map((slide) => {
+    const targetIdeaSlug = normalizeText(slide && slide.targetIdeaSlug);
+    const idea = targetIdeaSlug ? ideaMap[targetIdeaSlug] : null;
+    if (!idea) {
+      return slide;
+    }
+
+    return Object.assign({}, slide, {
+      targetIdeaSlug,
+      coverPosition: slide.coverPosition || normalizeCoverPosition(idea && idea.coverPosition),
+      sourceType: normalizeText(idea && idea.sourceType),
+      wechatArticleUrl: normalizeText(idea && idea.wechatArticleUrl),
+      wechatArticleTitle: normalizeText(idea && (idea.wechatArticleTitle || idea.title))
+    });
+  });
 }
 
 function buildHomeServiceCard(service) {
@@ -1062,6 +1151,15 @@ function normalizeIdeaSourceType(value) {
   return DEFAULT_PUBLIC_IDEA_SOURCE_TYPE;
 }
 
+function normalizeIdeaDisplayMode(value) {
+  const normalized = normalizeText(value);
+  if (IDEA_DISPLAY_MODES.includes(normalized)) {
+    return normalized;
+  }
+
+  return DEFAULT_PUBLIC_IDEA_DISPLAY_MODE;
+}
+
 function sanitizeExternalUrl(url) {
   const normalized = normalizeText(url);
   return /^https?:\/\//i.test(normalized) ? normalized : "";
@@ -1080,6 +1178,7 @@ function normalizeIdeaThemeDoc(idea) {
     themeLabel: theme.themeLabel,
     isCustomTheme: theme.isCustomTheme,
     sourceType: normalizeIdeaSourceType(idea && idea.sourceType),
+    displayMode: normalizeIdeaDisplayMode(idea && idea.displayMode),
     regionCodes: normalizeArray(idea && idea.regionCodes)
       .map((regionCode) => normalizeDestinationRegionCode(regionCode))
       .filter(Boolean),
@@ -1088,9 +1187,11 @@ function normalizeIdeaThemeDoc(idea) {
     wechatArticleUrl: sanitizeExternalUrl(idea && idea.wechatArticleUrl),
     wechatArticleTitle: normalizeText(idea && idea.wechatArticleTitle),
     wechatCover: normalizeText(idea && idea.wechatCover),
+    coverPosition: normalizeCoverPosition(idea && idea.coverPosition),
     publishedAt: normalizeNumber(idea && idea.publishedAt, 0),
     readMoreText: normalizeText(idea && idea.readMoreText) || DEFAULT_IDEA_READ_MORE_TEXT,
-    syncStatus: normalizeText(idea && idea.syncStatus) || "draft"
+    syncStatus: normalizeText(idea && idea.syncStatus) || "draft",
+    sortOrder: normalizeIdeaSortOrder(idea && idea.sortOrder, 0)
   });
 }
 
@@ -1124,7 +1225,7 @@ function resolvePublicPeriodStatus(period) {
 
   const totalSeats = Math.max(0, normalizeNumber(period && period.totalSeats, 0));
   const soldCount = Math.max(0, normalizeNumber(period && period.soldCount, 0));
-  const minGroup = Math.max(1, normalizeNumber(period && period.minGroup, 1));
+  const minGroup = Math.max(0, normalizeNumber(period && period.minGroup, 1));
   const dateStart = normalizeText(period && period.dateStart);
 
   if (dateStart && today && dateStart <= today) {
@@ -1952,6 +2053,10 @@ async function loadHomePageCollectionsWithConfig(homeConfig) {
   const featuredCreatorSlugs = normalizeArray(homeConfig && homeConfig.featuredCreatorSlugs);
   const featuredDestinationSlugs = normalizeArray(homeConfig && homeConfig.featuredDestinationSlugs);
   const featuredIdeaSlugs = normalizeArray(homeConfig && homeConfig.featuredIdeaSlugs);
+  const heroTargetIdeaSlugs = unique(
+    normalizeArray(homeConfig && homeConfig.heroSlides)
+      .map((slide) => normalizeText(slide && slide.targetIdeaSlug))
+  );
   const configuredServiceSlugs = unique(
     normalizeArray(homeConfig && homeConfig.featuredServiceSlugs)
       .concat(normalizeArray(homeConfig && homeConfig.recentServiceSlugs))
@@ -1962,6 +2067,7 @@ async function loadHomePageCollectionsWithConfig(homeConfig) {
     exactFeaturedCreators,
     exactFeaturedDestinations,
     exactFeaturedIdeas,
+    exactHeroTargetIdeas,
     exactConfiguredServices,
     fallbackCreators,
     fallbackDestinations,
@@ -1972,10 +2078,11 @@ async function loadHomePageCollectionsWithConfig(homeConfig) {
     listCollectionBySlugs(COLLECTIONS.creators, featuredCreatorSlugs, { fieldSpec: CREATOR_CARD_COLLECTION_FIELDS }),
     listCollectionBySlugs(COLLECTIONS.destinations, featuredDestinationSlugs, { fieldSpec: DESTINATION_CARD_COLLECTION_FIELDS }),
     listCollectionBySlugs(COLLECTIONS.ideas, featuredIdeaSlugs, { fieldSpec: IDEA_CARD_COLLECTION_FIELDS }),
+    listCollectionBySlugs(COLLECTIONS.ideas, heroTargetIdeaSlugs, { fieldSpec: IDEA_CARD_COLLECTION_FIELDS }),
     listCollectionBySlugs(COLLECTIONS.services, configuredServiceSlugs, { fieldSpec: SERVICE_LIST_COLLECTION_FIELDS }),
     listCollectionHead(COLLECTIONS.creators, HOME_CREATOR_WALL_LIMIT, { fieldSpec: CREATOR_CARD_COLLECTION_FIELDS }),
     listCollectionHead(COLLECTIONS.destinations, 8, { fieldSpec: DESTINATION_CARD_COLLECTION_FIELDS }),
-    listCollectionHead(COLLECTIONS.ideas, 6, { fieldSpec: IDEA_CARD_COLLECTION_FIELDS }),
+    listCollection(COLLECTIONS.ideas, { fieldSpec: IDEA_CARD_COLLECTION_FIELDS }),
     listCollectionHead(COLLECTIONS.services, 12, { fieldSpec: SERVICE_LIST_COLLECTION_FIELDS }),
     listCollection(COLLECTIONS.services, { fieldSpec: SERVICE_LIST_COLLECTION_FIELDS })
   ]);
@@ -1990,11 +2097,12 @@ async function loadHomePageCollectionsWithConfig(homeConfig) {
     .map(normalizeCreatorAssetFields)
     .map((creator) => Object.assign({}, creator, {
       tags: getCreatorTags(creator, normalizedAllServices)
-    }));
+  }));
   const normalizedFeaturedDestinations = exactFeaturedDestinations.map(normalizeDestinationContentDoc);
   const normalizedFallbackDestinations = fallbackDestinations.map(normalizeDestinationContentDoc);
   const normalizedFeaturedIdeas = exactFeaturedIdeas.map(normalizeIdeaAssetFields).map(normalizeIdeaThemeDoc);
-  const normalizedFallbackIdeas = fallbackIdeas.map(normalizeIdeaAssetFields).map(normalizeIdeaThemeDoc);
+  const normalizedHeroTargetIdeas = exactHeroTargetIdeas.map(normalizeIdeaAssetFields).map(normalizeIdeaThemeDoc);
+  const normalizedFallbackIdeas = sortIdeasForDisplay(fallbackIdeas.map(normalizeIdeaAssetFields).map(normalizeIdeaThemeDoc)).slice(0, 6);
   const normalizedConfiguredServices = exactConfiguredServices.map(normalizeServiceContentDoc);
   const normalizedFallbackServices = fallbackServices.map(normalizeServiceContentDoc);
 
@@ -2010,12 +2118,12 @@ async function loadHomePageCollectionsWithConfig(homeConfig) {
     normalizedFallbackDestinations,
     4
   );
-  const featuredIdeasBase = selectConfiguredOrFallback(
+  const featuredIdeasBase = sortIdeasForDisplay(selectConfiguredOrFallback(
     homeConfig && homeConfig.featuredIdeaSlugs,
     normalizedFeaturedIdeas,
     normalizedFallbackIdeas,
     3
-  );
+  ));
   const servicePool = takeActiveTopUp(normalizedFallbackServices, normalizedConfiguredServices, 12);
   const creatorRefs = unique(
     featuredCreators
@@ -2045,7 +2153,8 @@ async function loadHomePageCollectionsWithConfig(homeConfig) {
     services: servicePool,
     featuredCreators,
     featuredDestinations,
-    featuredIdeas
+    featuredIdeas,
+    heroTargetIdeas: normalizedHeroTargetIdeas
   };
 }
 
@@ -2640,7 +2749,7 @@ async function loadContentData() {
       const destinations = rawDestinations
         .map(normalizeDestinationContentDoc)
         .map((destination) => enrichDestinationDoc(destination, creators, services));
-      const ideas = rawIdeas.map(normalizeIdeaAssetFields).map(normalizeIdeaThemeDoc);
+      const ideas = sortIdeasForDisplay(rawIdeas.map(normalizeIdeaAssetFields).map(normalizeIdeaThemeDoc));
       const payload = {
         creators,
         destinations,
@@ -2993,7 +3102,8 @@ async function buildHomePagePayload() {
     services,
     featuredCreators,
     featuredDestinations,
-    featuredIdeas
+    featuredIdeas,
+    heroTargetIdeas
   } = await loadHomePageCollectionsWithConfig(homeConfig);
   const featuredServiceSlugs = Array.isArray(homeConfig.featuredServiceSlugs) ? homeConfig.featuredServiceSlugs : null;
   const recentServiceSlugs = Array.isArray(homeConfig.recentServiceSlugs) ? homeConfig.recentServiceSlugs : null;
@@ -3014,21 +3124,25 @@ async function buildHomePagePayload() {
     });
   });
 
+  const rawHeroSlides = Array.isArray(homeConfig.heroSlides) && homeConfig.heroSlides.length
+    ? homeConfig.heroSlides
+    : (featuredIdeas[0]
+      ? [{
+          id: `hero-${featuredIdeas[0].slug}`,
+          variant: "photo",
+          image: featuredIdeas[0].cover || "",
+          mark: "野哉",
+          title: featuredIdeas[0].title || "",
+          desc: featuredIdeas[0].summary || "",
+          targetIdeaSlug: featuredIdeas[0].slug,
+          coverPosition: featuredIdeas[0].coverPosition
+        }]
+      : []);
+
   const payload = {
-    heroSlides: normalizeHeroSlides(
-      Array.isArray(homeConfig.heroSlides) && homeConfig.heroSlides.length
-        ? homeConfig.heroSlides
-        : (featuredIdeas[0]
-          ? [{
-              id: `hero-${featuredIdeas[0].slug}`,
-              variant: "photo",
-              image: featuredIdeas[0].cover || "",
-              mark: "野哉",
-              title: featuredIdeas[0].title || "",
-              desc: featuredIdeas[0].summary || "",
-              targetIdeaSlug: featuredIdeas[0].slug
-            }]
-          : [])
+    heroSlides: attachHeroIdeaNavigation(
+      normalizeHeroSlides(rawHeroSlides),
+      (Array.isArray(heroTargetIdeas) ? heroTargetIdeas : []).concat(featuredIdeas)
     ),
     featuredCreators: featuredCreators.map(buildHomeCreatorCard),
     featuredDestinations: featuredDestinations.map(buildHomeDestinationCard),
@@ -3901,7 +4015,7 @@ async function getServiceBookingData(slug) {
           (Number(period.remainingSeats) || 0) + (soldCountMap[period.periodCode || period.id || ""] || 0),
         soldCount: soldCountMap[period.periodCode || period.id || ""] || 0,
         remainingSeats: Number(period.remainingSeats) || 0,
-        minGroup: Number(period.minGroup) || 1
+        minGroup: Math.max(0, normalizeNumber(period.minGroup, 1))
       })
     )
   };
@@ -3943,7 +4057,7 @@ async function getServiceDetailContentData(slug) {
           (Number(period.remainingSeats) || 0) + (soldCountMap[period.periodCode || period.id || ""] || 0),
         soldCount: soldCountMap[period.periodCode || period.id || ""] || 0,
         remainingSeats: Number(period.remainingSeats) || 0,
-        minGroup: Number(period.minGroup) || 1
+        minGroup: Math.max(0, normalizeNumber(period.minGroup, 1))
       })
     )
   };

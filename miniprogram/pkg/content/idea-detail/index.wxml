@@ -24,7 +24,7 @@
   <text class="back-link" bindtap="goBack">← 返回文章列表</text>
 
   <view class="section-block article-card">
-    <image wx:if="{{idea.cover}}" class="article-card__cover" src="{{idea.cover}}" mode="aspectFill"></image>
+    <view wx:if="{{idea.cover}}" class="article-card__cover article-card__cover-bg" style="{{idea.coverBackgroundStyle}}"></view>
     <view class="article-card__title-row">
       <text class="page-title article-card__title">{{idea.title}}</text>
       <view class="detail-action-group">
