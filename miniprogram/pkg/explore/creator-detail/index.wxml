@@ -52,15 +52,18 @@
           <text wx:for="{{creator.displayTags}}" wx:key="*this" class="creator-top__descriptor">{{item}}</text>
         </view>
       </view>
-      <image class="creator-top__avatar" src="{{creator.avatarDetail || creator.avatar}}" mode="aspectFill"></image>
+      <view wx:if="{{creator.avatarBackgroundStyle}}" class="creator-top__avatar creator-top__avatar-bg" style="{{creator.avatarBackgroundStyle}}"></view>
+      <image wx:else class="creator-top__avatar" src="{{creator.avatarDetail || creator.avatar}}" mode="aspectFill"></image>
     </view>
   </view>
 
-  <view class="section-block paper-block">
+  <view class="section-block paper-block creator-about">
+    <view class="creator-about__paper">
       <text class="section-title detail-card__title">关于创作者</text>
       <view class="detail-list">
         <text wx:for="{{creator.about}}" wx:key="*this" class="detail-list-item">{{item}}</text>
       </view>
+    </view>
   </view>
 
   <view wx:if="{{displayIdeas.length}}" class="section-block creator-stories">
@@ -76,12 +79,27 @@
         data-wechat-article-title="{{item.wechatArticleTitle}}"
         data-title="{{item.title}}"
         bindtap="onStoryTap"
+        hover-class="creator-story-item--pressed"
+        hover-stay-time="80"
       >
-        <view class="creator-story-item__main">
-          <text class="creator-story-item__title">{{item.title}}</text>
-          <text class="creator-story-item__summary">{{item.summary}}</text>
+        <view wx:if="{{item.cover}}" class="creator-story-item__thumb-wrap">
+          <view class="creator-story-item__thumb creator-story-item__cover-bg" style="{{item.coverBackgroundStyle}}"></view>
         </view>
-        <text class="creator-story-item__arrow">→</text>
+        <view wx:else class="creator-story-item__stamp">
+          <text class="creator-story-item__stamp-text">野哉</text>
+        </view>
+        <view class="creator-story-item__main">
+          <view class="creator-story-item__meta-row">
+            <text class="creator-story-item__theme">{{item.themeLabel || item.theme || '现场笔记'}}</text>
+            <text class="creator-story-item__number">NO.{{index + 1}}</text>
+          </view>
+          <text class="creator-story-item__title">{{item.title}}</text>
+          <text class="creator-story-item__summary" wx:if="{{item.summary}}">{{item.summary}}</text>
+          <view class="creator-story-item__footer">
+            <text class="creator-story-item__action">阅读全文</text>
+            <text class="creator-story-item__arrow">→</text>
+          </view>
+        </view>
       </view>
     </view>
     <view wx:if="{{hasMoreIdeas}}" class="creator-stories__more" bindtap="goCreatorStories">
@@ -89,7 +107,7 @@
     </view>
   </view>
 
-  <view class="section-block">
+  <view wx:if="{{relatedServices.length}}" class="section-block">
     <text class="section-title">同行的旅程</text>
     <view class="card-stack creator-detail__list">
       <service-card

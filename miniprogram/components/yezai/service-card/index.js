@@ -3,6 +3,7 @@ Component({
     addGlobalClass: true
   },
   data: {
+    coverBackgroundStyle: "",
     resolvedPrice: ""
   },
   properties: {
@@ -48,13 +49,17 @@ Component({
     }
   },
   observers: {
-    "service, hideDurationInPrice"(service, hideDurationInPrice) {
+    "service, compact, hideDurationInPrice"(service, compact, hideDurationInPrice) {
       const rawPrice = service && service.priceLabel ? service.priceLabel : "";
       const resolvedPrice = hideDurationInPrice
         ? rawPrice.replace(/\s*\/\s*\S+\s*$/, "")
         : rawPrice;
+      const coverBackgroundStyle = compact
+        ? (service && (service.coverSquareBackgroundStyle || service.coverBackgroundStyle)) || ""
+        : (service && (service.coverCardBackgroundStyle || service.coverBackgroundStyle)) || "";
 
       this.setData({
+        coverBackgroundStyle,
         resolvedPrice
       });
     }

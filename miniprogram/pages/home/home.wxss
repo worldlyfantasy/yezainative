@@ -621,6 +621,10 @@
   height: 100%;
 }
 
+.creator-constellation__avatar-bg {
+  background-color: rgba(189, 154, 95, 0.14);
+}
+
 .creator-constellation__fallback {
   display: -webkit-box;
   overflow: hidden;

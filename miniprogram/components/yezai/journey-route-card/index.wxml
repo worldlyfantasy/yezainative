@@ -1,7 +1,8 @@
 <view class="journey-route-card {{compact ? 'journey-route-card--compact' : ''}} {{variant === 'grid' ? 'journey-route-card--grid' : ''}} {{customExample ? 'journey-route-card--custom-example' : ''}}" bindtap="handleTap">
   <block wx:if="{{compact}}">
     <view class="journey-route-card__thumb-shell">
-      <image wx:if="{{journey.cover}}" class="journey-route-card__thumb" src="{{journey.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
+      <view wx:if="{{coverSquareBackgroundStyle}}" class="journey-route-card__thumb journey-route-card__thumb-bg" style="{{coverSquareBackgroundStyle}}"></view>
+      <image wx:elif="{{journey.cover}}" class="journey-route-card__thumb" src="{{journey.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
       <view wx:else class="journey-route-card__thumb journey-route-card__thumb--empty"></view>
       <view wx:if="{{!customExample && journey.displayStatus === 'confirmed'}}" class="journey-route-card__confirmed-corner journey-route-card__confirmed-corner--compact">已成行</view>
       <view wx:if="{{journey.displayDurationLabel}}" class="journey-route-card__duration-pill journey-route-card__duration-pill--compact">{{journey.displayDurationLabel}}</view>

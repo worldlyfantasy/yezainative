@@ -917,6 +917,63 @@ test("contentGateway sorts journey cards by departure date before confirmed stat
   );
 });
 
+test("contentGateway uses primaryTag for the displayed journey route type", async () => {
+  const collections = {
+    creators: {
+      list: [{ id: "creator-1", slug: "guide-a", name: "领队A" }]
+    },
+    destinations: {
+      list: []
+    },
+    services: {
+      list: [
+        {
+          id: "service-karst",
+          slug: "karst-village",
+          name: "喀斯特村落慢行",
+          status: "active",
+          creatorId: "creator-1",
+          primaryTag: "乡土",
+          tags: ["山野", "乡土", "文化"],
+          groupPeriods: [
+            {
+              periodCode: "KARST-20260520",
+              dateStart: "2026-05-20",
+              dateEnd: "2026-05-22",
+              price: 3980,
+              status: "available"
+            }
+          ]
+        }
+      ]
+    },
+    app_configs: {
+      list: []
+    }
+  };
+  const gateway = loadContentGatewayModule({
+    collections,
+    runSQL: async () => ({
+      data: {
+        executeResultList: []
+      }
+    })
+  });
+
+  const result = await gateway.main({
+    action: "getJourneyPageData",
+    payload: {}
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.journeys[0].primaryRouteType, "乡土");
+  assert.deepEqual(result.data.journeys[0].routeTypes, ["山野", "乡土", "文化"]);
+  assert.deepEqual(
+    result.data.routeTypeOptions.map((item) => item.value),
+    ["山野", "乡土", "文化"]
+  );
+});
+
 test("contentGateway serves creators page data from a fresh persisted snapshot for default filters", async () => {
   let sqlCalls = 0;
   const snapshotPayload = {

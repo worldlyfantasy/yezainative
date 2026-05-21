@@ -36,6 +36,18 @@ function buildBackgroundImageStyle(image, position) {
   return `background-image: url("${normalizedImage}"); background-size: cover; background-repeat: no-repeat; background-position: ${x}% ${y}%;`;
 }
 
+function mapCreatorAvatarPosition(item) {
+  const source = ensureObject(item);
+  if (!source || !item) {
+    return item;
+  }
+
+  return Object.assign({}, source, {
+    avatarPositionStyle: buildCoverPositionStyle(source.avatarPosition),
+    avatarBackgroundStyle: buildBackgroundImageStyle(source.avatarDetail || source.avatar, source.avatarPosition)
+  });
+}
+
 function normalizeIdeaDisplayMode(value) {
   return String(value || "").trim() === "featured" ? "featured" : "thumbnail";
 }
@@ -50,6 +62,23 @@ function mapIdeaCoverPosition(item) {
     displayMode: normalizeIdeaDisplayMode(source.displayMode),
     coverPositionStyle: buildCoverPositionStyle(source.coverPosition),
     coverBackgroundStyle: buildBackgroundImageStyle(source.cover, source.coverPosition)
+  });
+}
+
+function mapServiceCoverPosition(item) {
+  const source = ensureObject(item);
+  if (!source || !item) {
+    return item;
+  }
+
+  const positions = ensureObject(source.coverPositions);
+  const cardPosition = positions.card || source.coverPosition;
+  const squarePosition = positions.square || cardPosition;
+
+  return Object.assign({}, source, {
+    coverCardBackgroundStyle: buildBackgroundImageStyle(source.cover, cardPosition),
+    coverSquareBackgroundStyle: buildBackgroundImageStyle(source.cover, squarePosition),
+    coverBackgroundStyle: buildBackgroundImageStyle(source.cover, cardPosition)
   });
 }
 
@@ -87,12 +116,12 @@ function mapHomePageData(payload) {
   const servicesByTab = ensureObject(source.featuredServicesByTab);
   return {
     heroSlides: normalizeHeroSlides(source.heroSlides).map(mapHeroSlidePosition),
-    featuredCreators: ensureArray(source.featuredCreators),
+    featuredCreators: ensureArray(source.featuredCreators).map(mapCreatorAvatarPosition),
     featuredDestinations: ensureArray(source.featuredDestinations),
     featuredServicesByTab: {
-      featured: ensureArray(servicesByTab.featured),
-      recent: ensureArray(servicesByTab.recent),
-      special: ensureArray(servicesByTab.special)
+      featured: ensureArray(servicesByTab.featured).map(mapServiceCoverPosition),
+      recent: ensureArray(servicesByTab.recent).map(mapServiceCoverPosition),
+      special: ensureArray(servicesByTab.special).map(mapServiceCoverPosition)
     },
     featuredIdeas: ensureArray(source.featuredIdeas).map(mapIdeaCoverPosition)
   };
@@ -104,8 +133,8 @@ function mapJourneyPageData(payload) {
     routeTypeOptions: ensureArray(source.routeTypeOptions),
     regionOptions: ensureArray(source.regionOptions),
     journeys: ensureArray(source.journeys).length
-      ? ensureArray(source.journeys)
-      : ensureArray(source.services)
+      ? ensureArray(source.journeys).map(mapServiceCoverPosition)
+      : ensureArray(source.services).map(mapServiceCoverPosition)
   };
 }
 
@@ -118,7 +147,7 @@ function mapCreatorsPageData(payload) {
     destinationLabels: ensureArray(source.destinationLabels),
     regionLabels: ensureArray(source.regionLabels),
     styleLabels: ensureArray(source.styleLabels),
-    creators: ensureArray(source.creators)
+    creators: ensureArray(source.creators).map(mapCreatorAvatarPosition)
   };
 }
 
@@ -129,9 +158,9 @@ function mapCreatorDetailData(payload) {
 
   const source = ensureObject(payload);
   return {
-    creator: source.creator || null,
+    creator: source.creator ? mapCreatorAvatarPosition(source.creator) : null,
     creatorDestinations: ensureArray(source.creatorDestinations),
-    relatedServices: ensureArray(source.relatedServices),
+    relatedServices: ensureArray(source.relatedServices).map(mapServiceCoverPosition),
     creatorIdeas: ensureArray(source.creatorIdeas).map(mapIdeaCoverPosition)
   };
 }
@@ -159,9 +188,9 @@ function mapDestinationDetailData(payload) {
     styleOptions: ensureArray(source.styleOptions),
     typeLabels: ensureArray(source.typeLabels),
     styleLabels: ensureArray(source.styleLabels),
-    relatedCreators: ensureArray(source.relatedCreators),
+    relatedCreators: ensureArray(source.relatedCreators).map(mapCreatorAvatarPosition),
     relatedIdeas: ensureArray(source.relatedIdeas).map(mapIdeaCoverPosition),
-    services: ensureArray(source.services)
+    services: ensureArray(source.services).map(mapServiceCoverPosition)
   };
 }
 
@@ -182,9 +211,9 @@ function mapIdeaDetailData(payload) {
   const source = ensureObject(payload);
   return {
     idea: source.idea ? mapIdeaCoverPosition(source.idea) : null,
-    author: source.author || null,
+    author: source.author ? mapCreatorAvatarPosition(source.author) : null,
     relatedRegions: ensureArray(source.relatedRegions),
-    relatedServices: ensureArray(source.relatedServices),
+    relatedServices: ensureArray(source.relatedServices).map(mapServiceCoverPosition),
     blocks: ensureArray(source.blocks)
   };
 }
@@ -196,9 +225,9 @@ function mapServiceDetailData(payload) {
 
   const source = ensureObject(payload);
   return {
-    service: source.service || null,
+    service: source.service ? mapServiceCoverPosition(source.service) : null,
     travelDetail: source.travelDetail || null,
-    creator: source.creator || null,
+    creator: source.creator ? mapCreatorAvatarPosition(source.creator) : null,
     relatedDestinations: ensureArray(source.relatedDestinations),
     heroCover: source.heroCover || "",
     photoGallery: ensureArray(source.photoGallery),
@@ -220,8 +249,8 @@ function mapServiceBookingData(payload) {
 
   const source = ensureObject(payload);
   return {
-    service: source.service || null,
-    creator: source.creator || null,
+    service: source.service ? mapServiceCoverPosition(source.service) : null,
+    creator: source.creator ? mapCreatorAvatarPosition(source.creator) : null,
     groupPeriods: ensureArray(source.groupPeriods)
   };
 }

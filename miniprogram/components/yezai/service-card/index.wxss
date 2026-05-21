@@ -18,6 +18,10 @@
   border-radius: 24rpx;
 }
 
+.service-card__cover-bg {
+  background-color: rgba(217, 205, 179, 0.5);
+}
+
 .service-card--compact .service-card__cover {
   height: 220rpx;
   border-radius: 22rpx;

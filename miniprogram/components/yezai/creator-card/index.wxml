@@ -1,7 +1,8 @@
 <view class="creator-card {{showDivider ? '' : 'creator-card--no-divider'}} {{variant === 'grid' ? 'creator-card--grid' : ''}}" bindtap="handleTap">
   <block wx:if="{{variant === 'grid'}}">
     <view class="creator-card__head">
-      <image class="creator-card__avatar" src="{{creator.avatar}}" mode="aspectFill" lazy-load="{{true}}"></image>
+      <view wx:if="{{creator.avatarBackgroundStyle}}" class="creator-card__avatar creator-card__avatar-bg" style="{{creator.avatarBackgroundStyle}}"></view>
+      <image wx:else class="creator-card__avatar" src="{{creator.avatar}}" mode="aspectFill" lazy-load="{{true}}"></image>
       <view class="creator-card__meta">
         <view class="creator-card__title-row">
           <text class="creator-card__name">{{creator.name}}</text>
@@ -21,7 +22,8 @@
 
   <block wx:else>
     <view class="creator-card__head">
-      <image class="creator-card__avatar" src="{{creator.avatar}}" mode="aspectFill" lazy-load="{{true}}"></image>
+      <view wx:if="{{creator.avatarBackgroundStyle}}" class="creator-card__avatar creator-card__avatar-bg" style="{{creator.avatarBackgroundStyle}}"></view>
+      <image wx:else class="creator-card__avatar" src="{{creator.avatar}}" mode="aspectFill" lazy-load="{{true}}"></image>
       <view class="creator-card__meta">
         <view class="creator-card__title-row">
           <text class="creator-card__name">{{creator.name}}</text>

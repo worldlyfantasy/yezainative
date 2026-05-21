@@ -114,17 +114,20 @@
         </view>
         <view wx:if="{{creator}}" class="creator-quote creator-card creator-quote--tappable" bindtap="goCreatorDetail">
           <view class="creator-card__head">
-            <image class="creator-card__avatar" src="{{creator.avatar}}" mode="aspectFill"></image>
+            <view wx:if="{{creator.avatarBackgroundStyle}}" class="creator-card__avatar creator-card__avatar-bg" style="{{creator.avatarBackgroundStyle}}"></view>
+            <image wx:else class="creator-card__avatar" src="{{creator.avatar}}" mode="aspectFill"></image>
             <view class="creator-card__meta">
               <view class="creator-card__title-row">
                 <text class="creator-card__name">{{creator.name}}</text>
-                <view class="creator-card__tags">
+              </view>
+              <view wx:if="{{service.creatorRoles && service.creatorRoles.length}}" class="creator-card__tags">
+                <block wx:for="{{service.creatorRoles}}" wx:key="*this">
+                  <text class="creator-card__tag">{{item}}</text>
                   <text
-                    wx:for="{{service.creatorRoles}}"
-                    wx:key="*this"
-                    class="creator-card__tag"
-                  >{{item}}</text>
-                </view>
+                    wx:if="{{index < service.creatorRoles.length - 1}}"
+                    class="creator-card__tag-separator"
+                  >·</text>
+                </block>
               </view>
               <text class="creator-card__stance">"{{creatorQuoteText || service.summary}}"</text>
             </view>
@@ -137,7 +140,7 @@
       <view
         wx:for="{{serviceMetaCards}}"
         wx:key="key"
-        class="service-info-item {{item.clickable ? 'service-info-item--clickable' : ''}}"
+        class="service-info-item service-info-item--{{item.key}} {{item.clickable ? 'service-info-item--clickable' : ''}}"
         data-key="{{item.key}}"
         bindtap="{{item.clickable ? 'onTagTap' : ''}}"
       >

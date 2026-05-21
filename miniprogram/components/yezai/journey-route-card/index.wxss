@@ -32,6 +32,10 @@
   background: transparent;
 }
 
+.journey-route-card__cover-bg {
+  background-color: rgba(217, 205, 179, 0.5);
+}
+
 .journey-route-card__cover--empty {
   min-height: 430rpx;
 }
@@ -301,6 +305,10 @@
   height: 100%;
   border-radius: 22rpx;
   background: rgba(217, 205, 179, 0.5);
+}
+
+.journey-route-card__thumb-bg {
+  background-color: rgba(217, 205, 179, 0.5);
 }
 
 .journey-route-card__compact-body {

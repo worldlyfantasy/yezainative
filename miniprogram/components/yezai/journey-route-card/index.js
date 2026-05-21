@@ -21,9 +21,18 @@ Component({
     }
   },
   data: {
+    coverCardBackgroundStyle: "",
+    coverSquareBackgroundStyle: "",
     summaryOverflow: false
   },
   observers: {
+    "journey.coverCardBackgroundStyle, journey.coverSquareBackgroundStyle, journey.coverBackgroundStyle": function observeCoverStyle() {
+      const journey = this.properties.journey || {};
+      this.setData({
+        coverCardBackgroundStyle: journey.coverCardBackgroundStyle || journey.coverBackgroundStyle || "",
+        coverSquareBackgroundStyle: journey.coverSquareBackgroundStyle || journey.coverBackgroundStyle || ""
+      });
+    },
     "journey.summary, variant": function observeSummary() {
       this.queueSummaryMeasurement();
     }

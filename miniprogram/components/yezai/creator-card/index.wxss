@@ -24,6 +24,10 @@
   border: 1rpx solid rgba(189, 154, 95, 0.34);
 }
 
+.creator-card__avatar-bg {
+  background-color: rgba(189, 154, 95, 0.14);
+}
+
 .creator-card__meta {
   flex: 1;
 }

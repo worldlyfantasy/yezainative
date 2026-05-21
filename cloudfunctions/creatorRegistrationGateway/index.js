@@ -31,6 +31,25 @@ function normalizeText(value) {
   return String(value || "").trim();
 }
 
+function normalizePercent(value, fallback = 50) {
+  const parsed = Number(value);
+  return Math.min(100, Math.max(0, Math.round(Number.isFinite(parsed) ? parsed : fallback)));
+}
+
+function normalizeAvatarPosition(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {
+      x: 50,
+      y: 50
+    };
+  }
+
+  return {
+    x: normalizePercent(value.x, 50),
+    y: normalizePercent(value.y, 50)
+  };
+}
+
 function normalizeEmail(value) {
   return normalizeText(value).toLowerCase();
 }
@@ -306,6 +325,7 @@ function normalizeRegistrationPayload(payload, applicant) {
     documentNumber: normalizeDocumentNumber(source.documentNumber),
     wechat: normalizeText(source.wechat),
     avatar: normalizeText(source.avatar),
+    avatarPosition: normalizeAvatarPosition(source.avatarPosition),
     stance: normalizeText(source.stance),
     about: normalizeAbout(source.about)
   };
@@ -329,6 +349,7 @@ function normalizeRegistrationDoc(doc) {
     documentNumber: normalizeText(doc.documentNumber),
     wechat: normalizeText(doc.wechat),
     avatar: normalizeText(doc.avatar),
+    avatarPosition: normalizeAvatarPosition(doc.avatarPosition),
     stance: normalizeText(doc.stance),
     about: normalizeAbout(doc.about),
     status: normalizeText(doc.status) || "draft",
@@ -619,6 +640,7 @@ async function upsertRegistration(nextDoc, options = {}) {
         documentNumber: merged.documentNumber,
         wechat: merged.wechat,
         avatar: merged.avatar,
+        avatarPosition: merged.avatarPosition,
         stance: merged.stance,
         about: merged.about,
         status: merged.status,

@@ -217,6 +217,7 @@ const CREATOR_CARD_COLLECTION_FIELDS = {
   slug: true,
   name: true,
   avatar: true,
+  avatarPosition: true,
   stance: true,
   tags: true,
   status: true
@@ -247,6 +248,7 @@ const SERVICE_LIST_COLLECTION_FIELDS = {
   id: true,
   slug: true,
   cover: true,
+  coverPositions: true,
   groupType: true,
   type: true,
   name: true,
@@ -268,6 +270,7 @@ const SERVICE_DETAIL_SUMMARY_COLLECTION_FIELDS = {
   slug: true,
   cover: true,
   coverDetail: true,
+  coverPositions: true,
   groupType: true,
   type: true,
   name: true,
@@ -291,6 +294,7 @@ const SERVICE_DETAIL_CONTENT_COLLECTION_FIELDS = {
   slug: true,
   cover: true,
   coverDetail: true,
+  coverPositions: true,
   groupType: true,
   type: true,
   name: true,
@@ -468,6 +472,24 @@ function normalizeCoverPosition(value) {
   return {
     x: normalizePercent(value.x, 50),
     y: normalizePercent(value.y, 50)
+  };
+}
+
+function normalizeAvatarPosition(value) {
+  return normalizeCoverPosition(value);
+}
+
+function normalizeServiceCoverPositions(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {
+      card: { x: 50, y: 50 },
+      square: { x: 50, y: 50 }
+    };
+  }
+
+  return {
+    card: normalizeCoverPosition(value.card),
+    square: normalizeCoverPosition(value.square)
   };
 }
 
@@ -726,6 +748,7 @@ function buildHomeCreatorCard(creator) {
     slug: normalizeText(creator && creator.slug),
     name: normalizeText(creator && creator.name),
     avatar: normalizeImageRef(creator && creator.avatar, "card"),
+    avatarPosition: normalizeAvatarPosition(creator && creator.avatarPosition),
     stance: normalizeText(creator && creator.stance),
     displayTags: tags.slice(0, 3),
     gridDisplayTags: tags.slice(0, 3)
@@ -793,6 +816,7 @@ function buildHomeServiceCard(service) {
     slug: normalizeText(service && service.slug),
     name: normalizeText(service && service.name),
     cover: normalizeImageRef(service && service.cover, "card"),
+    coverPositions: normalizeServiceCoverPositions(service && service.coverPositions),
     summary: normalizeText(service && service.summary),
     priceLabel: normalizeText(service && service.priceLabel),
     durationTag: normalizeText(service && service.durationTag),
@@ -823,6 +847,7 @@ function buildJourneyCard(service, creator, relatedDestinations, activePeriods) 
   });
   const displayPeriod = activePeriods[0] || null;
   const routeTypes = getServiceRouteTags(service);
+  const primaryRouteType = getServicePrimaryRouteTag(service, routeTypes);
   const explicitRegionCodes = unique(
     normalizeArray(service && service.regionCodes)
       .map((regionCode) => normalizeDestinationRegionCode(regionCode))
@@ -850,13 +875,14 @@ function buildJourneyCard(service, creator, relatedDestinations, activePeriods) 
     slug: normalizeText(publicService && publicService.slug),
     name: normalizeText(publicService && publicService.name),
     cover: normalizeImageRef(publicService && publicService.cover, "card"),
+    coverPositions: normalizeServiceCoverPositions(publicService && publicService.coverPositions),
     summary: normalizeText(publicService && publicService.summary),
     creatorName: normalizeText(publicService && publicService.creatorName),
     type: normalizeText(publicService && publicService.type),
     durationTag: normalizeText(publicService && publicService.durationTag),
     priceLabel: normalizeText(publicService && publicService.priceLabel),
     routeTypes,
-    primaryRouteType: routeTypes[0] || "",
+    primaryRouteType,
     activePeriods: activePeriods.map(buildJourneyListPeriod),
     displayPeriod: displayPeriodForCard,
     displayStatus: displayPeriod ? displayPeriod.status : "",
@@ -878,6 +904,7 @@ function buildCustomJourneyCard(service, creator, relatedDestinations) {
     creatorName: creator ? creator.name : ""
   });
   const routeTypes = getServiceRouteTags(service);
+  const primaryRouteType = getServicePrimaryRouteTag(service, routeTypes);
   const explicitRegionCodes = unique(
     normalizeArray(service && service.regionCodes)
       .map((regionCode) => normalizeDestinationRegionCode(regionCode))
@@ -893,13 +920,14 @@ function buildCustomJourneyCard(service, creator, relatedDestinations) {
     slug: normalizeText(publicService && publicService.slug),
     name: normalizeText(publicService && publicService.name),
     cover: normalizeImageRef(publicService && publicService.cover, "card"),
+    coverPositions: normalizeServiceCoverPositions(publicService && publicService.coverPositions),
     summary: normalizeText(publicService && publicService.summary),
     creatorName: normalizeText(publicService && publicService.creatorName),
     type: normalizeText(publicService && publicService.type),
     durationTag: normalizeText(publicService && publicService.durationTag),
     priceLabel: normalizeText(publicService && publicService.priceLabel),
     routeTypes,
-    primaryRouteType: routeTypes[0] || "",
+    primaryRouteType,
     activePeriods: [],
     displayPeriod: null,
     displayStatus: "available",
@@ -1391,6 +1419,12 @@ function getServiceRouteTags(service) {
   return normalizeRouteTags(service && service.tags, service && service.styles);
 }
 
+function getServicePrimaryRouteTag(service, routeTags) {
+  const tags = Array.isArray(routeTags) ? routeTags : getServiceRouteTags(service);
+  const primaryTag = normalizeText(service && service.primaryTag);
+  return tags.includes(primaryTag) ? primaryTag : (tags[0] || "");
+}
+
 function normalizeServiceGroupType(value) {
   const normalized = normalizeText(value).toLowerCase();
   return SERVICE_GROUP_TYPES.includes(normalized) ? normalized : DEFAULT_SERVICE_GROUP_TYPE;
@@ -1407,14 +1441,16 @@ function isRegularServiceGroup(service) {
 function normalizeServiceContentDoc(service) {
   const normalized = normalizeServiceAssetFields(service);
   const durationTag = getServiceDurationTag(normalized);
+  const routeTags = getServiceRouteTags(normalized);
   return Object.assign({}, normalized, {
     groupType: normalizeServiceGroupType(normalized && normalized.groupType),
     type: normalizeServiceType(normalized && normalized.type, Object.assign({}, normalized, { durationTag })),
     fullGroupSize: Math.max(0, normalizeNumber(normalized && normalized.fullGroupSize, 0)),
     durationTag,
     priceLabel: getServicePriceLabel(normalized),
-    tags: getServiceRouteTags(normalized),
-    styles: getServiceRouteTags(normalized)
+    primaryTag: getServicePrimaryRouteTag(normalized, routeTags),
+    tags: routeTags,
+    styles: routeTags
   });
 }
 
@@ -1432,6 +1468,7 @@ function buildPublicService(service, overrides) {
   const source = service && typeof service === "object" ? service : {};
   const { groupPeriods, travelDetail, ...rest } = source;
   const durationTag = getServiceDurationTag(source);
+  const routeTags = getServiceRouteTags(source);
   const explicitCreatorMessage = String(source.creatorMessage || "").trim();
   const overview =
     travelDetail && typeof travelDetail === "object" && travelDetail.overview && typeof travelDetail.overview === "object"
@@ -1446,10 +1483,12 @@ function buildPublicService(service, overrides) {
     groupType: normalizeServiceGroupType(source && source.groupType),
     type: normalizeServiceType(source && source.type, Object.assign({}, source, { durationTag })),
     fullGroupSize: Math.max(0, normalizeNumber(source && source.fullGroupSize, 0)),
+    coverPositions: normalizeServiceCoverPositions(source && source.coverPositions),
     durationTag,
     priceLabel: getServicePriceLabel(source),
-    tags: getServiceRouteTags(source),
-    styles: getServiceRouteTags(source),
+    primaryTag: getServicePrimaryRouteTag(source, routeTags),
+    tags: routeTags,
+    styles: routeTags,
     creatorMessage
   }, overrides || {});
 }
@@ -1562,6 +1601,7 @@ function getCreatorTags(creator, services, soldCountMap) {
 
 function enrichCreatorDoc(creator, services, soldCountMap) {
   return Object.assign({}, creator, {
+    avatarPosition: normalizeAvatarPosition(creator && creator.avatarPosition),
     tags: getCreatorTags(creator, services, soldCountMap),
     regionCodes: listCreatorRegionCodes(creator, services),
     destinationSlugs: listCreatorDestinationSlugs(creator, services),

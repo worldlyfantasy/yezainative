@@ -111,8 +111,13 @@
                   hover-class="creator-constellation__item--pressed"
                   hover-stay-time="80"
                 >
+                  <view
+                    wx:if="{{item.avatarBackgroundStyle}}"
+                    class="creator-constellation__avatar creator-constellation__avatar-bg"
+                    style="{{item.avatarBackgroundStyle}}"
+                  ></view>
                   <image
-                    wx:if="{{item.avatar}}"
+                    wx:elif="{{item.avatar}}"
                     class="creator-constellation__avatar"
                     src="{{item.avatar}}"
                     mode="aspectFill"

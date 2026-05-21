@@ -1,5 +1,6 @@
 <view class="service-card {{compact ? 'service-card--compact' : ''}}" bindtap="handleTap">
-  <image wx:if="{{showCover && service.cover}}" class="service-card__cover" src="{{service.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
+  <view wx:if="{{showCover && coverBackgroundStyle}}" class="service-card__cover service-card__cover-bg" style="{{coverBackgroundStyle}}"></view>
+  <image wx:elif="{{showCover && service.cover}}" class="service-card__cover" src="{{service.cover}}" mode="aspectFill" lazy-load="{{true}}"></image>
   <view class="service-card__meta">
     <text class="service-card__type">{{service.type}}</text>
     <text class="service-card__duration">{{service.durationTag}}</text>

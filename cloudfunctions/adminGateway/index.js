@@ -1081,6 +1081,24 @@ function normalizeCoverPosition(value) {
   };
 }
 
+function normalizeAvatarPosition(value) {
+  return normalizeCoverPosition(value);
+}
+
+function normalizeServiceCoverPositions(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {
+      card: { x: 50, y: 50 },
+      square: { x: 50, y: 50 }
+    };
+  }
+
+  return {
+    card: normalizeCoverPosition(value.card),
+    square: normalizeCoverPosition(value.square)
+  };
+}
+
 function normalizeBoolean(value) {
   if (typeof value === "boolean") {
     return value;
@@ -1665,6 +1683,12 @@ function normalizeRouteTags(value, fallbackValue) {
 
 function getServiceRouteTags(service) {
   return normalizeRouteTags(service && service.tags, service && service.styles);
+}
+
+function getServicePrimaryRouteTag(service, routeTags) {
+  const tags = Array.isArray(routeTags) ? routeTags : getServiceRouteTags(service);
+  const primaryTag = normalizeText(service && service.primaryTag);
+  return tags.includes(primaryTag) ? primaryTag : (tags[0] || "");
 }
 
 function normalizeServiceGroupType(value) {
@@ -4441,6 +4465,7 @@ function buildServiceSummary(service, creatorNameMap, periodStatsMap, orderStats
     regionCodes: normalizeServiceRegionCodes(service && service.regionCodes),
     destinationSlugs: uniqueStrings(service.destinationSlugs),
     destinationCount: normalizeArray(service.destinationSlugs).length,
+    primaryTag: getServicePrimaryRouteTag(service, tags),
     tags,
     summary: normalizeText(service.summary),
     periodCount: normalizeNumber(periodStats.periodCount),
@@ -4475,6 +4500,7 @@ function mapServiceDetailRecord(service, creatorNameMap, adminUser) {
     destinationSlugs: uniqueStrings(service && service.destinationSlugs),
     summary: normalizeText(service && service.summary),
     cover: getImageAssetOriginal(service && service.cover),
+    coverPositions: normalizeServiceCoverPositions(service && service.coverPositions),
     gallery: flattenServiceGalleryGroups(service && service.galleryGroups, service && service.gallery)
       .map((item) => getImageAssetOriginal(item))
       .filter(Boolean),
@@ -4482,6 +4508,7 @@ function mapServiceDetailRecord(service, creatorNameMap, adminUser) {
       label: item.label,
       images: normalizeArray(item.images).map((image) => getImageAssetOriginal(image)).filter(Boolean)
     })),
+    primaryTag: getServicePrimaryRouteTag(service, tags),
     tags,
     travelDetail: (() => {
       const travelDetail = sanitizeTravelDetail(
@@ -4566,6 +4593,7 @@ function mapCreatorDetailRecord(creator, services, adminUser) {
     name: normalizeText(creator && creator.name),
     status: buildStatusTag(creator),
     avatar: getImageAssetOriginal(creator && creator.avatar),
+    avatarPosition: normalizeAvatarPosition(creator && creator.avatarPosition),
     stance: normalizeText(creator && creator.stance),
     tags: getCreatorRouteTags(creator, services),
     regionCodes: collectRegionCodesFromServicesForCreator(creator, services),
@@ -5965,7 +5993,14 @@ async function saveService(payload, adminUser) {
       ? normalizedPayload.regionCodes
       : (requestedStatus === "inactive" && existing ? existing.regionCodes : [])
   );
-  const routeTags = normalizeRouteTags(normalizedPayload && normalizedPayload.tags, existing ? getServiceRouteTags(existing) : []);
+  const requestedPrimaryTag = normalizeText(normalizedPayload && normalizedPayload.primaryTag);
+  const requestedTags = requestedPrimaryTag
+    ? uniqueStrings([requestedPrimaryTag].concat(normalizeArray(normalizedPayload && normalizedPayload.tags)))
+    : normalizedPayload && normalizedPayload.tags;
+  const routeTags = normalizeRouteTags(requestedTags, existing ? getServiceRouteTags(existing) : []);
+  const primaryTag = routeTags.includes(requestedPrimaryTag)
+    ? requestedPrimaryTag
+    : (existing ? getServicePrimaryRouteTag(existing, routeTags) : routeTags[0] || "");
   const groupTypeSource =
     normalizedPayload && Object.prototype.hasOwnProperty.call(normalizedPayload, "groupType")
       ? normalizedPayload.groupType
@@ -5980,6 +6015,7 @@ async function saveService(payload, adminUser) {
     id: logicalId,
     slug,
     cover: normalizeImageAssetValue(normalizedPayload && normalizedPayload.cover),
+    coverPositions: normalizeServiceCoverPositions(normalizedPayload && normalizedPayload.coverPositions),
     gallery: flattenServiceGalleryGroups(normalizedPayload && normalizedPayload.galleryGroups, normalizedPayload && normalizedPayload.gallery),
     galleryGroups: sanitizeServiceGalleryGroups(normalizedPayload && normalizedPayload.galleryGroups, normalizedPayload && normalizedPayload.gallery),
     groupType: normalizeServiceGroupType(groupTypeSource),
@@ -5992,6 +6028,7 @@ async function saveService(payload, adminUser) {
     regionCodes,
     destinationSlugs: uniqueStrings(normalizedPayload && normalizedPayload.destinationSlugs),
     summary: normalizeText(normalizedPayload && normalizedPayload.summary),
+    primaryTag,
     tags: routeTags,
     styles: routeTags,
     status: requestedStatus,
@@ -6221,6 +6258,7 @@ async function saveCreator(payload, adminUser) {
     slug,
     name,
     avatar: getImageAssetOriginal(normalizedPayload && normalizedPayload.avatar),
+    avatarPosition: normalizeAvatarPosition(normalizedPayload && normalizedPayload.avatarPosition),
     stance: normalizeText(payload && payload.stance),
     regionCodes,
     destinationSlugs: collectDestinationSlugsFromServicesForCreator(creatorForDestinationAggregation, services),
@@ -6300,6 +6338,7 @@ function normalizeCreatorRegistrationDoc(doc) {
     documentNumber: normalizeText(doc.documentNumber),
     wechat: normalizeText(doc.wechat),
     avatar: normalizeText(doc.avatar),
+    avatarPosition: normalizeAvatarPosition(doc.avatarPosition),
     stance: normalizeText(doc.stance),
     about: normalizeCreatorRegistrationAbout(doc.about),
     status: normalizeText(doc.status) || "draft",
@@ -6459,6 +6498,7 @@ async function createCreatorFromRegistration(registration, adminUser) {
     slug,
     name: creatorName,
     avatar: getImageAssetOriginal(registration && registration.avatar),
+    avatarPosition: normalizeAvatarPosition(registration && registration.avatarPosition),
     stance: normalizeText(registration && registration.stance),
     destinationSlugs: [],
     about: normalizeCreatorRegistrationAbout(registration && registration.about),
@@ -7488,6 +7528,7 @@ async function getCreatorProfileDetail(payload, adminUser) {
     personName: resolveCreatorProfilePersonName(registration, adminAccount, creator),
     status: buildStatusTag(creator),
     avatar: normalizeText(creator && creator.avatar),
+    avatarPosition: normalizeAvatarPosition(creator && creator.avatarPosition),
     stance: normalizeText(creator && creator.stance),
     tags: getCreatorRouteTags(creator, services),
     regionCodes: collectRegionCodesFromServicesForCreator(creator, services),

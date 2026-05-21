@@ -2181,6 +2181,66 @@ test("service draft rejects cloud records with only lightweight defaults", async
   );
 });
 
+test("saveService stores primaryTag separately while keeping all route tags filterable", async () => {
+  const { __test__, __mocks__ } = loadAdminGatewayModule({
+    collectionData: {
+      creators: [
+        {
+          id: "creator-b",
+          slug: "creator-b",
+          name: "创作者 B",
+          status: "active"
+        }
+      ],
+      services: []
+    }
+  });
+
+  await __test__.saveService(
+    {
+      slug: "karst-village",
+      name: "喀斯特村落慢行",
+      type: "短途旅行",
+      status: "active",
+      creatorId: "creator-b",
+      creatorRoles: ["创作者"],
+      creatorMessage: "走进喀斯特里的村落生活。",
+      regionCodes: ["cn_yun_gui_chuan"],
+      destinationSlugs: [],
+      summary: "喀斯特地貌里的乡土慢行。",
+      cover: "",
+      gallery: [],
+      galleryGroups: [],
+      primaryTag: "乡土",
+      tags: ["山野", "乡土", "文化"],
+      travelDetail: {
+        overview: {
+          coverImage: "",
+          whyJoinText: "走进喀斯特里的村落生活。",
+          suitableTitle: "这段旅程适合谁",
+          suitableText: "适合想看见地貌与村落关系的人。"
+        },
+        itinerary: {
+          days: []
+        },
+        costs: {
+          include: [],
+          exclude: [],
+          refundRules: []
+        },
+        notices: []
+      }
+    },
+    { uid: "admin-1", permissions: ["services:write", "services:read"] }
+  );
+
+  const serviceAdd = __mocks__.collectionAdds.find((item) => item.name === "services");
+  assert.ok(serviceAdd);
+  assert.equal(serviceAdd.data.primaryTag, "乡土");
+  assert.deepEqual(serviceAdd.data.tags, ["乡土", "山野", "文化"]);
+  assert.deepEqual(serviceAdd.data.styles, ["乡土", "山野", "文化"]);
+});
+
 test("saveService clears route-level consult qr and keeps system-config strategy", async () => {
   const { __test__, __mocks__ } = loadAdminGatewayModule({
     collectionData: {

@@ -161,50 +161,64 @@
   border: 1rpx solid rgba(189, 154, 95, 0.34);
 }
 
+.creator-quote .creator-card__avatar-bg {
+  background-color: rgba(189, 154, 95, 0.14);
+}
+
 .creator-quote .creator-card__meta {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .creator-quote .creator-card__title-row {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 16rpx;
+  width: 100%;
 }
 
 .creator-quote .creator-card__name {
-  flex: 0 0 auto;
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
   font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   font-size: 40rpx;
-  line-height: 1.45;
+  line-height: 1.28;
   font-weight: 500;
   color: #2b241d;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .creator-quote .creator-card__tags {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10rpx 12rpx;
-  flex: 1;
-  padding-top: 6rpx;
+  justify-content: flex-start;
+  gap: 0 8rpx;
+  max-height: 32rpx;
+  overflow: hidden;
+  margin-top: 8rpx;
 }
 
 .creator-quote .creator-card__tag {
-  padding: 6rpx 14rpx;
-  border-radius: 999rpx;
-  border: 1rpx solid rgba(153, 57, 33, 0.2);
-  background: rgba(189, 154, 95, 0.1);
-  font-size: 20rpx;
-  line-height: 1.2;
-  letter-spacing: 1rpx;
-  color: #8a5a38;
+  font-size: 22rpx;
+  line-height: 1.4;
+  font-weight: 400;
+  color: #8a7664;
+}
+
+.creator-quote .creator-card__tag-separator {
+  font-size: 22rpx;
+  line-height: 1.4;
+  font-weight: 400;
+  color: #8a7664;
 }
 
 .creator-quote .creator-card__stance {
   display: block;
-  margin-top: 10rpx;
+  margin-top: 14rpx;
   font-size: 25rpx;
   line-height: 1.9;
   color: #6a5a4b;
@@ -271,6 +285,11 @@
   min-width: 0;
 }
 
+.service-info-item--meetingPoint,
+.service-info-item--dismissalPoint {
+  align-items: flex-start;
+}
+
 .service-info-item--clickable {
   padding-right: 4rpx;
 }
@@ -280,6 +299,12 @@
   align-items: center;
   min-width: 0;
   gap: 12rpx;
+}
+
+.service-info-item--meetingPoint .service-info-item__inner,
+.service-info-item--dismissalPoint .service-info-item__inner {
+  align-items: flex-start;
+  width: 100%;
 }
 
 .service-info-item__label {
@@ -301,6 +326,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.service-info-item--meetingPoint .service-info-item__value,
+.service-info-item--dismissalPoint .service-info-item__value {
+  flex: 1;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
+  word-break: break-all;
+  white-space: normal;
 }
 
 .service-info-item__arrow {
