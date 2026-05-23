@@ -2689,7 +2689,7 @@ test("listOrderDebugTestOrders rejects admin-level platform admins even when all
   }
 });
 
-test("listOrderDebugTestOrders rejects owner admins outside the debug allowlist", async () => {
+test("listOrderDebugTestOrders allows owner admins without the debug allowlist", async () => {
   const originalEnabled = process.env.ENABLE_ORDER_DEBUG_TOOL;
   const originalAllowList = process.env.ORDER_DEBUG_ADMIN_UIDS;
   process.env.ENABLE_ORDER_DEBUG_TOOL = "true";
@@ -2697,17 +2697,16 @@ test("listOrderDebugTestOrders rejects owner admins outside the debug allowlist"
   const { __test__ } = loadAdminGatewayModule();
 
   try {
-    await assert.rejects(
-      () => __test__.listOrderDebugTestOrders({}, {
-        id: "admin-1",
-        uid: "admin-1",
-        username: "ops",
-        adminLevel: "owner",
-        accountType: "admin",
-        permissions: ["ops:read"]
-      }),
-      /当前账号没有订单调试工具权限/
-    );
+    const result = await __test__.listOrderDebugTestOrders({}, {
+      id: "admin-1",
+      uid: "admin-1",
+      username: "ops",
+      adminLevel: "owner",
+      accountType: "admin",
+      permissions: ["ops:read"]
+    });
+
+    assert.deepEqual(result, []);
   } finally {
     if (originalEnabled === undefined) {
       delete process.env.ENABLE_ORDER_DEBUG_TOOL;
@@ -2905,6 +2904,126 @@ test("adjustOrderPrice updates a pending order payable amount", async () => {
   assert.equal(result.priceAdjustmentAmount, -300);
   assert.equal(result.priceAdjustmentReason, "客服协商改价");
   assert.equal(sqlCalls.some((call) => /^UPDATE `TravelOrder`/.test(call.sql)), true);
+});
+
+test("listOrders auto cancels expired pending orders before filtering", async () => {
+  const now = Date.now();
+  let orderRow = {
+    orderNo: "yz202605230001",
+    userOpenid: "openid-1",
+    serviceSlug: "route-1",
+    serviceName: "湖岸环线体感",
+    servicePeriodCode: "",
+    status: "pending",
+    peopleCountInt: 1,
+    createdAtTs: now - 40 * 60 * 1000,
+    payExpireAtTs: now - 10 * 60 * 1000,
+    updatedAt: now - 10 * 60 * 1000,
+    payable: 999,
+    payableDec: 999,
+    couponId: "coupon-1",
+    travelersJson: "[]",
+    creatorSnapshotJson: "{}",
+    serviceSnapshotJson: "{}"
+  };
+  const { __test__, __mocks__ } = loadAdminGatewayModule({
+    collectionData: {
+      users: [
+        { _id: "user-1", openid: "openid-1", nickname: "海森" }
+      ],
+      user_coupon_assets: [
+        { _id: "coupon-1", status: "used", usedOrderNo: "yz202605230001" }
+      ],
+      services: [],
+      creators: []
+    },
+    runSQL: async (sql, params) => {
+      if (/^UPDATE `TravelOrder` SET `status` = 'canceled'/.test(sql)) {
+        orderRow = {
+          ...orderRow,
+          status: "canceled",
+          canceledAtTs: params.canceledAtTs,
+          updatedAt: params.updatedAt
+        };
+        return { data: { executeResultList: [] } };
+      }
+
+      return {
+        data: {
+          executeResultList: [orderRow]
+        }
+      };
+    }
+  });
+
+  const pendingResult = await __test__.listOrders(
+    { status: "pending", page: 1, pageSize: 10 },
+    { permissions: ["ops:read"], uid: "admin-1" }
+  );
+  const couponUpdate = __mocks__.collectionUpdates.find((item) => item.name === "user_coupon_assets");
+
+  assert.equal(pendingResult.total, 0);
+  assert.equal(orderRow.status, "canceled");
+  assert.equal(__mocks__.collectionAdds.some((item) => item.name === "order_events" && item.data.status === "canceled"), true);
+  assert.deepEqual(couponUpdate, {
+    name: "user_coupon_assets",
+    id: "coupon-1",
+    data: {
+      status: "active",
+      usedOrderNo: "",
+      usedAt: 0,
+      updatedAt: couponUpdate.data.updatedAt
+    }
+  });
+});
+
+test("maintenanceCancelExpiredPendingOrders cancels expired pending rows with token", async () => {
+  const previousToken = process.env.ADMIN_GATEWAY_MAINTENANCE_TOKEN;
+  process.env.ADMIN_GATEWAY_MAINTENANCE_TOKEN = "test-maintenance-token";
+  const now = Date.now();
+  let orderRow = {
+    orderNo: "yz202605230002",
+    userOpenid: "openid-2",
+    servicePeriodCode: "",
+    status: "pending",
+    peopleCountInt: 1,
+    createdAtTs: now - 40 * 60 * 1000,
+    payExpireAtTs: now - 5 * 60 * 1000,
+    canceledAtTs: 0,
+    couponId: ""
+  };
+
+  try {
+    const { __test__ } = loadAdminGatewayModule({
+      runSQL: async (sql, params) => {
+        if (/^UPDATE `TravelOrder` SET `status` = 'canceled'/.test(sql)) {
+          orderRow = {
+            ...orderRow,
+            status: "canceled",
+            canceledAtTs: params.canceledAtTs,
+            updatedAt: params.updatedAt
+          };
+          return { data: { executeResultList: [] } };
+        }
+
+        return {
+          data: {
+            executeResultList: [orderRow]
+          }
+        };
+      }
+    });
+
+    const result = await __test__.maintenanceCancelExpiredPendingOrders({
+      accessToken: "test-maintenance-token"
+    });
+
+    assert.equal(result.scannedOrders, 1);
+    assert.equal(result.canceledOrders, 1);
+    assert.equal(orderRow.status, "canceled");
+  } finally {
+    process.env.ADMIN_GATEWAY_MAINTENANCE_TOKEN = previousToken;
+  }
 });
 
 test("creator portal listOrders only returns orders for the bound creator", async () => {
@@ -3107,6 +3226,39 @@ test("listCreators includes idea counts and applies requested sorting", async ()
     page: 1,
     pageSize: 2
   });
+});
+
+test("listCreators defaults to active creators for association selectors", async () => {
+  const adminUser = {
+    accountType: "admin",
+    permissions: ["creators:read"]
+  };
+  const { __test__ } = loadAdminGatewayModule({
+    collectionData: {
+      creators: [
+        {
+          id: "creator-active",
+          slug: "active-creator",
+          name: "真实创作者",
+          status: "active",
+          updatedAt: 1770000001000
+        },
+        {
+          id: "creator-mock",
+          slug: "mock-creator",
+          name: "旧 mock 创作者",
+          status: "inactive",
+          updatedAt: 1770000002000
+        }
+      ],
+      services: [],
+      ideas: []
+    }
+  });
+
+  const result = await __test__.listCreators({ limit: 10 }, adminUser);
+
+  assert.deepEqual(result.map((item) => item.slug), ["active-creator"]);
 });
 
 test("creator portal listCreators keeps the bound creator visible under active filter while leaving others read-only", async () => {

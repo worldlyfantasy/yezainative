@@ -1604,7 +1604,7 @@ function assertOrderDebugToolAccess(adminUser) {
   const adminLevel = normalizeText(adminUser && adminUser.adminLevel).toLowerCase();
   const isOwner = adminLevel === "owner";
   assertCondition(
-    isOwner && matchesAnyOrderDebugAllowList(adminUser),
+    isOwner,
     "当前账号没有订单调试工具权限"
   );
 }
@@ -5775,7 +5775,7 @@ async function markServiceDraftPublished(draftId, serviceDetail, adminUser) {
 async function listServices(payload, adminUser) {
   assertAdminPermission(adminUser, "services:read");
   const keyword = normalizeText(payload && payload.keyword).toLowerCase();
-  const status = normalizeText(payload && payload.status).toLowerCase();
+  const status = (normalizeText(payload && payload.status) || "active").toLowerCase();
   const tag = normalizeText(payload && payload.tag);
   const groupType = normalizeText(payload && payload.groupType);
   const serviceSlug = normalizeText(payload && payload.serviceSlug);
@@ -7943,7 +7943,7 @@ async function deleteIdea(payload, adminUser) {
 async function listCreators(payload, adminUser) {
   assertAdminPermission(adminUser, "creators:read");
   const keyword = normalizeText(payload && payload.keyword).toLowerCase();
-  const status = normalizeText(payload && payload.status).toLowerCase();
+  const status = (normalizeText(payload && payload.status) || "active").toLowerCase();
   const tag = normalizeText(payload && payload.tag);
   const creatorSlug = normalizeText(payload && payload.creatorSlug);
   const limit = clampLimit(payload && payload.limit);
@@ -9469,9 +9469,9 @@ async function listOrders(payload, adminUser) {
   const travelerRecordId = normalizeText(payload && (payload.travelerRecordId || payload.travelerId || payload._id));
   const travelerProfileId = normalizeText(payload && (payload.travelerProfileId || payload.profileId));
   const limit = clampLimit(payload && payload.limit);
-  const [rows, users, orderEventDocs, travelerDocs, services, creators] = await Promise.all([
+  const [rawRows, users, orderEventDocs, travelerDocs, services, creators] = await Promise.all([
     queryRows(
-      "SELECT `orderNo`, `userOpenid`, `serviceSlug`, `serviceName`, `servicePeriodCode`, `travelDateStart`, `status`, `versionName`, `peopleCountInt`, `createdAtTs`, `paidAtTs`, `canceledAtTs`, `updatedAt`, `payExpireAtTs`, `amount`, `amountDec`, `payable`, `payableDec`, `priceAdjustmentAmount`, `priceAdjustmentReason`, `priceAdjustedAtTs`, `priceAdjustedBy`, `travelersJson`, `creatorSnapshotJson`, `serviceSnapshotJson` FROM `TravelOrder` ORDER BY COALESCE(`updatedAt`, `createdAtTs`) DESC LIMIT 200"
+      "SELECT `orderNo`, `userOpenid`, `serviceSlug`, `serviceName`, `servicePeriodCode`, `travelDateStart`, `status`, `versionName`, `peopleCountInt`, `createdAtTs`, `paidAtTs`, `canceledAtTs`, `updatedAt`, `payExpireAtTs`, `amount`, `amountDec`, `payable`, `payableDec`, `priceAdjustmentAmount`, `priceAdjustmentReason`, `priceAdjustedAtTs`, `priceAdjustedBy`, `couponId`, `travelersJson`, `creatorSnapshotJson`, `serviceSnapshotJson` FROM `TravelOrder` ORDER BY COALESCE(`updatedAt`, `createdAtTs`) DESC LIMIT 200"
     ),
     listCollection(COLLECTIONS.users),
     listOptionalCollection(ORDER_EVENTS_COLLECTION),
@@ -9479,6 +9479,9 @@ async function listOrders(payload, adminUser) {
     listCollection(COLLECTIONS.services),
     listCollection(COLLECTIONS.creators)
   ]);
+  const rows = await autoCancelExpiredPendingOrderRows(rawRows, {
+    source: "payment_expired_admin_list"
+  });
   const userMap = buildOrderUserMap(users);
   const travelerLookup = buildTravelerProfileLookup(travelerDocs);
   const creatorRefSet = buildAdminCreatorRefSet(adminUser, creators);
@@ -9635,6 +9638,231 @@ function isPendingOrderPaymentExpired(orderRecord, now = Date.now()) {
   return expireAtTs > 0 && expireAtTs <= now;
 }
 
+function splitCouponSelectionIds(value) {
+  return normalizeText(value)
+    .split(/[,\s]+/)
+    .map((item) => normalizeText(item))
+    .filter(Boolean);
+}
+
+async function findCouponAssetIdsByUsedOrderNo(orderNo) {
+  const normalizedOrderNo = normalizeText(orderNo);
+  if (!normalizedOrderNo) {
+    return [];
+  }
+
+  try {
+    const result = await db.collection(COLLECTIONS.userCouponAssets)
+      .where({ usedOrderNo: normalizedOrderNo })
+      .limit(20)
+      .get();
+    return normalizeArray(result && result.data)
+      .map((item) => normalizeText(item && item._id))
+      .filter(Boolean);
+  } catch (error) {
+    console.error("Failed to find coupon assets by used order", {
+      orderNo: normalizedOrderNo,
+      error
+    });
+    return [];
+  }
+}
+
+async function restoreOrderCouponAssetsIfNeeded(orderRecord) {
+  const orderNo = normalizeText(orderRecord && orderRecord.orderNo);
+  if (!orderNo) {
+    return;
+  }
+
+  const couponAssetIds = uniqueNormalizedValues(
+    splitCouponSelectionIds(orderRecord && orderRecord.couponId)
+      .concat(await findCouponAssetIdsByUsedOrderNo(orderNo)),
+    normalizeText
+  );
+  if (!couponAssetIds.length) {
+    return;
+  }
+
+  const now = Date.now();
+  await Promise.all(couponAssetIds.map((id) => db.collection(COLLECTIONS.userCouponAssets).doc(id).update({
+    data: {
+      status: "active",
+      usedOrderNo: "",
+      usedAt: 0,
+      updatedAt: now
+    }
+  })));
+}
+
+async function rollbackExpiredPendingOrderCancellation(orderRecord) {
+  try {
+    await executeSQL(
+      "UPDATE `TravelOrder` SET `status` = {{status}}, `canceledAtTs` = {{canceledAtTs}}, `updatedAt` = {{updatedAt}} WHERE `orderNo` = {{orderNo}} AND `status` = 'canceled' LIMIT 1",
+      {
+        orderNo: normalizeText(orderRecord && orderRecord.orderNo),
+        status: normalizeText(orderRecord && orderRecord.status) || "pending",
+        canceledAtTs: normalizeNumber(orderRecord && orderRecord.canceledAtTs, 0),
+        updatedAt: Date.now()
+      }
+    );
+  } catch (error) {
+    console.error("Failed to rollback expired pending order cancellation", {
+      orderNo: normalizeText(orderRecord && orderRecord.orderNo),
+      error
+    });
+  }
+}
+
+async function cancelExpiredPendingOrderRow(orderRecord, options = {}) {
+  if (!isPendingOrderPaymentExpired(orderRecord, options.now)) {
+    return {
+      changed: false,
+      order: orderRecord
+    };
+  }
+
+  const orderNo = normalizeText(orderRecord && orderRecord.orderNo);
+  if (!orderNo) {
+    return {
+      changed: false,
+      order: orderRecord,
+      error: "missing_order_no"
+    };
+  }
+
+  const now = normalizeNumber(options.now, Date.now());
+  await executeSQL(
+    "UPDATE `TravelOrder` SET `status` = 'canceled', `canceledAtTs` = {{canceledAtTs}}, `updatedAt` = {{updatedAt}} WHERE `orderNo` = {{orderNo}} AND `status` = 'pending' LIMIT 1",
+    {
+      orderNo,
+      canceledAtTs: now,
+      updatedAt: now
+    }
+  );
+
+  try {
+    await restoreDeletedOrderSeatsIfNeeded(orderRecord);
+    await restoreOrderCouponAssetsIfNeeded(orderRecord);
+  } catch (error) {
+    await rollbackExpiredPendingOrderCancellation(orderRecord);
+    throw error;
+  }
+
+  await appendOrderStatusEvent({
+    orderNo,
+    userOpenid: normalizeText(orderRecord && orderRecord.userOpenid),
+    status: "canceled",
+    fromStatus: "pending",
+    source: normalizeText(options.source) || "payment_expired",
+    occurredAtTs: now
+  });
+
+  return {
+    changed: true,
+    order: Object.assign({}, orderRecord, {
+      status: "canceled",
+      canceledAtTs: now,
+      updatedAt: now
+    })
+  };
+}
+
+async function autoCancelExpiredPendingOrderRows(rows, options = {}) {
+  const now = normalizeNumber(options.now, Date.now());
+  const errorSamples = [];
+
+  const effectiveRows = [];
+  for (const row of normalizeArray(rows)) {
+    if (!isPendingOrderPaymentExpired(row, now)) {
+      effectiveRows.push(row);
+      continue;
+    }
+
+    try {
+      const result = await cancelExpiredPendingOrderRow(row, {
+        now,
+        source: options.source
+      });
+      effectiveRows.push(result.order || row);
+    } catch (error) {
+      errorSamples.push({
+        orderNo: normalizeText(row && row.orderNo),
+        message: error && error.message ? error.message : "cancel expired pending order failed"
+      });
+      effectiveRows.push(row);
+    }
+  }
+
+  if (errorSamples.length) {
+    console.error("Failed to auto cancel expired pending orders", {
+      errorSamples: errorSamples.slice(0, 10)
+    });
+  }
+
+  return effectiveRows;
+}
+
+function resolveExpiredPendingOrderMaintenanceOptions(payload) {
+  return {
+    dryRun: normalizeBooleanFlag(payload && payload.dryRun),
+    limit: Math.max(1, Math.min(500, normalizePositiveInteger(payload && payload.limit, 100)))
+  };
+}
+
+async function maintenanceCancelExpiredPendingOrders(payload) {
+  assertMaintenanceAccess(payload);
+
+  const options = resolveExpiredPendingOrderMaintenanceOptions(payload);
+  const now = Date.now();
+  const fallbackCutoff = now - ORDER_PAYMENT_EXPIRE_MS;
+  const rows = await queryRows(
+    "SELECT `orderNo`, `userOpenid`, `servicePeriodCode`, `status`, `peopleCountInt`, `peopleCount`, `createdAtTs`, `createdAt`, `canceledAtTs`, `payExpireAtTs`, `couponId` FROM `TravelOrder` WHERE `status` = 'pending' AND ((`payExpireAtTs` IS NOT NULL AND `payExpireAtTs` > 0 AND `payExpireAtTs` <= {{now}}) OR ((`payExpireAtTs` IS NULL OR `payExpireAtTs` <= 0) AND COALESCE(`createdAtTs`, `createdAt`, 0) <= {{fallbackCutoff}})) ORDER BY COALESCE(`payExpireAtTs`, `createdAtTs`, `createdAt`) ASC LIMIT {{limit}}",
+    {
+      now,
+      fallbackCutoff,
+      limit: options.limit
+    }
+  );
+
+  const canceledSamples = [];
+  const errorSamples = [];
+  let canceledOrders = 0;
+
+  for (const row of rows) {
+    try {
+      if (!options.dryRun) {
+        const result = await cancelExpiredPendingOrderRow(row, {
+          now,
+          source: "payment_expired_maintenance"
+        });
+        if (result.changed) {
+          canceledOrders += 1;
+        }
+      }
+      if (canceledSamples.length < 20) {
+        canceledSamples.push({
+          orderNo: normalizeText(row && row.orderNo),
+          payExpireAtTs: getOrderPaymentExpireAtTs(row)
+        });
+      }
+    } catch (error) {
+      errorSamples.push({
+        orderNo: normalizeText(row && row.orderNo),
+        message: error && error.message ? error.message : "cancel expired pending order failed"
+      });
+    }
+  }
+
+  return {
+    dryRun: options.dryRun,
+    scannedOrders: rows.length,
+    canceledOrders: options.dryRun ? 0 : canceledOrders,
+    errorCount: errorSamples.length,
+    canceledSamples,
+    errorSamples
+  };
+}
+
 async function getOrderDetail(payload, adminUser) {
   const orderNo = normalizeText(payload && payload.orderNo);
   assertCondition(orderNo, "缺少订单号");
@@ -9643,8 +9871,11 @@ async function getOrderDetail(payload, adminUser) {
     "SELECT * FROM `TravelOrder` WHERE `orderNo` = {{orderNo}} LIMIT 1",
     { orderNo }
   );
-  const row = rows[0];
+  let row = rows[0];
   assertCondition(row, "未找到对应订单");
+  row = (await autoCancelExpiredPendingOrderRows([row], {
+    source: "payment_expired_admin_detail"
+  }))[0] || row;
   const [users, orderEventDocs, travelerDocs, services, creators] = await Promise.all([
     listCollection(COLLECTIONS.users),
     listOptionalCollection(ORDER_EVENTS_COLLECTION),
@@ -12190,6 +12421,9 @@ const handlers = {
   maintenanceBackfillServiceCreatorMessages: async (payload) => {
     return maintenanceBackfillServiceCreatorMessages(payload);
   },
+  maintenanceCancelExpiredPendingOrders: async (payload) => {
+    return maintenanceCancelExpiredPendingOrders(payload);
+  },
   maintenanceRestoreServices: async (payload) => {
     return maintenanceRestoreServices(payload);
   },
@@ -12293,6 +12527,7 @@ exports.__test__ = {
   resolvePeriodStatusByRemainingSeats,
   resolveServicePeriodStatus,
   resolveUserOrderOpenids,
+  maintenanceCancelExpiredPendingOrders,
   maintenanceBackfillServiceCreatorMessages,
   maintenanceRestoreServices,
   saveService,

@@ -11,6 +11,7 @@ const DEFAULT_REGION = "ap-shanghai";
 const DEFAULT_RETENTION_DAYS = 7;
 const DEFAULT_DELETE_LIMIT = 50;
 const DELETE_BATCH_SIZE = 50;
+const ADMIN_GATEWAY_FUNCTION = "adminGateway";
 
 function normalizeText(value) {
   if (typeof value === "string" && value.trim()) {
@@ -290,14 +291,77 @@ async function cleanupDraftAssets(payload) {
   };
 }
 
+async function cancelExpiredPendingOrders(payload) {
+  const accessToken = normalizeText(
+    payload && (payload.accessToken || payload.maintenanceToken || payload.token)
+  ) || normalizeText(process.env.ADMIN_GATEWAY_MAINTENANCE_TOKEN);
+  if (!accessToken) {
+    throw new Error("ADMIN_GATEWAY_MAINTENANCE_TOKEN is required");
+  }
+
+  const result = await cloud.callFunction({
+    name: normalizeText(process.env.ADMIN_GATEWAY_FUNCTION) || ADMIN_GATEWAY_FUNCTION,
+    data: {
+      action: "maintenanceCancelExpiredPendingOrders",
+      payload: Object.assign({}, payload || {}, {
+        accessToken
+      })
+    }
+  });
+  const response = result && result.result ? result.result : {};
+  if (!response.ok) {
+    throw new Error(response.error || "cancel expired pending orders failed");
+  }
+
+  return response.data || {};
+}
+
+async function runScheduledMaintenance(payload) {
+  const cleanupPayload = payload && payload.cleanupDraftAssets
+    ? payload.cleanupDraftAssets
+    : payload;
+  const cancelPayload = payload && payload.cancelExpiredPendingOrders
+    ? payload.cancelExpiredPendingOrders
+    : {};
+  const results = {};
+
+  try {
+    results.cleanupDraftAssets = {
+      ok: true,
+      data: await cleanupDraftAssets(cleanupPayload)
+    };
+  } catch (error) {
+    results.cleanupDraftAssets = {
+      ok: false,
+      error: error && error.message ? error.message : "cleanup draft assets failed"
+    };
+  }
+
+  try {
+    results.cancelExpiredPendingOrders = {
+      ok: true,
+      data: await cancelExpiredPendingOrders(cancelPayload)
+    };
+  } catch (error) {
+    results.cancelExpiredPendingOrders = {
+      ok: false,
+      error: error && error.message ? error.message : "cancel expired pending orders failed"
+    };
+  }
+
+  return results;
+}
+
 const handlers = {
-  cleanupDraftAssets: (payload) => cleanupDraftAssets(payload)
+  cleanupDraftAssets: (payload) => cleanupDraftAssets(payload),
+  cancelExpiredPendingOrders: (payload) => cancelExpiredPendingOrders(payload),
+  runScheduledMaintenance: (payload) => runScheduledMaintenance(payload)
 };
 
 exports.main = async (event) => {
   const action =
     normalizeText(event && event.action) ||
-    (normalizeText(event && event.Type) === "Timer" ? "cleanupDraftAssets" : "");
+    (normalizeText(event && event.Type) === "Timer" ? "runScheduledMaintenance" : "");
   const payload = event && event.payload ? event.payload : {};
   const handler = handlers[action];
 

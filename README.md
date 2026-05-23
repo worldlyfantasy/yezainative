@@ -232,14 +232,14 @@ TCB_SECRET_ID=xxx TCB_SECRET_KEY=xxx node scripts/backfill-service-creator-messa
 
 ## 草稿图片清理
 
-`maintenanceGateway` 负责清理 `content/services/draft/` 下超期且未被数据库引用的草稿图。
+`maintenanceGateway` 负责清理 `content/services/draft/` 下超期且未被数据库引用的草稿图，并触发待支付超时订单自动取消。
 
 默认策略：
 
 - 仅扫描 `content/services/draft/`
 - 仅删除超过 `7` 天的未引用文件
 - 单次最多删除 `50` 个对象
-- 已配置为每天凌晨定时执行
+- 已配置为每天凌晨定时执行，同时清理超过 30 分钟未支付的待支付订单
 
 手动预演：
 
@@ -247,10 +247,22 @@ TCB_SECRET_ID=xxx TCB_SECRET_KEY=xxx node scripts/backfill-service-creator-messa
 cloudbase functions:invoke maintenanceGateway --data '{"action":"cleanupDraftAssets","payload":{"dryRun":true}}'
 ```
 
+手动预演待支付超时取消：
+
+```bash
+cloudbase functions:invoke maintenanceGateway --data '{"action":"cancelExpiredPendingOrders","payload":{"dryRun":true}}'
+```
+
 手动执行：
 
 ```bash
 cloudbase functions:invoke maintenanceGateway --data '{"action":"cleanupDraftAssets","payload":{"dryRun":false}}'
+```
+
+手动执行待支付超时取消：
+
+```bash
+cloudbase functions:invoke maintenanceGateway --data '{"action":"cancelExpiredPendingOrders","payload":{"dryRun":false}}'
 ```
 
 返回结果会包含：

@@ -32,8 +32,8 @@
             <view class="hero__mask hero__mask--art"></view>
           </block>
           <view wx:if="{{item.mark || item.title || item.desc || item.subDesc}}" class="hero__content">
-            <text wx:if="{{item.mark}}" class="hero__mark">{{item.mark}}</text>
-            <text class="hero__title">{{item.title}}</text>
+            <text wx:if="{{item.mark}}" class="hero__mark" style="{{item.markColor ? 'color: ' + item.markColor : ''}}">{{item.mark}}</text>
+            <text class="hero__title" style="{{item.titleColor ? 'color: ' + item.titleColor : ''}}">{{item.title}}</text>
             <text class="hero__desc">{{item.desc}}</text>
             <text wx:if="{{item.subDesc}}" class="hero__desc hero__desc--secondary">{{item.subDesc}}</text>
           </view>
